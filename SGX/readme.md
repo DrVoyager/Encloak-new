@@ -11,9 +11,8 @@
     $ cd EnhancedSGX/  
     $ make
     $ ./app #(optional)
-    
-    # for hadoop case
+    # for hadoop case    
     $ cp libSGX.so ~/hadoop/lib/native/Linux-amd64-64  
     $ cp enclave.signed.so ~/hadoop/lib/native/Linux-amd64-64  
     $ cp enclave.so ~/hadoop/lib/native/Linux-amd64-64  
-NOTE: *.so should be in the same dir on every nodes in the cluster.(scp)  
+NOTE: The value of **tmpe** in line 167 of **EnhancedSGX/App/SGX_setting/SGX_setting.cpp** should be consistent with the actual location in the project. And *.so should be in the same dir on every nodes in the cluster.(scp)  
