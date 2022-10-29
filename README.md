@@ -5,12 +5,12 @@ this repo contains the necessary file for users to bulid or test a data flow pro
 
 ### How do I get set up?  
 
-* 0. Install JDK and SGX on your computer
-* 1. Build the c++ shared object in SGX folder
-* 2. Bulid the transform tool in soot-code folder
-* 3. Bulid java or hadoop project
-* 4. Transform your code using the tool generated in step 2
-* 5. Test the benchmark test cases
+* Install JDK and SGX on your computer
+* Build the c++ shared object in SGX folder
+* Bulid the transform tool in soot-code folder
+* Bulid java or hadoop project
+* Transform your code using the tool generated in step 2
+* Test the benchmark test cases
 
 # FOLDERS  
 ### JNI  
