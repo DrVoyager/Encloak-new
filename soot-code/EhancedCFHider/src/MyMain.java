@@ -143,7 +143,7 @@ public class MyMain {
 			   //tearsort cfhider.TeraInputFormat writePartitionFile i4
 			   
 			  
-			   String taintClassName = "test.ArrayTest";
+			   String taintClassName = "test.BinarySearch";
 			   String taintMethodName = "main";
 			   //bubbleSort   binarySearch   quickSort   heapSort   Kmp
 			   String taintSourceName = "r1";			   
