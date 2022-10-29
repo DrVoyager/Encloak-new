@@ -7,4 +7,4 @@
 ### you can modify the interface, then  
     $ javac your-java-invoker.java
     $ javah your-java-invoker    
-### The compiled \*.h file should be put into *func_call_v3.17_Encryption/App* or *func_call_v3.14_without_Encryption/App*  
+### The compiled \*.h file should be put into */SGX/EnhancedSGX/App/* 
