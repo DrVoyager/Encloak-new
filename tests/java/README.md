@@ -1,18 +1,28 @@
-## There are Bubble Sort, Quick Sort and BinarySearch tests in this folder.
-    $ cd java
-    $ mkdir bin replaceOutput  
-    $ cd src/  
-    $ javac -d ../bin */*.java    
-    $ cd ../  
-    $ ./SGX-transformer.sh  
+# Java Application Testing Guide
+There are 7 java application tests in this folder. The source codes of the seven Java applications are in the **java/src/test/case/** directory.
 
-## add the SGX path to LD_LIBRARY_PATH  
-    $ export LD_LIBRARY_PATH=/home/xidian/func_call_v3.17_Encryption/  or  
-    $ export LD_LIBRARY_PATH=/YOUR/PATH/TO/func_call_v3.17_Encryption/  
+## Add SGX path
+Add LD_LIBRARY_PATH to your environment variable according to the project location. If your project location is **/home/sgx/SGX/EnCloak**, just add the following command to **~/.bashrc**.
+    
+    $ export LD_LIBRARY_PATH=/home/sgx/SGX/EnCloak/SGX/EnhancedSGX
 
-## Then run the transformed class  
+## Select the Java application to test
+Put the application to be tested in the **java/src/test/** directory, and specify the sensitive variable to be protected according to **soot-code/readme.md**. Don't forget to rebuild the transform tool. The currently specified sensitive variable is the array in the main method of the binary search application.
+
+## Compile the source code
+    $ ./build-origin.sh
+  
+## Clear last test cache
+    $ ./rmtmp.sh
+    
+## Run the transform tool
+    $ ./transformer.sh
+ 
+## Encrypt SGXindex
+    $ ./encrypt_SGXindex.sh
+
+## Then run the transformed application
+Here is an example of binary search:
+    
     $ cd replaceOutput  
-    $ java pegasus.Sort  or  
-    $ java pegasus.BinarySearch
-
-/home/xidian/bitbucket/cfhider/SGX/func_call_v3.17_Encryption/README.md
+    $ java test.BinarySearch
