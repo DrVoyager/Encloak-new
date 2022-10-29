@@ -11,7 +11,7 @@ This folder contains the JNI (cpp headers) for the java project to call the c++ 
 This folder contains the source code to build the c++ shared object.
 ##### Note: config the sgx in Enclave/Enclave.config.xml, especially for the heap and stack.
 
-### soot code  
+### soot-code  
 Use soot to transform the java or hadoop code into a data flow version.
 
 ### tests  
