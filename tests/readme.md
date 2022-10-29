@@ -1,3 +1,15 @@
-# There are 3 Hadoop applications that selected from the hadoop 1.0.4 release package and 7 simple java application to test the applicability and the performance of EnCloak. 
+## hadoop/
+There are 3 Hadoop applications that selected from the hadoop 1.0.4 release package:
+- Word Count
+- Pi
+- Tera Sort
 
- **NOTICE: Paths used in each script and the sensitive variable that need to be protected.**   
+## java/
+There are 7 java CPU-intensive applications:
+- Heap Sort
+- Bubble Sort
+- Quick Sort
+- Binary Search
+- KMP
+- Fast Power
+- Pi
