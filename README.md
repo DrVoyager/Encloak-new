@@ -26,8 +26,3 @@ use soot to transform the java or hadoop code into a data flow version
 ### tests  
 benchmark test cases for the projects
 
-## Contribution  
-
-
-### feedback  
- 
