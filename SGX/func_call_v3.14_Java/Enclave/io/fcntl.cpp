@@ -25,10 +25,7 @@ int fcntl(int fd, int cmd, ... /* arg */ ){
     flock* pFlock;
 	va_list ap;
     va_start(ap, cmd);
- //    flock* p=va_arg(ap,flock*);
- //    va_end(ap);
-	///if (ocall_fcntl(&ret, fd, cmd, (void *)p, sizeof(struct flock)) != SGX_SUCCESS) return -1;
-    //return ret;
+
     switch (cmd) {
     	case F_GETFD:
     		if (ocall_fcntl_void(&ret, fd, cmd) != SGX_SUCCESS) return -1;
@@ -44,8 +41,6 @@ int fcntl(int fd, int cmd, ... /* arg */ ){
     		va_end(ap);
     		if (ocall_fcntl_flock(&ret, fd, cmd, pFlock ) != SGX_SUCCESS) return -1;
     		break;
-    	//case F_FULLFSYNC:
-    	//case op: lockTrace
     	default:
             va_end(ap);
     		ret = -1;

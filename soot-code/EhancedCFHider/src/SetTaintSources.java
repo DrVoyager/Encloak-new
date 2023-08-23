@@ -4,14 +4,22 @@ import java.util.List;
 
 import soot.Body;
 import soot.G;
+import soot.Local;
+import soot.Modifier;
 import soot.PatchingChain;
+import soot.RefType;
+import soot.SootField;
 import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
 import soot.jimple.AssignStmt;
 import soot.jimple.Constant;
+import soot.jimple.FieldRef;
 import soot.jimple.IdentityStmt;
 import soot.jimple.IfStmt;
+import soot.jimple.InstanceFieldRef;
+import soot.jimple.Jimple;
+import soot.util.Chain;
 
 
 public class SetTaintSources {
@@ -22,6 +30,37 @@ public class SetTaintSources {
 		// TODO Auto-generated constructor stub
 		
 			List<Value> newlist = new ArrayList<>();
+			
+//			Chain<SootField> fields= body.getMethod().getDeclaringClass().getFields();
+//			for (SootField field : fields) {
+//			    String fieldName = field.getName();
+//			    G.v().out.println("fieldName: " + fieldName);
+//			    
+//			    if (Modifier.isStatic(field.getModifiers())) {
+//			        // 如果字段是静态字段，则使用 newStaticFieldRef()方法获取其值
+//			    	G.v().out.println("===static field===");
+//			        FieldRef fieldRef = Jimple.v().newStaticFieldRef(field.makeRef());
+//			        Value fieldValue = fieldRef;
+//			        G.v().out.println("fieldValue: " + fieldValue);
+//			        if(!newlist.contains(fieldValue)&& fieldValue.toString().equals(taintSourceName)){
+//			        	G.v().out.println("added");
+//			        	newlist.add(fieldValue);
+//			        }
+//			        
+//			    } else {
+//			        // 如果字段是实例字段，则需要先创建一个对象实例，并使用 newInstanceFieldRef() 方法获取其值
+//			    	G.v().out.println("===instance field===");
+//			        Local obj = Jimple.v().newLocal("obj", RefType.v(field.getDeclaringClass().getName()));
+//			        InstanceFieldRef fieldRef = Jimple.v().newInstanceFieldRef(obj, field.makeRef());
+//			        Value fieldValue = fieldRef;
+//			        G.v().out.println("fieldValue: " + fieldValue);
+//			        if(!newlist.contains(fieldValue)&& fieldValue.toString().equals(taintSourceName)){
+//			        	G.v().out.println("added");
+//			        	newlist.add(fieldValue);
+//			        }
+//			    }
+//			}
+			
 			
 			Unit currStmt = null;
 			PatchingChain<Unit> units = body.getUnits();//all statements
@@ -53,11 +92,11 @@ public class SetTaintSources {
 	    				
 	    			}
 	    		}
-	    		if(currStmt instanceof AssignStmt){
+	    		else if(currStmt instanceof AssignStmt){
 	    			G.v().out.println("AssignStmt statment");
 	    			
 	    			Iterator<ValueBox> ubIt=currStmt.getUseAndDefBoxes().iterator();
-	    			    			
+	    			// $r0[0] = 2, tValue includes $r0[0], $r0, 0, 2			
 	    			while(ubIt.hasNext()){
 	    				ValueBox vBox = (ValueBox) ubIt.next();
 	    				Value tValue = vBox.getValue();
@@ -75,7 +114,7 @@ public class SetTaintSources {
 						}
 	    			}
 	    		}
-	    		if(currStmt instanceof IdentityStmt){
+	    		else if(currStmt instanceof IdentityStmt){
 	    			G.v().out.println("Identity statment");
 	    			Iterator<ValueBox> ubIt=currStmt.getUseAndDefBoxes().iterator();
 	    			    			
@@ -84,13 +123,18 @@ public class SetTaintSources {
 	    				Value tValue = vBox.getValue();
 	    				G.v().out.println("the value="+tValue);
 	    				if (tValue instanceof Constant) {
+	    					G.v().out.println("tValue instanceof Constant");
 							continue;
 						}
 	    				if(!newlist.contains(tValue)&& tValue.toString().equals(taintSourceName)) {
 	    					newlist.add(tValue);
+	    					G.v().out.println("tValue added in newList");
 	    					break;
 						}
 	    			}
+	    		}
+	    		else {
+	    			G.v().out.println("other type currStmt");
 	    		}
 		}
 		list.addAll(newlist);

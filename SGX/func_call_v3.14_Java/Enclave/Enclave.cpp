@@ -23,13 +23,7 @@ char ret[100000];
 int encall_test(char* file)
 {
 
-	// int src=open(file,O_RDONLY,S_IRUSR);
-	// unsigned char s[64];
-	// int ret = read(src,s,64);
-	// unsigned char ppp[64];
-	// ecall_ctr_decrypt(s,"1234567812345678",ppp,64);
-	// printf((char*)ppp);
-	// return 0;
+
 
 	memset(ret,0,100000);
 	char* key_t="1234567812345678";
@@ -41,16 +35,13 @@ int encall_test(char* file)
 	unsigned char sss[MAX];
 	memset(sss,0,MAX);
 	unsigned char c[65];
-	//while(!reout.eof()){
 	while(1){
-		//reout.get(c);
 		l=read(reout,c,64);
 		if(l<64){
 			break;
 		}
 		
-		//sss[l]=(unsigned char)c;
-		//l++;
+	
 		if(64==l){
 			c[64]=0;
 			unsigned char ppp[MAX];
@@ -82,9 +73,7 @@ int ecall_ctr_encrypt(const char *sql,
 {
 	sgx_status_t rc;
 	char *zErrMsg = 0;
-	//ocall_print_string("im encrypting\n");
-	//const sgx_aes_ctr_128bit_key_t *p_key = "1234567812345678";
-
+	
 	const uint8_t *p_src = (const uint8_t *)sql;
 	const uint32_t src_len = strlen(sql);
 
@@ -92,12 +81,6 @@ int ecall_ctr_encrypt(const char *sql,
 	const uint32_t ctr_inc_bits = 128;
 	uint8_t *sgx_ctr_keys = (uint8_t *)malloc(16*sizeof(char));
 	memcpy(sgx_ctr_keys,sgx_ctr_key,16);
-/*
-	fprintf(stdout,"sgx_ctr_keys = %s\n",sgx_ctr_key);
-
-	ocall_print_string(stdout,"memcpy ok\n");
-	//uint8_t *p_dst;
-	ocall_print_string(stdout,"sgx_ctr_keys = %s\n",sgx_ctr_keys);*/
 
 	uint8_t *p_dsts = (uint8_t *)malloc(src_len*sizeof(char));
 
@@ -110,21 +93,14 @@ int ecall_ctr_encrypt(const char *sql,
 
 	rc2 = sgx_aes_ctr_decrypt((sgx_aes_gcm_128bit_key_t *)sgx_ctr_keys, p_dsts, src_len, p_ctr2, ctr_inc_bits, p_dsts2);
 
-/*
-	for(int i=0; i<src_len; i++){
-		ocall_print_string(stdout, "%02x ", p_dsts[i]);
-	}*/
+
 	*((char*)p_dsts+src_len)='\0';
-	//ocall_print_string((char*)p_dsts);
-
-
+	
 	for(int i=0; i<src_len; i++){
 		p_dst[i] = p_dsts[i];
-		//ocall_print_string(stdout,"%c", p_dsts2[i]);
+		
 	}
-	//ocall_print_string("\n");
 	*((char*)p_dsts2+src_len)='\0';
-	//ocall_print_string((char*)p_dsts2);
 
 
 
@@ -149,7 +125,6 @@ int ecall_ctr_decrypt(uint8_t *sql,
 
 	for(int i=0; i<src_len; i++){
 		p_dst[i] = p_dsts2[i];
-		//ocall_print_string(stdout,"%c", p_dsts2[i]);
 	}
 	return 0;
 }

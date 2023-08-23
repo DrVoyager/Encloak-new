@@ -57,6 +57,7 @@ import soot.jimple.DefinitionStmt;
 import soot.jimple.FieldRef;
 import soot.jimple.IdentityStmt;
 import soot.jimple.IfStmt;
+import soot.jimple.InstanceFieldRef;
 import soot.jimple.InvokeExpr;
 import soot.jimple.InvokeStmt;
 import soot.jimple.Jimple;
@@ -77,6 +78,8 @@ public class MyMain {
    static Map<String, List<String>> staticmemberVariables = new HashMap<>();        //Class--staticmemberVari
    
    static Map<String, Map<String, int[]>> INVOKEMAP = new HashMap<>();  //for sensitive invoke
+   
+
    
    static Map<String, Map<String, int[]>> senstiveArrayMap = new HashMap<>();  //for sensitive Array
    
@@ -143,10 +146,10 @@ public class MyMain {
 			   //tearsort cfhider.TeraInputFormat writePartitionFile i4
 			   
 			  
-			   String taintClassName = "test.BinarySearch";
-			   String taintMethodName = "main";
+//			   String taintClassName = "test.BinarySearch";
+//			   String taintMethodName = "main";
 			   //bubbleSort   binarySearch   quickSort   heapSort   Kmp
-			   String taintSourceName = "r1";			   
+//			   String taintSourceName = "r1";			   
 			   //countPI
 //			   String taintSourceName = "d1";			   
 			   //fastPower
@@ -155,13 +158,34 @@ public class MyMain {
 //			   String taintClassName = "test.ArrayTest";
 //			   String taintMethodName = "main";
 //			   String taintSourceName = "r3";
-
+			   
+			   String taintClassName = "test.test";
+			   String taintMethodName = "t";
+			   String taintSourceName = "$i0";
+			   
+//			   String taintClassName = "test.Test2";
+//			   String taintMethodName = "main";
+//			   String taintSourceName = "$i0";
+//			   String taintSourceName = "K";
+			   
+//			   String taintClassName = "test.Test3";
+//			   String taintMethodName = "main";
+//			   String taintSourceName = "$i0";
+//			   String taintSourceName = "a";
+			   
+//			   String taintClassName = "test.simple";
+//			   String taintMethodName = "main";
+//			   String taintSourceName = "b0";
+			   
+//			   String taintClassName = "test.Test";
+//			   String taintMethodName = "main";
+//			   String taintSourceName = "r1";
 			   
 			   /**
 			    * for variables
 			    */
 			   for(SootClass cls:Scene.v().getApplicationClasses()){
-				   G.v().out.println("[cf]SooClass:"+cls.toString());
+				   G.v().out.println("[cf]SootClass:"+cls.toString());
 				   
 				   Map<String, List<Value>> map = new HashMap<>(); 
 				   
@@ -174,7 +198,7 @@ public class MyMain {
 				 // if(cls.toString().equals(taintClassName)){//200
 				// G.v().out.println("[cf] success class: "+cls.toString());
 				   for (SootMethod sootMethod : sootMethods) { 
-					   G.v().out.println("2021class name :"+sootMethod.getName());
+					   G.v().out.println("2021method name :"+sootMethod.getName());
 					// if (sootMethod.getName().equals(taintMethodName)) {
 						 if(!sootMethod.hasActiveBody()){
 							   G.v().out.println("method name="+sootMethod.getName());
@@ -225,9 +249,13 @@ public class MyMain {
                    
                    
                    
-                   // init Cuuid
-                   SootField sField = new SootField("Cuuid", RefType.v("java.lang.String"),1);
-				   cls.addField(sField);
+                   // insert Ouuid, public String Ouuid
+                   SootField sFieldOuuid = new SootField("Ouuid", RefType.v("java.lang.String"), 1);
+				   cls.addField(sFieldOuuid);
+				   
+				   // insert Cuuid, public static String Cuuid
+				   SootField sFieldCuuid = new SootField("Cuuid", RefType.v("java.lang.String"), 9);
+				   cls.addField(sFieldCuuid);
 				   
 			   }
 			   
@@ -260,7 +288,7 @@ public class MyMain {
 				   Iterator<SootClass> iterator = sList.iterator();
 				   while(iterator.hasNext()){
 					   SootClass cls = iterator.next();
-						G.v().out.println("[taint]SooClass:"+cls.toString());
+						G.v().out.println("[taint]SootClass:"+cls.toString());
 						if (cls.toString().equals("invoker.sgx_invoker") || cls.toString().equals("pegasus.PagerankNaive$PrCounters")) {
 							continue;
 						}
@@ -414,6 +442,7 @@ public class MyMain {
 				   }
 			   }
 			   G.v().out.println("[========CFMAP=======after delete constant===]:"+CFMAP.toString());
+			   // ensure the membervariables is correct?
 			   for(SootClass cls:Scene.v().getApplicationClasses()){
 				   G.v().out.println("[add member]SooClass:"+cls.toString());
 				   
@@ -446,7 +475,7 @@ public class MyMain {
 					    			Value leValue = ((AssignStmt)currStmt).getLeftOp();
 					    			Value riValue = ((AssignStmt)currStmt).getRightOp();
 									if (CFMAP.get(ClassName).containsKey(MethodName)&&CFMAP.get(ClassName).get(MethodName).contains(leValue)) {
-										
+										// FieldRef -> InstanceFieldRef 2023.07.10 (for member variable)
 										if (TypeIndex(leValue.getType())>6 && TypeIndex(leValue.getType())<19 && riValue instanceof FieldRef) {//don't solve static
 											SootField sField = ((FieldRef) riValue).getField();
 											Value sValue=riValue;
@@ -470,6 +499,7 @@ public class MyMain {
 								}
 							}
 						}else {
+							G.v().out.println("[add member] sootMethod:hasActiveBody "+sootMethod.getName());
 							Body body = sootMethod.getActiveBody();
 							String ClassName = body.getMethod().getDeclaringClass().getName();
 							String MethodName = body.getMethod().getName();
@@ -487,6 +517,7 @@ public class MyMain {
 										boolean b2 = TypeIndex(leValue.getType())<19;
 										boolean b3 = riValue instanceof FieldRef;
 										G.v().out.println("===b1  :"+b1 +"  b2 :" + b2 + "  b3:"+ b3);
+										// FieldRef -> InstanceFieldRef 2023.07.10 (for member variable)
 										if (TypeIndex(leValue.getType())>6 && TypeIndex(leValue.getType())<19 && riValue instanceof FieldRef) {//don't solve static
 											SootField sField = ((FieldRef) riValue).getField();
 											Value sValue=riValue;
@@ -560,18 +591,18 @@ public class MyMain {
 						String MethodName = body.getMethod().getName();
 						G.v().out.println("MethodName20210512:"+MethodName);
 						
-						    if(staticmemberVariables.containsKey(ClassName)&&!staticmemberVariables.get(ClassName).isEmpty()||
+						    if(memberVariables.containsKey(ClassName)&&!memberVariables.get(ClassName).isEmpty()||
 						    		(CFMAP.containsKey(ClassName)&&CFMAP.get(ClassName).containsKey(MethodName)&&!CFMAP.get(ClassName).get(MethodName).isEmpty())
 						    		){
 						    	
 						    		new Transformer(body,phase,CFMAP,memberVariables,staticmemberVariables,INVOKEMAP,OriginFieldCuuidArray);
 ////merge update statement part
-						    								    	    try {
-									new MergeUpdate(body,phase,CFMAP,memberVariables,staticmemberVariables,INVOKEMAP,OriginFieldCuuidArray);
-									} catch (IOException e) {
-										// TODO Auto-generated catch block
-										e.printStackTrace();
-									} 
+//						    								    	    try {
+//									new MergeUpdate(body,phase,CFMAP,memberVariables,staticmemberVariables,INVOKEMAP,OriginFieldCuuidArray);
+//									} catch (IOException e) {
+//										// TODO Auto-generated catch block
+//										e.printStackTrace();
+//									} 
 
 						    }
 //						    else if("<init>".equals(MethodName)){

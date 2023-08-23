@@ -41,11 +41,20 @@ int re_get = -99;
 
 clock_t t3,t4;
 
-int gnum = 0;
 int inum = 0;
 int dnum = 0;
-int unum = 0;
+int fnum = 0;
+int lnum = 0;
+int cnum = 0;
 int bnum = 0;
+// update number
+int unum = 0;
+// branch number
+int brnum = 0;
+// init number
+int innum = 0;
+// destroy number
+int denum = 0;
 
 long temp = 0;
 int tem=0;
@@ -116,12 +125,19 @@ void* EnclaveResponderThread3( void* hotEcall3AsVoidP ) //init_delete
 }
 */
 	int         data            = 0;
-	int intArray[ArrayLen]={0};
-	double doubleArray[ArrayLen]={0};
-	float floatArray[ArrayLen]={0};
-	char charArray[ArrayLen]={NULL};
-	long longArray[ArrayLen]={0};
-	char byteArray[ArrayLen]={NULL};
+	// int intArray[ArrayLen]={0};
+	// double doubleArray[ArrayLen]={0};
+	// float floatArray[ArrayLen]={0};
+	// char charArray[ArrayLen]={NULL};
+	// long longArray[ArrayLen]={0};
+	// char byteArray[ArrayLen]={NULL};
+
+	int* intArray;
+	double* doubleArray;
+	float* floatArray;
+	char* charArray;
+	long* longArray;
+	char* byteArray;
 	char uuid[33]={NULL};
 	HotCall     hotEcall        = HOTCALL_INITIALIZER;
 /*
@@ -174,13 +190,14 @@ void* EnclaveResponderThread3( void* hotEcall3AsVoidP ) //init_delete
 JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_init(JNIEnv *env, jclass obj)
 //int init_enclave(void)
 {
-t3=clock();
 	if(sgx_use_flag){
 		return 0;
 	}
-clock_t t1,t2;
-t1=clock();
-printf("Java_invoker_sgx_1invoker_init\n");
+	clock_t t1,t2;
+	t1=clock();
+
+	printf("----enter Java_invoker_sgx_1invoker_init()-----\n");
+	// TODO initialize_enclave()这个函数的定义在哪？
     if(initialize_enclave() < 0){
         printf("init Failed ...\n");
         getchar();
@@ -244,9 +261,9 @@ printf("Java_invoker_sgx_1invoker_init\n");
  	pthread_create(&hotEcall3.responderThread, NULL, EnclaveResponderThread3, (void*)&hotEcall3);
 ///pthread_create(&hotEcall_deletevalue.responderThread, NULL, EnclaveResponderThread_deletevalue, (void*)&hotEcall_deletevalue);
 
-t2=clock();
-printf("initialize_enclave()_time:%lfs\n",((double)(t2 - t1)/CLOCKS_PER_SEC));
-printf("sgx update 22\n");
+	t2=clock();
+	printf("initialize_enclave()_time: %lfs\n", ((double)(t2 - t1)/CLOCKS_PER_SEC));
+	printf("sgx update 22\n");
 	printf("hotcall init ok\n");
 
 	return load_flag;
@@ -263,18 +280,18 @@ JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_destroy(JNIEnv *env, jclass obj
     StopResponder( &hotEcall3);
    
     if(SGX_SUCCESS==sgx_destroy_enclave(global_eid)){
-	sgx_use_flag=0;
-	printf("total_ecall=%d\n",gnum+unum+bnum+inum+dnum);
-	printf("getint_ecall=%d\n",gnum);
-	printf("update_ecall=%d\n",unum);
-	printf("branch_ecall=%d\n",bnum);
-	printf("init_ecall=%d\n",inum);
-	printf("delete_ecall=%d\n",dnum);
+		sgx_use_flag=0;
+		printf("total_ecall=%d\n",inum+unum+brnum+innum+denum);
+		printf("getint_ecall=%d\n",inum);
+		printf("update_ecall=%d\n",unum);
+		printf("branch_ecall=%d\n",brnum);
+		printf("init_ecall=%d\n",innum);
+		printf("delete_ecall=%d\n",denum);
     	printf("Enclave destroy success\n");
-	return 0;
+		return 0;
     }else{
-	printf("Enclave destroy failure\n");
-	return -1;
+		printf("Enclave destroy failure\n");
+		return -1;
     }
 }
 JNIEXPORT void JNICALL Java_invoker_sgx_1invoker_initNode
@@ -298,46 +315,192 @@ JNIEXPORT void JNICALL Java_invoker_sgx_1invoker_initNode
 
 
 JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitInt
-  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring){
+  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring, jstring ouuidstring, jstring cuuidstring){
 
-
-	
 	if(env -> MonitorEnter(obj)!= JNI_OK)
 		printf("Java_invoker_sgx_1invoker_commitInt enter wrong \n");
-//printf("go to get int line=%ld\n",counter);
-gnum++;
-//printf("gettnum=%ld\n",num);
 
-	/*int intArray[ArrayLen];
-	double doubleArray[ArrayLen];
-	float floatArray[ArrayLen];
-	char charArray[ArrayLen];
-	long longArray[ArrayLen];
-	char byteArray[ArrayLen];*/
+	inum++;
+
+	if(intTail > 0){
+		intArray = new int[intTail];
 		jint *body_i = env->GetIntArrayElements(jintArray, 0);
-			for (int i=0; i<intTail; i++)
-			{
-				intArray[i] = body_i[i];
-			}
-			env->ReleaseIntArrayElements(jintArray, body_i, 0);
-	//	}
-	//if(doubleTail > 0){
+		for (int i=0; i<intTail; i++)
+		{
+			intArray[i] = body_i[i];
+		}
+		env->ReleaseIntArrayElements(jintArray, body_i, 0);
+	}
+
+	int re=-99;
+
+	// [hyr]obatain uuid, ouuid, cuuid, 0813
+	const char* uuidBuf = env->GetStringUTFChars(uuidstring, false);
+	char uuid[33] = {0};
+	strncpy(uuid,uuidBuf,32);
+	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
+
+	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+	char ouuid[33] = {0};
+	strncpy(uuid,ouuidBuf,32);
+	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+
+
+	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+	char cuuid[33] = {0};
+	strncpy(cuuid,cuuidBuf,32);
+	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+  
+	sgx_status_t ret=encall_switch_type_get_i(global_eid,&counter,&re_get,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid);
+	// HotCall_requestCall( &hotEcall,requestedCallID4, &counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid,&re_get);
+	// sgx_status_t ret=print_int(global_eid,&re_get,counter,intArray,intTail,uuid,ouuid,cuuid);
+	re=re_get;
+
+	if(ret != SGX_SUCCESS){
+		print_error_message(ret);
+	}
+
+	if(intTail > 0){
+		delete[] intArray;
+	}
+
+	if(env -> MonitorExit(obj)!= JNI_OK)
+		printf("Java_invoker_sgx_1invoker_commitInt exit wrong \n");	
+	
+	return re;
+
+}
+/**
+	commitDouble
+*/
+JNIEXPORT jdouble JNICALL Java_invoker_sgx_1invoker_commitDouble
+   (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring, jstring ouuidstring, jstring cuuidstring){
+	if(env -> MonitorEnter(obj)!= JNI_OK)
+		printf("Java_invoker_sgx_1invoker_commitFloat enter wrong \n");
+
+	dnum++;
+
+	if(doubleTail > 0){
+		doubleArray = new double[doubleTail];
 		jdouble *body_d = env->GetDoubleArrayElements(jdoubleArray, 0);
 		for (int i=0; i<doubleTail; i++)
 		{
 			doubleArray[i] = body_d[i];
 		}
 		env->ReleaseDoubleArrayElements(jdoubleArray, body_d, 0);
-	//}
-	//if(floatTail > 0){
+	}
+
+	// [hyr]obatain uuid, ouuid, cuuid, 0813
+	const char* uuidBuf = env->GetStringUTFChars(uuidstring, false);
+	char uuid[33] = {0};
+	strncpy(uuid,uuidBuf,32);
+	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
+
+	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+	char ouuid[33] = {0};
+	strncpy(uuid,ouuidBuf,32);
+	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+
+
+	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+	char cuuid[33] = {0};
+	strncpy(cuuid,cuuidBuf,32);
+	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	
+	double red=0.0;
+	
+	// sgx_status_t ret=encall_switch_get_d(global_eid,&red,counter,intArray,intTail,
+	// 		doubleArray,doubleTail,
+	// 		floatArray,floatTail,
+	// 		charArray,charTail,
+	// 		longArray,longTail,
+	// 		byteArray,byteTail,uuid,ouuid,cuuid);
+
+	// sgx_status_t ret=print_double(global_eid,&red,counter,doubleArray,doubleTail,uuid,ouuid,cuuid);
+	sgx_status_t ret=encall_switch_type_get_i(global_eid,&counter,&red,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid);
+	
+	if(ret != SGX_SUCCESS){
+		print_error_message(ret);
+	}
+	if(doubleTail > 0){
+		delete[] doubleArray;
+	}
+
+
+	if(env -> MonitorExit(obj)!= JNI_OK)
+		printf("Java_invoker_sgx_1invoker_commitdouble exit wrong \n");	
+	return red;
+}
+
+
+JNIEXPORT jfloat JNICALL Java_invoker_sgx_1invoker_commitFloat
+  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring, jstring ouuidstring, jstring cuuidstring){
+	if(env -> MonitorEnter(obj)!= JNI_OK)
+		printf("Java_invoker_sgx_1invoker_commitFloat enter wrong \n");
+
+	fnum++;
+
+	if(floatTail > 0){
+		floatArray = new float[floatTail];
 		jfloat *body_f = env->GetFloatArrayElements(jfloatArray, 0);
 		for (int i=0; i<floatTail; i++)
 		{
 			floatArray[i] = body_f[i];
 		}
 		env->ReleaseFloatArrayElements(jfloatArray,body_f, 0);
-	//}
-	//if(longTail > 0){
+	}
+
+	// [hyr]obatain uuid, ouuid, cuuid, 0813
+	const char* uuidBuf = env->GetStringUTFChars(uuidstring, false);
+	char uuid[33] = {0};
+	strncpy(uuid,uuidBuf,32);
+	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
+
+	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+	char ouuid[33] = {0};
+	strncpy(uuid,ouuidBuf,32);
+	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+
+
+	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+	char cuuid[33] = {0};
+	strncpy(cuuid,cuuidBuf,32);
+	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	
+	float ref=0.0;
+	
+	// sgx_status_t ret=encall_switch_get_f(global_eid,&ref,counter,intArray,intTail,
+	// 		doubleArray,doubleTail,
+	// 		floatArray,floatTail,
+	// 		charArray,charTail,
+	// 		longArray,longTail,
+	// 		byteArray,byteTail,uuid,ouuid,cuuid);
+	// sgx_status_t ret=print_float(global_eid,&ref,counter,floatArray,floatTail,uuid,ouuid,cuuid);
+	sgx_status_t ret=encall_switch_type_get_i(global_eid,&counter,&ref,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid);
+	
+	if(ret != SGX_SUCCESS){
+		print_error_message(ret);
+	}
+
+	if(floatTail > 0){
+		delete[] floatArray;
+	}			
+
+	if(env -> MonitorExit(obj)!= JNI_OK)
+		printf("Java_invoker_sgx_1invoker_commitfloat exit wrong \n");	
+	return ref;
+}
+
+JNIEXPORT jlong JNICALL Java_invoker_sgx_1invoker_commitLong
+  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring, jstring ouuidstring, jstring cuuidstring){
+	
+	if(env -> MonitorEnter(obj)!= JNI_OK)
+		printf("Java_invoker_sgx_1invoker_commitLong enter wrong \n");	
+
+	lnum++;
+
+	if(longTail > 0){
+		longArray = new long[longTail];
 		jlong *body_l = env->GetLongArrayElements(jlongArray, 0);
 		for (int i=0; i<longTail; i++)
 		{
@@ -345,402 +508,169 @@ gnum++;
 		}
 		env->ReleaseLongArrayElements(jlongArray,body_l, 0);
 
-	//}
-	//if(charTail > 0){
+	}
+
+	// [hyr]obatain uuid, ouuid, cuuid, 0813
+	const char* uuidBuf = env->GetStringUTFChars(uuidstring, false);
+	char uuid[33] = {0};
+	strncpy(uuid,uuidBuf,32);
+	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
+
+	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+	char ouuid[33] = {0};
+	strncpy(uuid,ouuidBuf,32);
+	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+
+
+	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+	char cuuid[33] = {0};
+	strncpy(cuuid,cuuidBuf,32);
+	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	
+	long rel=999;	
+
+	// sgx_status_t ret=encall_switch_get_l(global_eid,&rel,counter,intArray,intTail,
+	// 		doubleArray,doubleTail,
+	// 		floatArray,floatTail,
+	// 		charArray,charTail,
+	// 		longArray,longTail,
+	// 		byteArray,byteTail,uuid,ouuid,cuuid);
+	// sgx_status_t ret=print_long(global_eid,&rel,counter,longArray,longTail,uuid,ouuid,cuuid);
+	sgx_status_t ret=encall_switch_type_get_i(global_eid,&counter,&rel,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid);
+	if(ret != SGX_SUCCESS){
+		print_error_message(ret);
+	}
+
+	if(longTail > 0){
+		delete[] longArray;
+	}
+
+	if(env -> MonitorExit(obj)!= JNI_OK)
+		printf("Java_invoker_sgx_1invoker_commitLong exit wrong \n");	
+	return rel;
+}
+
+JNIEXPORT jchar JNICALL Java_invoker_sgx_1invoker_commitChar
+  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring, jstring ouuidstring, jstring cuuidstring){
+	if(env -> MonitorEnter(obj)!= JNI_OK)
+		printf("Java_invoker_sgx_1invoker_commitChar enter wrong \n");	
+
+	cnum++;
+
+	if(charTail > 0){
+		charArray = new char[charTail];
 		jchar *body_c = env->GetCharArrayElements(jcharArray, 0);
 		for (int i=0; i<charTail; i++)
 		{
 			charArray[i] = body_c[i];
 		}
 		env->ReleaseCharArrayElements(jcharArray,body_c , 0);
-	//}
-	//if(byteTail > 0){
+	}
+
+	// [hyr]obatain uuid, ouuid, cuuid, 0813
+	const char* uuidBuf = env->GetStringUTFChars(uuidstring, false);
+	char uuid[33] = {0};
+	strncpy(uuid,uuidBuf,32);
+	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
+
+	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+	char ouuid[33] = {0};
+	strncpy(uuid,ouuidBuf,32);
+	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+
+	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+	char cuuid[33] = {0};
+	strncpy(cuuid,cuuidBuf,32);
+	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+
+	char rec=NULL;
+	
+	// sgx_status_t ret=encall_switch_type_c(global_eid,&rec,counter,intArray,intTail,
+	// 		doubleArray,doubleTail,
+	// 		floatArray,floatTail,
+	// 		charArray,charTail,
+	// 		longArray,longTail,
+	// 		byteArray,byteTail,uuid,ouuid,cuuid);
+
+	// sgx_status_t ret=print_char(global_eid,&rec,counter,charArray,charTail,uuid,ouuid,cuuid);
+	sgx_status_t ret=encall_switch_type_get_i(global_eid,&counter,&rec,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid);
+
+	if(ret != SGX_SUCCESS){
+		print_error_message(ret);
+	}
+	
+	if(charTail > 0){
+		delete[] charArray;
+	}
+
+	return rec;
+}
+
+JNIEXPORT jbyte JNICALL Java_invoker_sgx_1invoker_commitByte
+  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring, jstring ouuidstring, jstring cuuidstring){
+	if(env -> MonitorEnter(obj)!= JNI_OK)
+		printf("Java_invoker_sgx_1invoker_commitByte enter wrong \n");	
+
+	bnum++;
+
+	if(byteTail > 0){
+		byteArray = new char[byteTail];
 		jbyte *body_b = env->GetByteArrayElements(jbyteArray, 0);
 		for (int i=0; i<byteTail; i++)
 		{
 			byteArray[i] = body_b[i];
 		}
 		env->ReleaseByteArrayElements(jbyteArray,body_b, 0);
-	//}
+	}
 
-	int re=-99;
-	const char* buf = env->GetStringUTFChars(uuidstring, false);
+	// [hyr]obatain uuid, ouuid, cuuid, 0813
+	const char* uuidBuf = env->GetStringUTFChars(uuidstring, false);
 	char uuid[33] = {0};
+	strncpy(uuid,uuidBuf,32);
+	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
+
+	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+	char ouuid[33] = {0};
+	strncpy(uuid,ouuidBuf,32);
+	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+
+	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
 	char cuuid[33] = {0};
-	strcpy(uuid,buf);
-	env->ReleaseStringUTFChars(uuidstring,buf);
-
-//printf("get Line=%ld ,uuid=%s\n",counter,uuid);
-	//sgx_status_t ret=encall_switch_type_i(global_eid,&re,counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid);
-	HotCall_requestCall( &hotEcall,requestedCallID4, &counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,cuuid,&re_get);
-	//printf("after HotCall_requestCall get over\n");
-//printf("get Line=%ld ,uuid=%s\n",counter,uuid);
-	
-//	if(env -> ExceptionOccurred()){
-//		printf(" commInt ExceptionOccurred\n");
-//		if(env -> MonitorExit(obj)!= JNI_OK);
-//		return 0;
-//	}
-	//getint_ecall++;
-	re = re_get;
-
-//if(counter == 48L){
-//	printf("[APP] get Line 48 re=%d\n",re);
-//}
-	if(env -> MonitorExit(obj)!= JNI_OK)
-		printf("Java_invoker_sgx_1invoker_commitInt exit wrong \n");	
-	
-	return re;
-
-	
-	//return rei;
-}
-/**
-	commitDouble
-*/
-JNIEXPORT jdouble JNICALL Java_invoker_sgx_1invoker_commitDouble
-   (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring){
-	if(env -> MonitorEnter(obj)!= JNI_OK)
-		printf("double enter wrong \n");		
-	printf("go to get double line=%ld\n",counter);	
-	const char* buf = env->GetStringUTFChars(uuidstring, false);
-	//char uuid[33] = {0};
-	strcpy(uuid,buf);
-	env->ReleaseStringUTFChars(uuidstring, buf);
-
-	
-	double red=0.0;
-	
-	sgx_status_t ret=encall_switch_get_d(global_eid,&red,counter,intArray,intTail,
-			doubleArray,doubleTail,
-			floatArray,floatTail,
-			charArray,charTail,
-			longArray,longTail,
-			byteArray,byteTail,uuid);
-	if(ret != SGX_SUCCESS){
-		print_error_message(ret);
-	}
-//printf("get over \n");
-	if(env -> MonitorExit(obj)!= JNI_OK)
-		printf("Java_invoker_sgx_1invoker_commitdouble exit wrong \n");	
-	return red;
-}
-/**
-	commitFloat
-*/
-JNIEXPORT jfloat JNICALL Java_invoker_sgx_1invoker_commitFloat
-  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring){
-	float ref=999;
-	//printf("go to get float line=%ld\n",counter);	
-	/*int intArray[ArrayLen];
-	double doubleArray[ArrayLen];
-	float floatArray[ArrayLen];
-	char charArray[ArrayLen];
-	long longArray[ArrayLen];
-	char byteArray[ArrayLen];
-	
-	jint *body_i = env->GetIntArrayElements(jintArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		intArray[i] = body_i[i];
-	}
-	env->ReleaseIntArrayElements(jintArray, body_i, 0);
-
-	jdouble *body_d = env->GetDoubleArrayElements(jdoubleArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		doubleArray[i] = body_d[i];
-	}
-	env->ReleaseDoubleArrayElements(jdoubleArray, body_d, 0);
-
-	jfloat *body_f = env->GetFloatArrayElements(jfloatArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		floatArray[i] = body_f[i];
-	}
-	env->ReleaseFloatArrayElements(jfloatArray, body_f, 0);
-
-	jlong *body_l = env->GetLongArrayElements(jlongArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		longArray[i] = body_l[i];
-	}
-	env->ReleaseLongArrayElements(jlongArray, body_l, 0);
-	
-	jchar *body_c = env->GetCharArrayElements(jcharArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		charArray[i] = body_c[i];
-	}
-	env->ReleaseCharArrayElements(jcharArray, body_c, 0);
-	
-	jbyte *body_b = env->GetByteArrayElements(jbyteArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		byteArray[i] = body_b[i];
-	}
-	env->ReleaseByteArrayElements(jbyteArray, body_b, 0);	
-
-	if(sgx_use_flag!=1){printf("not init yet");return -12;}
-
-	float ref=999;
-	/*
-	sgx_status_t ret=encall_switch_type_f(global_eid,&ref,counter,intArray,intTail,
-			doubleArray,doubleTail,
-			floatArray,floatTail,
-			charArray,charTail,
-			longArray,longTail,
-			byteArray,byteTail);
-	if(ret != SGX_SUCCESS){
-		print_error_message(ret);
-	}
-	*/
-	return ref;
-}
-/**
-	commitChar
-*/
-JNIEXPORT jchar JNICALL Java_invoker_sgx_1invoker_commitChar
-  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring){
-	char rec=NULL;	
-	//printf("go to get Char line=%ld\n",counter);
-	/*int intArray[ArrayLen];
-	double doubleArray[ArrayLen];
-	float floatArray[ArrayLen];
-	char charArray[ArrayLen];
-	long longArray[ArrayLen];
-	char byteArray[ArrayLen];
-	
-	jint *body_i = env->GetIntArrayElements(jintArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		intArray[i] = body_i[i];
-	}
-	env->ReleaseIntArrayElements(jintArray, body_i, 0);
-
-	jdouble *body_d = env->GetDoubleArrayElements(jdoubleArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		doubleArray[i] = body_d[i];
-	}
-	env->ReleaseDoubleArrayElements(jdoubleArray, body_d, 0);
-
-	jfloat *body_f = env->GetFloatArrayElements(jfloatArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		floatArray[i] = body_f[i];
-	}
-	env->ReleaseFloatArrayElements(jfloatArray, body_f, 0);
-
-	jlong *body_l = env->GetLongArrayElements(jlongArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		longArray[i] = body_l[i];
-	}
-	env->ReleaseLongArrayElements(jlongArray, body_l, 0);
-	
-	jchar *body_c = env->GetCharArrayElements(jcharArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		charArray[i] = body_c[i];
-	}
-	env->ReleaseCharArrayElements(jcharArray, body_c, 0);
-	
-	jbyte *body_b = env->GetByteArrayElements(jbyteArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		byteArray[i] = body_b[i];
-	}
-	env->ReleaseByteArrayElements(jbyteArray, body_b, 0);	
-
-	if(sgx_use_flag!=1){printf("not init yet");return -12;}
-
-	char rec=NULL;
-	/*
-	sgx_status_t ret=encall_switch_type_c(global_eid,&rec,counter,intArray,intTail,
-			doubleArray,doubleTail,
-			floatArray,floatTail,
-			charArray,charTail,
-			longArray,longTail,
-			byteArray,byteTail);
-	if(ret != SGX_SUCCESS){
-		print_error_message(ret);
-	}
-	*/
-	return rec;
-}
-
-/**
-	commitByte
-*/
-JNIEXPORT jbyte JNICALL Java_invoker_sgx_1invoker_commitByte
-  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring){
-	char reb=NULL;	
-	/*int intArray[ArrayLen];
-	double doubleArray[ArrayLen];
-	float floatArray[ArrayLen];
-	char charArray[ArrayLen];
-	long longArray[ArrayLen];
-	char byteArray[ArrayLen];
-	
-	jint *body_i = env->GetIntArrayElements(jintArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		intArray[i] = body_i[i];
-	}
-	env->ReleaseIntArrayElements(jintArray, body_i, 0);
-
-	jdouble *body_d = env->GetDoubleArrayElements(jdoubleArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		doubleArray[i] = body_d[i];
-	}
-	env->ReleaseDoubleArrayElements(jdoubleArray, body_d, 0);
-
-	jfloat *body_f = env->GetFloatArrayElements(jfloatArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		floatArray[i] = body_f[i];
-	}
-	env->ReleaseFloatArrayElements(jfloatArray, body_f, 0);
-
-	jlong *body_l = env->GetLongArrayElements(jlongArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		longArray[i] = body_l[i];
-	}
-	env->ReleaseLongArrayElements(jlongArray, body_l, 0);
-	
-	jchar *body_c = env->GetCharArrayElements(jcharArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		charArray[i] = body_c[i];
-	}
-	env->ReleaseCharArrayElements(jcharArray, body_c, 0);
-	
-	jbyte *body_b = env->GetByteArrayElements(jbyteArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		byteArray[i] = body_b[i];
-	}
-	env->ReleaseByteArrayElements(jbyteArray, body_b, 0);	
-
-	if(sgx_use_flag!=1){printf("not init yet");return -12;}
+	strncpy(cuuid,cuuidBuf,32);
+	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
 
 	char reb=NULL;
-	/*
-	sgx_status_t ret=encall_switch_type_b(global_eid,&reb,counter,intArray,intTail,
-			doubleArray,doubleTail,
-			floatArray,floatTail,
-			charArray,charTail,
-			longArray,longTail,
-			byteArray,byteTail);
+
+	// sgx_status_t ret=encall_switch_type_b(global_eid,&reb,counter,intArray,intTail,
+	// 		doubleArray,doubleTail,
+	// 		floatArray,floatTail,
+	// 		charArray,charTail,
+	// 		longArray,longTail,
+	// 		byteArray,byteTail,uuid,ouuid);
+	// sgx_status_t ret=print_byte(global_eid,&reb,counter,byteArray,byteTail,uuid,ouuid);
+	sgx_status_t ret=encall_switch_type_get_i(global_eid,&counter,&reb,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid);
+
 	if(ret != SGX_SUCCESS){
 		print_error_message(ret);
 	}
-	*/
+
+	if(byteTail > 0){
+		delete[] byteArray;
+	}
 	return reb;
 }
-/**
-	commitLong
-*/
-JNIEXPORT jlong JNICALL Java_invoker_sgx_1invoker_commitLong
-  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring){
-	
-	if(env -> MonitorEnter(obj)!= JNI_OK)
-		printf("Long enter wrong \n");	
-	long rel=999;	
-	//printf("go to get l line=%ld\n",counter);
-	/*int intArray[ArrayLen];
-	double doubleArray[ArrayLen];
-	float floatArray[ArrayLen];
-	char charArray[ArrayLen];
-	long longArray[ArrayLen];
-	char byteArray[ArrayLen];
-	
-	jint *body_i = env->GetIntArrayElements(jintArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		intArray[i] = body_i[i];
-	}
-	env->ReleaseIntArrayElements(jintArray, body_i, 0);
 
-	jdouble *body_d = env->GetDoubleArrayElements(jdoubleArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		doubleArray[i] = body_d[i];
-	}
-	env->ReleaseDoubleArrayElements(jdoubleArray, body_d, 0);
-
-	jfloat *body_f = env->GetFloatArrayElements(jfloatArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		floatArray[i] = body_f[i];
-	}
-	env->ReleaseFloatArrayElements(jfloatArray, body_f, 0);
-
-	jlong *body_l = env->GetLongArrayElements(jlongArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		longArray[i] = body_l[i];
-	}
-	env->ReleaseLongArrayElements(jlongArray, body_l, 0);
-	
-	jchar *body_c = env->GetCharArrayElements(jcharArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		charArray[i] = body_c[i];
-	}
-	env->ReleaseCharArrayElements(jcharArray, body_c, 0);
-	
-	jbyte *body_b = env->GetByteArrayElements(jbyteArray, 0);
-	for (int i=0; i<ArrayLen; i++)
-	{
-		byteArray[i] = body_b[i];
-	}
-	env->ReleaseByteArrayElements(jbyteArray, body_b, 0);	
-
-	if(sgx_use_flag!=1){printf("not init yet");return -12;}
-
-	long rel=999;
-	*/
-	const char* buf = env->GetStringUTFChars(uuidstring, false);
-	//char uuid[33] = {0};
-	strcpy(uuid,buf);
-	env->ReleaseStringUTFChars(uuidstring, buf);
-
-	sgx_status_t ret=encall_switch_get_l(global_eid,&rel,counter,intArray,intTail,
-			doubleArray,doubleTail,
-			floatArray,floatTail,
-			charArray,charTail,
-			longArray,longTail,
-			byteArray,byteTail,uuid);
-	if(ret != SGX_SUCCESS){
-		print_error_message(ret);
-	}
-//printf("get over %ld\n",rel);
-
-	if(env -> MonitorExit(obj)!= JNI_OK)
-		printf("branch exit wrong \n");	
-	return rel;
-}
 
 JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitBranch
- (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring){
+ (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring, jstring ouuidstring, jstring cuuidstring){
 	
 	if(env -> MonitorEnter(obj)!= JNI_OK)
 		printf("branch enter wrong \n");
-	//printf("go to branch line=%ld\n",counter);
-bnum++;
-//printf("evalnum=%ld\n",num);
 
-	/*int intArray[ArrayLen];
-	double doubleArray[ArrayLen];
-	float floatArray[ArrayLen];
-	char charArray[ArrayLen];
-	long longArray[ArrayLen];
-	char byteArray[ArrayLen];
+	brnum++;
+
 	if(intTail > 0){
+		intArray = new int[intTail];
 		jint *body_i = env->GetIntArrayElements(jintArray, 0);
 		for (int i=0; i<intTail; i++)
 		{
@@ -749,6 +679,7 @@ bnum++;
 		env->ReleaseIntArrayElements(jintArray, body_i, 0);
 	}
 	if(doubleTail > 0){
+		doubleArray = new double[doubleTail];
 		jdouble *body_d = env->GetDoubleArrayElements(jdoubleArray, 0);
 		for (int i=0; i<doubleTail; i++)
 		{
@@ -757,6 +688,7 @@ bnum++;
 		env->ReleaseDoubleArrayElements(jdoubleArray, body_d, 0);
 	}
 	if(floatTail > 0){
+		floatArray = new float[floatTail];
 		jfloat *body_f = env->GetFloatArrayElements(jfloatArray, 0);
 		for (int i=0; i<floatTail; i++)
 		{
@@ -765,6 +697,7 @@ bnum++;
 		env->ReleaseFloatArrayElements(jfloatArray,body_f, 0);
 	}
 	if(longTail > 0){
+		longArray = new long[longTail];
 		jlong *body_l = env->GetLongArrayElements(jlongArray, 0);
 		for (int i=0; i<longTail; i++)
 		{
@@ -774,6 +707,7 @@ bnum++;
 
 	}
 	if(charTail > 0){
+		charArray = new char[charTail];
 		jchar *body_c = env->GetCharArrayElements(jcharArray, 0);
 		for (int i=0; i<charTail; i++)
 		{
@@ -782,41 +716,55 @@ bnum++;
 		env->ReleaseCharArrayElements(jcharArray,body_c , 0);
 	}
 	if(byteTail > 0){
+		byteArray = new char[byteTail];
 		jbyte *body_b = env->GetByteArrayElements(jbyteArray, 0);
 		for (int i=0; i<byteTail; i++)
 		{
 			byteArray[i] = body_b[i];
 		}
 		env->ReleaseByteArrayElements(jbyteArray,body_b, 0);
-	}*/
+	}
 
 	int re = -98;
-	const char* buf = env->GetStringUTFChars(uuidstring, false);
+
+	// [hyr]obtain uuid, ouuid, cuuid, 0813
+	const char* uuidBuf = env->GetStringUTFChars(uuidstring, false);
 	char uuid[33] = {0};
-	strncpy(uuid,buf,32);
-	env->ReleaseStringUTFChars(uuidstring, buf);
-//printf("branch Line=%ld ,uuid=%s\n",counter,uuid);
-	//printf("go to branch\n");
-	//sgx_status_t ret=encall_switch_type_i(global_eid,&re,counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid);
-	HotCall_requestCall( &hotEcall,requestedCallID, &counter,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,uuid,NULL,&reb);	
-	//HotCall_requestCall( &hotEcall,requestedCallID, &counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,NULL,&reb);
-	//printf("branch over\n");
-	
-	//env->ReleaseIntArrayElements(jintArray,body_i, 0);
-	
-	
-		
+	strncpy(uuid,uuidBuf,32);
+	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
 
-	
-//printf("branch over reb=%d\n",reb);
-//	if(env -> ExceptionOccurred()){
-//		printf(" branch ExceptionOccurred\n");
-//		if(env -> MonitorExit(obj)!= JNI_OK);
-//		return 0;
-//	}
-	//branch_ecall++;
-	re = reb;
+	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+	char ouuid[33] = {0};
+	strncpy(uuid,ouuidBuf,32);
+	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
 
+	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+	char cuuid[33] = {0};
+	strncpy(cuuid,cuuidBuf,32);
+	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+  
+	sgx_status_t ret=encall_switch_type_branch(global_eid,&counter,&re,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid);
+	//HotCall_requestCall( &hotEcall,requestedCallID, &counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid,&re);
+
+	if(intTail > 0){
+		delete[] intArray;
+	}
+
+	if(doubleTail > 0){
+		delete[] doubleArray;
+	}
+	if(floatTail > 0){
+		delete[] floatArray;
+	}			
+	if(longTail > 0){
+		delete[] longArray;
+	}
+	if(charTail > 0){
+		delete[] charArray;
+	}
+	if(byteTail > 0){
+		delete[] byteArray;
+	}
 	if(env -> MonitorExit(obj)!= JNI_OK)
 		printf("branch exit wrong \n");	
 	return re;
@@ -824,43 +772,21 @@ bnum++;
 }
 
 JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitUpdate
-  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring){
-
+  (JNIEnv *env, jclass obj, jlong counter, jintArray jintArray, jint intTail, jdoubleArray jdoubleArray, jint doubleTail, jfloatArray jfloatArray, jint floatTail,jlongArray jlongArray, jint longTail, jcharArray jcharArray, jint charTail,jbyteArray jbyteArray, jint byteTail, jstring uuidstring, jstring ouuidstring, jstring cuuidstring){
 
 	if(env -> MonitorEnter(obj)!= JNI_OK)
 		printf("update enter wrong \n");
 
-//printf("go to update line=%ld\n",counter);
-unum++;
-//printf("updanum=%ld\n",unum);
+	unum++;
 
+	// int* intArray = NULL;
+	// double* doubleArray = NULL;
+	// float* floatArray = NULL;
+	// long* longArray = NULL;
+	// char* charArray = NULL;
+	// // c++ no byte?
+	// char* byteArray = NULL;
 
-//printf("%d %d\n",intTail,doubleTail);
-	int* intArray = NULL;
-	double* doubleArray = NULL;
-	float* floatArray = NULL;
-	long* longArray = NULL;
-	char* charArray = NULL;
-	char* byteArray = NULL;
-
-	if(intTail > 0){
-		intArray = new int[intTail];
-	}
-	if(doubleTail > 0){
-		doubleArray = new double[doubleTail];
-	}
-	if(floatTail > 0){
-		floatArray = new float[floatTail];
-	}			
-	if(longTail > 0){
-		longArray = new long[longTail];
-	}
-	if(charTail > 0){
-		charArray = new char[charTail];
-	}
-	if(byteTail > 0){
-		byteArray = new char[byteTail];
-	}
 	if(intTail > 0){
 		intArray = new int[intTail];
 		jint *body_i = env->GetIntArrayElements(jintArray, 0);
@@ -919,18 +845,26 @@ unum++;
 
 	int re=-97;
 
-	const char* buf = env->GetStringUTFChars(uuidstring, false);
+	// obtain uuid, ouuid, cuuid
+	const char* uuidBuf = env->GetStringUTFChars(uuidstring, false);
 	char uuid[33] = {0};
-	strncpy(uuid,buf,32);
-	char cuuid[33] = {0};
-	strncpy(cuuid,buf+32,32);
-	env->ReleaseStringUTFChars(uuidstring,buf);
-//printf("uuid=%s cuuid=%s\n",uuid,cuuid);
+	strncpy(uuid,uuidBuf,32);
+	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
 
+	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+	char ouuid[33] = {0};
+	strncpy(uuid,ouuidBuf,32);
+	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+
+	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+	char cuuid[33] = {0};
+	strncpy(cuuid,cuuidBuf,32);
+	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
   
-	//sgx_status_t ret=encall_switch_type_i(global_eid,&reu,counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid);
-	HotCall_requestCall( &hotEcall,requestedCallID3,&counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,cuuid,&reu);
-//printf("update over\n");
+  	// [hyr]0814 暂时不用hotcall
+	sgx_status_t ret=encall_switch_type_update(global_eid,&counter,&re,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid);
+	// HotCall_requestCall( &hotEcall,requestedCallID3,&counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid,&reu);
+	printf("update over\n");
 	
 	if(intTail > 0){
 		delete[] intArray;
@@ -951,25 +885,8 @@ unum++;
 	if(byteTail > 0){
 		delete[] byteArray;
 	}
-
-	//int rei=-977;
-	//if(reu == 1000){
-	//	rei = 1;
-	//}else{
-	//	printf("update error!!! in app.cpp rei=%d\n",rei);
-	//	rei = 0;
-	//}
-
 	
-//	if(env -> ExceptionOccurred()){
-//		printf(" update ExceptionOccurred\n");
-//		if(env -> MonitorExit(obj)!= JNI_OK);
-//		return 0;
-//	}
-	//update_ecall++;
-	
-	re = reu;
-//printf("out update\n");	
+	re = reu;	
 	if(env -> MonitorExit(obj)!= JNI_OK)
 		printf("update exit wrong \n");
 
@@ -984,73 +901,58 @@ JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_initValue
 	if(env -> MonitorEnter(obj)!= JNI_OK)
 		printf("initvalue enter wrong \n");
 
-//printf("go to init\n");
-inum++;
-//printf("initnum=%ld\n",num);
-//printf("11112\n");
-	const char* buf = env->GetStringUTFChars(uuidstring, false);
-	strcpy(uuid3,buf);
-	env->ReleaseStringUTFChars(uuidstring, buf);
-//printf("11113\n");
+	innum++;
+
+	const char* uuidBuf = env->GetStringUTFChars(uuidstring, false);
+	char uuid[33] = {0};
+	strncpy(uuid,uuidBuf,32);
+	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
+
 	if(calluuidstring == NULL){
-		//printf("11116\n");
-		//encall_varible(global_eid,uuid3,NULL,lineno);
-		HotCall_requestCall( &hotEcall3,requestedCallID1,&lineno,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,uuid3,NULL,&tem);
+		encall_varible(global_eid,&lineno,uuid,NULL);
+		// HotCall_requestCall( &hotEcall3,requestedCallID1,&lineno,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,uuid,&tem);
 	}else{
 		const char* callbuf = env->GetStringUTFChars(calluuidstring, false);
-//printf("11114\n");
-	//char uuid[33] = {0};
-	
-		strcpy(uuid3c,callbuf);
+		char calluuid[33] = {0};	
+		strcpy(calluuid,callbuf);
 		env->ReleaseStringUTFChars(calluuidstring, callbuf);
-	//int intArray[ArrayLen];
-	//jint *body_i = env->GetIntArrayElements(jintArray, 0);
-	//memcpy(intArray,body_i,8);
-	//int reinitvalue;
-//printf("2222\n");
-		//encall_varible(global_eid,uuid3,uuid3c,lineno);
-		HotCall_requestCall( &hotEcall3,requestedCallID1,&lineno,NULL,0,NULL,0,NULL,0,uuid3c,32,NULL,0,NULL,0,uuid3,NULL,&tem);
-
-	//env->ReleaseIntArrayElements(jintArray, body_i, 0); 
+		encall_varible(global_eid,&lineno,uuid,calluuid);
+		// HotCall_requestCall( &hotEcall3,requestedCallID1,&lineno,NULL,0,NULL,0,NULL,0,calluuid,32,NULL,0,NULL,0,uuid,&tem);
 	}
-//printf("init over\n");	
 	if(env -> MonitorExit(obj)!= JNI_OK)
 		printf("initvalue exit wrong \n");
 	return 1;
 }
 
 JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_deleteValue
-  (JNIEnv *env, jclass obj, jstring uuidstring,jstring deletecuuid,jlong status){
-
+  (JNIEnv *env, jclass obj, jstring uuidstring, jstring ouuidstring,jlong status){
 
 	if(env -> MonitorEnter(obj)!= JNI_OK)
 		printf("deletevalue enter wrong \n");
-//printf("go to delete\n");
-dnum++;
-	const char* buf = env->GetStringUTFChars(uuidstring, false);
-	//char uuid[33] = {0};
-	strcpy(uuid3,buf);
-	//deletevalue_ecall++;
-	//printf("[delete]status=%ld\n",status);
-	if(status == 0){
-	//encall_deleteValue(global_eid,uuid);
-		HotCall_requestCall( &hotEcall3,requestedCallID2, &status,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,uuid3,NULL,&tem);
-	}else if(status == 1){
-		//printf("[delete]status=%ld",status);
-		const char* callbuf = env->GetStringUTFChars(deletecuuid, false);
-		strcpy(uuid3c,callbuf);
-		env->ReleaseStringUTFChars(deletecuuid, callbuf);
-		HotCall_requestCall( &hotEcall3,requestedCallID2, &status,NULL,0,NULL,0,NULL,0,uuid3c,32,NULL,0,NULL,0,uuid3,NULL,&tem);
-	}
-//printf("delete over\n");
-	env->ReleaseStringUTFChars(uuidstring, buf);
+	denum++;
 
-//---------------------------------------------------------------------	
+	const char* uuidBuf = env->GetStringUTFChars(uuidstring, false);
+	char uuid[33] = {0};
+	strncpy(uuid,uuidBuf,32);
+	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
+	
+	if(status == 0){
+		encall_deleteValue(global_eid,&status,uuid,NULL);
+		// HotCall_requestCall( &hotEcall3,requestedCallID2, &status,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,uuid,NULL,&tem);
+	}else if(status == 1){
+		const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+		char ouuid[33] = {0};
+		strncpy(uuid,ouuidBuf,32);
+		env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+		encall_deleteValue(global_eid,&status,uuid,ouuid);
+		// HotCall_requestCall( &hotEcall3,requestedCallID2, &status,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,NULL,0,uuid,ouuid,&tem);
+	}
 	if(env -> MonitorExit(obj)!= JNI_OK)
 		printf("deletevalue exit wrong \n");
 	return 1;
 }
 
+// 原方案
 JNIEXPORT void JNICALL Java_invoker_sgx_1invoker_initArray
   (JNIEnv *env, jclass obj, jstring uuidstring, jint index, jint size,jint isSens){
 //printf("got to initarray\n");
@@ -1071,124 +973,130 @@ JNIEXPORT void JNICALL Java_invoker_sgx_1invoker_initArray
 
 
 
-JNIEXPORT jintArray JNICALL Java_invoker_sgx_1invoker_commitIntArray
-  (JNIEnv *env, jclass obj, jlong counter, jstring uuidstring){
+// JNIEXPORT jintArray JNICALL Java_invoker_sgx_1invoker_commitIntArray
+//   (JNIEnv *env, jclass obj, jlong counter, jstring uuidstring){
 	
 
-	if(env -> MonitorEnter(obj)!= JNI_OK)
-		printf("initArray enter wrong \n");
-//printf("get int[] counter=%ld\n",counter);
-	const char* buf = env->GetStringUTFChars(uuidstring, false);
-	strcpy(uuid,buf);
-	env->ReleaseStringUTFChars(uuidstring, buf);
+// 	if(env -> MonitorEnter(obj)!= JNI_OK)
+// 		printf("initArray enter wrong \n");
+// //printf("get int[] counter=%ld\n",counter);
+// 	const char* buf = env->GetStringUTFChars(uuidstring, false);
+// 	strcpy(uuid,buf);
+// 	env->ReleaseStringUTFChars(uuidstring, buf);
 
-	int size = 0;
+// 	int size = 0;
 	
-	//first return array size
-	encall_getArraySize(global_eid,&size,counter,uuid);
-//printf("int[] size=%d \n",size);
-	//printf("size=%d\n",size);
-	int *re = new int[size];
-	//second return the array
-	encall_getIntArray(global_eid,re,size,counter,uuid);
+// 	//first return array size
+// 	encall_getArraySize(global_eid,&size,counter,uuid);
+// //printf("int[] size=%d \n",size);
+// 	//printf("size=%d\n",size);
+// 	int *re = new int[size];
+// 	//second return the array
+// 	encall_getIntArray(global_eid,re,size,counter,uuid);
 	
-/*	if(counter == 22L){
-		for(int i=0;i<size;i++){
-			printf("[App get int array]re[%d]=%d\n",i,re[i]);
-		}
-	}
-*/
+// 	if(counter == 22L){
+// 		for(int i=0;i<size;i++){
+// 			printf("[App get int array]re[%d]=%d\n",i,re[i]);
+// 		}
+// 	}
 
- 	jintArray result = env->NewIntArray(size);
- 	if (result == NULL) {
-	    printf("APP.CPP OUT OF MEMORY!!!!!!!!\n");
- 	    return NULL; /* out of memory error thrown */
- 	}
-	jint *get_i = env->GetIntArrayElements(result, 0);
-	for(int i=0;i<size;i++){
-			get_i[i] = re[i];
-	}
-	env->ReleaseIntArrayElements(result, get_i, 0);
-	// move from the temp structure to the java structure
- 	//env->SetIntArrayRegion(result, 0, size, re);
-	delete[] re;
-//printf("out int[] \n");
-	if(env -> MonitorExit(obj)!= JNI_OK)
-		printf("initArray exit wrong \n");
 
- 	return result;
-}
+//  	jintArray result = env->NewIntArray(size);
+//  	if (result == NULL) {
+// 	    printf("APP.CPP OUT OF MEMORY!!!!!!!!\n");
+//  	    return NULL; /* out of memory error thrown */
+//  	}
+// 	jint *get_i = env->GetIntArrayElements(result, 0);
+// 	for(int i=0;i<size;i++){
+// 			get_i[i] = re[i];
+// 	}
+// 	env->ReleaseIntArrayElements(result, get_i, 0);
+// 	// move from the temp structure to the java structure
+//  	//env->SetIntArrayRegion(result, 0, size, re);
+// 	delete[] re;
+// //printf("out int[] \n");
+// 	if(env -> MonitorExit(obj)!= JNI_OK)
+// 		printf("initArray exit wrong \n");
 
-JNIEXPORT jdoubleArray JNICALL Java_invoker_sgx_1invoker_commitDoubleArray
-  (JNIEnv *env, jclass obj, jlong counter, jstring uuidstring){
-	if(env -> MonitorEnter(obj)!= JNI_OK)
-		printf("initArray enter wrong \n");
-//printf("get double[] counter=%ld\n",counter);
-	const char* buf = env->GetStringUTFChars(uuidstring, false);
-	strcpy(uuid,buf);
-	env->ReleaseStringUTFChars(uuidstring, buf);
-	int size = 0;
+//  	return result;
+// }
+
+// JNIEXPORT jdoubleArray JNICALL Java_invoker_sgx_1invoker_commitDoubleArray
+//   (JNIEnv *env, jclass obj, jlong counter, jstring uuidstring){
+// 	if(env -> MonitorEnter(obj)!= JNI_OK)
+// 		printf("initArray enter wrong \n");
+// //printf("get double[] counter=%ld\n",counter);
+// 	const char* buf = env->GetStringUTFChars(uuidstring, false);
+// 	strcpy(uuid,buf);
+// 	env->ReleaseStringUTFChars(uuidstring, buf);
+// 	int size = 0;
 	
-	//first return array size
-	encall_getArraySize(global_eid,&size,counter,uuid);
+// 	//first return array size
+// 	encall_getArraySize(global_eid,&size,counter,uuid);
 
-	//printf("d size=%d\n",size);
-	double *re = new double[size];
-	//second return the array
-	encall_getDoubleArray(global_eid,re,size,counter,uuid);
+// 	//printf("d size=%d\n",size);
+// 	double *re = new double[size];
+// 	//second return the array
+// 	encall_getDoubleArray(global_eid,re,size,counter,uuid);
 	
-	//printf("%ld out %lf %lf\n",counter,re[0],re[1]);
+// 	//printf("%ld out %lf %lf\n",counter,re[0],re[1]);
 
- 	jdoubleArray result = env->NewDoubleArray(size);
- 	if (result == NULL) {
-	    printf("APP.CPP OUT OF MEMORY!!!!!!!!\n");
- 	    return NULL; /* out of memory error thrown */
- 	}
+//  	jdoubleArray result = env->NewDoubleArray(size);
+//  	if (result == NULL) {
+// 	    printf("APP.CPP OUT OF MEMORY!!!!!!!!\n");
+//  	    return NULL; /* out of memory error thrown */
+//  	}
 
-	// move from the temp structure to the java structure
-	jdouble *get_d = env->GetDoubleArrayElements(result, 0);
-	for(int i=0;i<size;i++){
-			get_d[i] = re[i];
-	}
-	env->ReleaseDoubleArrayElements(result, get_d, 0);
- 	//env->SetDoubleArrayRegion(result, 0, size, re);
-	delete[] re;
-//printf("out double[] \n");
-	if(env -> MonitorExit(obj)!= JNI_OK)
-		printf("initArray exit wrong \n");
- 	return result;
-}
+// 	// move from the temp structure to the java structure
+// 	jdouble *get_d = env->GetDoubleArrayElements(result, 0);
+// 	for(int i=0;i<size;i++){
+// 			get_d[i] = re[i];
+// 	}
+// 	env->ReleaseDoubleArrayElements(result, get_d, 0);
+//  	//env->SetDoubleArrayRegion(result, 0, size, re);
+// 	delete[] re;
+// //printf("out double[] \n");
+// 	if(env -> MonitorExit(obj)!= JNI_OK)
+// 		printf("initArray exit wrong \n");
+//  	return result;
+// }
 
-JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitUpdateMutliArray
-  (JNIEnv *env, jclass obj, jlong counter, jstring uuidstring, jstring cuuid){
+// 原方案
+// JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitUpdateMutliArray
+//   (JNIEnv *env, jclass obj, jlong counter, jstring uuidstring, jstring cuuid){
 
-	if(env -> MonitorEnter(obj)!= JNI_OK)
-		printf("initArray enter wrong \n");
-//printf("go to update mutli array \n");
-	const char* buf = env->GetStringUTFChars(uuidstring, false);
-	strcpy(uuid3,buf);
-	env->ReleaseStringUTFChars(uuidstring, buf);
+// 	if(env -> MonitorEnter(obj)!= JNI_OK)
+// 		printf("initArray enter wrong \n");
+// //printf("go to update mutli array \n");
+// 	const char* buf = env->GetStringUTFChars(uuidstring, false);
+// 	strcpy(uuid3,buf);
+// 	env->ReleaseStringUTFChars(uuidstring, buf);
 
-	const char* callbuf = env->GetStringUTFChars(cuuid, false);
-	strcpy(uuid3c,callbuf);
-	env->ReleaseStringUTFChars(cuuid, callbuf);
+// 	const char* callbuf = env->GetStringUTFChars(cuuid, false);
+// 	strcpy(uuid3c,callbuf);
+// 	env->ReleaseStringUTFChars(cuuid, callbuf);
 
-	encall_initmultiArray(global_eid,counter,uuid3,uuid3c);
-//printf("out update mutli array \n");
-	if(env -> MonitorExit(obj)!= JNI_OK)
-		printf("initArray exit wrong \n");
- 	return 1;
+// 	encall_initmultiArray(global_eid,counter,uuid3,uuid3c);
+// //printf("out update mutli array \n");
+// 	if(env -> MonitorExit(obj)!= JNI_OK)
+// 		printf("initArray exit wrong \n");
+//  	return 1;
 
-}
+// }
 
 int SGX_CDECL main(int argc, char *argv[])
 {
-clock_t t1,t2,t3,t4;
-t1=clock();
-initialize_enclave();
-t2=clock();
-printf("init time:%lf\n",((double)(t2 - t1)/CLOCKS_PER_SEC));
-int re = 0;
+	clock_t t1,t2,t3,t4;
+	t1=clock();
+	initialize_enclave();
+	t2=clock();
+	printf("init time: %lf\n", ((double)(t2 - t1)/CLOCKS_PER_SEC));
+	int re = 0;
+	int red =99;
+	t3=clock();
+	t4=clock();
+	printf("destory time: %lf\n", ((double)(t4 - t3)/CLOCKS_PER_SEC));
+	return 0;
 //
 //
 /*
@@ -1273,7 +1181,6 @@ encall_switch_type_i(global_eid,&re_i,6,int_array,10,double_array,10,float_array
 //printf("re_i6=%d\n",re_i);
 */
 //encall_varible(global_eid,k,7);
-int red =99;
 //encall_deleteValue(global_eid,&red);
 /*
 encall_switch_type_i(global_eid,&re_i,1,int_array,10,double_array,10,float_array,10,char_array,10,long_array,10,byte_array,10);
@@ -1284,9 +1191,5 @@ for(int i=2;i<5;i++){
 }
 encall_deleteValue(global_eid,&red);
 */
-t3=clock();
-t4=clock();
-printf("destory time:%lf\n",((double)(t4 - t3)/CLOCKS_PER_SEC));
 
-return 0;
 }

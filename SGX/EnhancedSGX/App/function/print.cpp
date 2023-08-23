@@ -83,8 +83,6 @@ void ocall_file_read(char* file,int* buf,long* start)
 		{
 			
 			if(line<*start){
-				//ifile.getline (buffer,100);
-				//======get line===========
 				for(int k=0;k<50;k++){
 					if(fread(&buffer[k],sizeof(char),1,fp)<=0){
 						eof_flag=1;
@@ -96,7 +94,6 @@ void ocall_file_read(char* file,int* buf,long* start)
 						break;
 					}
 				}
-				//==========end============
 				line++;
 				continue;
 			}
@@ -105,40 +102,24 @@ void ocall_file_read(char* file,int* buf,long* start)
 				break;
 			}
 			memset(buffer,'\0',50);
-			//ifile.getline (buffer,100);
-			//=========get line=========
 			for(int k=0;k<50;k++){
 				if(fread(&buffer[k],sizeof(char),1,fp)<=0){
 					eof_flag=1;
 					break;
 				}
-				//printf("TT:%c\n",buffer[k]);
 				if(buffer[k]=='\n'){
 					buffer[k]='\0';
 					break;
 				}
 			}
-			//==========================
+			
 			int read_num=0;
-			//----------new version----
+		
 			int load_flagh=-998;
 			int buffer_len=strlen(buffer);
-			//printf("");
-			//encall_read_line(global_eid,&load_flagh,buffer,buffer_len,line,1);
+		
 			if(load_flagh!=0){printf("readline error");}
-			//----------old version--------
-			// if(*buffer<48||*buffer>57){//not number
-			// 	int in_flag=999;
-			// 	read_num=0-line;
-			// 	int load_flagh=-998;
-			// 	encall_hash_readin(global_eid,&load_flagh,buffer,line);
-			// 	printf("readin_flag=%d\n",load_flagh);
-			// }else{
-			// read_num=atoi(buffer);
-			// }
-			// *(buf+count)=read_num;
-
-			//----------end----------
+			
 			count++;
 			line++;
 		}

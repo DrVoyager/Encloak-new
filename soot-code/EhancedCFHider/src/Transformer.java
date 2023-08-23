@@ -2,18 +2,8 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import java_cup.internal_error;
-
-import org.matheclipse.core.interfaces.IRational;
-import org.omg.CORBA.PRIVATE_MEMBER;
-
-import com.sun.java.swing.plaf.windows.WindowsTreeUI.ExpandedIcon;
-
 import soot.*;
-import soot.JastAddJ.ArrayAccess;
 import soot.javaToJimple.LocalGenerator;
-import soot.jimple.AddExpr;
-import soot.jimple.AnyNewExpr;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.BinopExpr;
@@ -21,15 +11,14 @@ import soot.jimple.CastExpr;
 import soot.jimple.Constant;
 import soot.jimple.DefinitionStmt;
 import soot.jimple.DoubleConstant;
-import soot.jimple.Expr;
 import soot.jimple.FieldRef;
 import soot.jimple.FloatConstant;
 import soot.jimple.IdentityStmt;
 import soot.jimple.IfStmt;
+import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InstanceOfExpr;
 import soot.jimple.IntConstant;
-import soot.jimple.InterfaceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.InvokeStmt;
 import soot.jimple.Jimple;
@@ -40,16 +29,13 @@ import soot.jimple.NewMultiArrayExpr;
 import soot.jimple.NopStmt;
 import soot.jimple.NullConstant;
 import soot.jimple.ParameterRef;
-import soot.jimple.Ref;
 import soot.jimple.ReturnStmt;
 import soot.jimple.ReturnVoidStmt;
 import soot.jimple.SpecialInvokeExpr;
 import soot.jimple.StaticFieldRef;
-import soot.jimple.StaticInvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
 import soot.jimple.VirtualInvokeExpr;
-import soot.jimple.internal.AbstractBinopExpr;
 import soot.jimple.internal.JEqExpr;
 import soot.jimple.internal.JInstanceFieldRef;
 import soot.jimple.internal.JLengthExpr;
@@ -65,6 +51,7 @@ public class Transformer {
 	static Writer indexWriter = null;
 	final static double ratio = 0.5;
 
+	// 将八元组写入/tmp/SGXindex文件
 	static Writer getWriter() {
 		String filename = "/tmp/SGXindex";
 		if (indexWriter == null) {
@@ -114,6 +101,7 @@ public class Transformer {
 	static long invokecounter = 1;
 	static Writer invokeWriter = null;
 
+	// 将函数调用语句中的敏感参数存入/tmp/SGXinvoke文件（三元组）
 	public static void invokeWriter(String content) {
 		String file = "/tmp/SGXinvoke";
 		BufferedWriter out = null;
@@ -132,10 +120,12 @@ public class Transformer {
 		}
 	}
 
+	// <LeftOp(), "call_" + index> 入参敏感数组
 	Map<Value, String> identityArray = new HashMap<Value, String>();
 
 	ArrayList<Value> InvokeVals = new ArrayList<Value>();
 
+	// 存储该方法内敏感变量
 	ArrayList<Value> condVals = new ArrayList<Value>();
 	ArrayList<Value> condValsInt = new ArrayList<Value>();
 	ArrayList<Value> condValsDouble = new ArrayList<Value>();
@@ -157,6 +147,8 @@ public class Transformer {
 	ArrayList<Value> condValsMultiArrayChar = new ArrayList<Value>();
 	ArrayList<Value> condValsMultiArrayLong = new ArrayList<Value>();
 	ArrayList<Value> condValsMultiArrayByte = new ArrayList<Value>();
+	ArrayList<Value> condValsOtherType = new ArrayList<Value>();
+	ArrayList<Value> condValsTypeArray = new ArrayList<Value>();
 
 	Map<Value, Integer> MultiBaseMap = new HashMap<>();
 	Map<Value, Integer> MultiIndexMap = new HashMap<>();
@@ -164,12 +156,8 @@ public class Transformer {
 	Map<Value, Integer> SenstiveFieldArray = new HashMap<>();
 	Map<Value, Integer> SenstiveFieldIndexArray = new HashMap<>();
 	Map<Value, Value> SenstiveFieldCuuidArray = new HashMap<>();
-
-	ArrayList<Value> condValsOtherType = new ArrayList<Value>(); // maybe no use
-																	// too
-
-	ArrayList<Value> condValsTypeArray = new ArrayList<Value>();
 	Unit lastIdentityStmt = null;
+
 
 	@SuppressWarnings("unchecked")
 	public Transformer(Body aBody, String phase,
@@ -178,199 +166,219 @@ public class Transformer {
 			Map<String, List<String>> staticmemberVariables,
 			Map<String, Map<String, int[]>> INVOKEMAP,
 			Map<SootField, Value> OriginFieldCuuidArray) {
-		
-		String declaredClassName = "";
-		declaredClassName = aBody.getMethod().getDeclaringClass().getName()
-				.toString();
+
+		String declaredClassName = aBody.getMethod().getDeclaringClass().getName().toString();
 		String declaredFunction = aBody.getMethod().toString();
-		String declaredName = aBody.getMethod().getName();
-		G.v().out.println("<<!!!!!!START!!!!!!>>start processing function: "
-				+ declaredFunction + ";");
+		String declaredMethodName = aBody.getMethod().getName();
+	
 		if (declaredClassName.contains("sgx_invoker")) {
 			return;
 		}
 
-		/**
-		 * new test , we don't care about clinit
-		 */
-		if (declaredName.equals("<clinit>")||declaredName.equals("estimate")) {
-			
-			return;
-		}
+		// TODO 不应该直接跳过<clinit>，同时为什么要跳过estimate
+//		if (declaredMethodName.equals("<clinit>") || declaredMethodName.equals("estimate")) {
+//			return;
+//		}
 
-		G.v().out.println("<<!!!!!!START!!!!!!>>start insertting at class: "
-				+ declaredClassName);
-		
+		G.v().out.println("<<!!!!!!START!!!!!!>>start insertting at class: " + declaredClassName);
+		G.v().out.println("<<!!!!!!START!!!!!!>>start processing function: " + declaredFunction);
 
-		PatchingChain<Unit> units = aBody.getUnits();// all statements
-		// G.v().out.println("units:"+units.toString());
-		Local invokeUUIDLocal = Jimple.v().newLocal("invokeUUID",
-				RefType.v("java.lang.String"));
+
+		// add some local variables
+		Local invokeUUIDLocal = Jimple.v().newLocal("invokeUUID", RefType.v("java.lang.String"));
 		Local invokeLineNo = Jimple.v().newLocal("invokeLineNo", LongType.v());
-		Local getUUIDLocal = Jimple.v().newLocal("getUUID",
-				RefType.v("java.lang.String"));
-		Local branchResultLocal = Jimple.v().newLocal("branchInvokeResult",
-				BooleanType.v());
-		Local sgxObjLocal = Jimple.v().newLocal("sgxInvoker",
-				RefType.v("invoker.sgx_invoker"));// sgx object
+		Local getUUIDLocal = Jimple.v().newLocal("getUUID", RefType.v("java.lang.String"));
+		Local branchResultLocal = Jimple.v().newLocal("branchInvokeResult", BooleanType.v());
+		Local sgxObjLocal = Jimple.v().newLocal("sgxInvoker", RefType.v("invoker.sgx_invoker"));	// sgx object
 		aBody.getLocals().add(invokeLineNo);
 		aBody.getLocals().add(getUUIDLocal);
 		aBody.getLocals().add(invokeUUIDLocal);
-		aBody.getLocals().add(branchResultLocal); // 1.insert local boolean
-													// branchInvokeResultLocal
-		aBody.getLocals().add(sgxObjLocal); // 2.insert local reftype
-											// invokerLocal
-		// LocalGenerator localGenerator = new LocalGenerator(aBody);
-		// Local invokeUUIDLocal = localGenerator.generateLocal
-		// (RefType.v("java.lang.String"));
-		// aBody.getLocals().add(invokeUUIDLocal);
-		Unit currProStmt = null;
+		aBody.getLocals().add(branchResultLocal); 												
+		aBody.getLocals().add(sgxObjLocal); 
 
-		boolean isInitValueInSgx = false;
-
-		boolean flag = true;
-
-		HashSet<Value> identifiedLocal = new HashSet<Value>();
-
-		List<Local> localArray = new CopyOnWriteArrayList<Local>();// declaration
-																	// valuables
-		List<Local> tmpLocalArray = new CopyOnWriteArrayList<Local>();// declaration
-																		// valuables
+		List<Local> localArray = new CopyOnWriteArrayList<Local>();
+		List<Local> tmpLocalArray = new CopyOnWriteArrayList<Local>();
 		Iterator<Local> locali = aBody.getLocals().iterator();
-
+		G.v().out.println("**************local variables**************");
 		while (locali.hasNext()) {
 			Local tLocal = locali.next();
-			G.v().out.println("tLocal=" + tLocal.toString());
+			G.v().out.println("tLocal= " + tLocal.toString());
 			localArray.add(tLocal);
 			tmpLocalArray.add(tLocal);
 		}
-		G.v().out.println("**********************Line376");
+		G.v().out.println("*******************************************");
+
+
 		/**
-		 * 2020 04 04 First of all, CFMAP, memberVariables and
-		 * staticmemberVariables let us know what variables are sensitive. Then
-		 * we will load them into some lists by type.
+		 *  1.preprocessing for certain types, espically in IdentityStmt, the situation where the parameter list contains sensitive arrays
+		 * 	2.load sensitive variables(CFMAP/memberVariables/staticMemberVariables) into corresponding lists by type
 		 */
-		// pre deal with the identity
+
+		PatchingChain<Unit> units = aBody.getUnits();
 		Iterator<Unit> scanPre = units.snapshotIterator();
-		Unit currScanPreStmt = null;
+		Unit currScanStmt = null;
 		while (scanPre.hasNext()) {
-			currScanPreStmt = scanPre.next();
-			G.v().out.println("====currScanPre==0404=====" + currScanPreStmt);
-			if (currProStmt instanceof NopStmt) {
-				G.v().out.println("20210626:" + currProStmt.toString());
+			currScanStmt = scanPre.next();
+			G.v().out.println("currScanStmt: " + currScanStmt);
+
+			// ----------------preprocessing for certain types----------------
+			if (currScanStmt.equals("label")) {
+				G.v().out.println("20210604 label= "+ currScanStmt.toString());
 			}
-			if (currScanPreStmt.equals("label")) {
-				G.v().out.println("20210604 label="
-						+ currScanPreStmt.toString());
+			if (currScanStmt instanceof NopStmt) {
+				G.v().out.println("20210626: " + currScanStmt.toString());
 			}
-			// G.v().out.println("202106041029="+currScanPreStmt.toString());
-			if (currScanPreStmt instanceof IdentityStmt) {
-				if (((IdentityStmt) currScanPreStmt).getRightOp().toString()
-						.startsWith("@parameter")) {
-					int index = Integer
-							.parseInt(((IdentityStmt) currScanPreStmt)
-									.getRightOp().toString().substring(10, 11));
-					if (CFMAP.containsKey(declaredClassName)
-							&& CFMAP.get(declaredClassName).containsKey(
-									declaredName)) {
-						if (CFMAP
-								.get(declaredClassName)
-								.get(declaredName)
-								.contains(
-										((IdentityStmt) currScanPreStmt)
-												.getLeftOp()) // only deal with
-																// CFMAP
-								&& TypeIndex(((IdentityStmt) currScanPreStmt)
-										.getLeftOp()) > 6) {
-							identityArray.put(((IdentityStmt) currScanPreStmt)
-									.getLeftOp(), "call_" + index);
-							// condVals.add(((IdentityStmt)
-							// currScanPreStmt).getLeftOp());
+			// 如果IdentityStmt(将函数的参数赋给某个值的语句)的右边是敏感数组，即方法的参数中有敏感数组，加入identityArray
+			// TODO 如果敏感数组不是CFMAP中的而是membervariable或staticmembervariable呢？(另外这里的逻辑放入identityArray的不是敏感数组)
+			if (currScanStmt instanceof IdentityStmt) { // 将参数赋给变量的语句，如 a := @parameter1: int[];
+				if (((IdentityStmt) currScanStmt).getRightOp().toString().startsWith("@parameter")) {
+					// Index represents the position of this parameter in the list of parameters
+					int index = Integer.parseInt(((IdentityStmt) currScanStmt).getRightOp().toString().substring(10, 11));
+					if (CFMAP.containsKey(declaredClassName) && CFMAP.get(declaredClassName).containsKey(declaredMethodName)) {
+						if (CFMAP.get(declaredClassName).get(declaredMethodName).contains(((IdentityStmt) currScanStmt).getLeftOp())
+								&& TypeIndex(((IdentityStmt) currScanStmt).getLeftOp()) > 6) {
+							identityArray.put(((IdentityStmt) currScanStmt).getLeftOp(), "call_" + index);
+							// 为什么continue？
 							continue;
 						}
 					}
 				}
 			}
+			// ----------------[FINISH]preprocessing for certain types----------------
 
-			Iterator<ValueBox> ubIt = currScanPreStmt.getDefBoxes().iterator();
+
+			// ----------------load sensitive variables into corresponding lists by type----------------
+			Iterator<ValueBox> ubIt = currScanStmt.getDefBoxes().iterator(); 
 			while (ubIt.hasNext()) {
 				ValueBox vBox = ubIt.next();
 				Value tmpValue = vBox.getValue();
 				G.v().out.println("def:" + tmpValue);
-				if (CFMAP.containsKey(declaredClassName)
-						&& CFMAP.get(declaredClassName).containsKey(
-								declaredName)) {
-					if (CFMAP.get(declaredClassName).get(declaredName)
-							.contains(tmpValue)) {
+				G.v().out.println("tmpValue type: " + tmpValue.getType().toString());
+				if (CFMAP.containsKey(declaredClassName) && CFMAP.get(declaredClassName).containsKey(declaredMethodName)
+							&& CFMAP.get(declaredClassName).get(declaredMethodName).contains(tmpValue)){
 						G.v().out.println("add def:" + tmpValue);
-						preInitSensitiveVariables(tmpValue); // add
+						preInitSensitiveVariables(tmpValue); 
+				}
+
+				// 0719 FIX, add sensitive (static) member variables into condVals
+				// TODO object itself should not be added into condVals*, and the membervariables MAP is still wrong
+				if (currScanStmt instanceof AssignStmt
+						&& ((AssignStmt) currScanStmt).getLeftOp() instanceof FieldRef) {
+					SootField sField = ((FieldRef) ((AssignStmt) currScanStmt).getLeftOp()).getField();
+					String sFieldName = ((FieldRef) ((AssignStmt) currScanStmt).getLeftOp()).getField().getName();
+					G.v().out.println("[hyr]sField:" + sField);
+					G.v().out.println("[hyr]sFieldName:" + sFieldName);
+					if (memberVariables.containsKey(declaredClassName)
+							&& memberVariables.get(declaredClassName).containsKey(sFieldName)) {
+						G.v().out.println("[hyr]---sensitive member variable---");
+						preInitSensitiveVariables(tmpValue); 
 					}
 				}
 			}
 
-			ubIt = currScanPreStmt.getUseBoxes().iterator();
+			ubIt = currScanStmt.getUseBoxes().iterator(); 
 			while (ubIt.hasNext()) {
 				ValueBox vBox = ubIt.next();
 				Value tmpValue = vBox.getValue();
 				G.v().out.println("use:" + tmpValue);
-				if (CFMAP.containsKey(declaredClassName)
-						&& CFMAP.get(declaredClassName).containsKey(
-								declaredName)) {
-					if (CFMAP.get(declaredClassName).get(declaredName)
-							.contains(tmpValue)) {
+				G.v().out.println("tmpValue type: " + tmpValue.getType().toString());
+				if (CFMAP.containsKey(declaredClassName) && CFMAP.get(declaredClassName).containsKey(declaredMethodName) 
+						&& CFMAP.get(declaredClassName).get(declaredMethodName).contains(tmpValue)) {
 						G.v().out.println("add use:" + tmpValue);
-						preInitSensitiveVariables(tmpValue); // add
+						preInitSensitiveVariables(tmpValue); 
+				}
+				// 0719 FIX, add sensitive (static) member variables into condVals
+				if (currScanStmt instanceof AssignStmt
+						&& ((AssignStmt) currScanStmt).getRightOp() instanceof FieldRef) {
+					SootField sField = ((FieldRef) ((AssignStmt) currScanStmt).getRightOp()).getField();
+					String sFieldName = ((FieldRef) ((AssignStmt) currScanStmt).getRightOp()).getField().getName();
+					G.v().out.println("[hyr]sField:" + sField);
+					G.v().out.println("[hyr]sFieldName:" + sFieldName);
+					if (memberVariables.containsKey(declaredClassName)
+							&& memberVariables.get(declaredClassName).containsKey(sFieldName)) {
+						G.v().out.println("[hyr]---sensitive member variable---");
+						preInitSensitiveVariables(tmpValue); 
+					}
+				}
+			}
+			// ----------------[FINISH]load sensitive variables into corresponding lists by type----------------
+			
+		}
+
+		G.v().out.println("[hyr]condVals: " + condVals.toString());
+
+		// deal with Ouuid
+		if (declaredMethodName.equals("<init>")
+				&& !declaredClassName.equals("invoker.sgx_invoker")
+				&& !declaredClassName.equals("pegasus.PagerankNaive$PrCounters")) {
+			G.v().out.println("declaredClassname: " + declaredClassName + "; declaredMethodName: " + declaredMethodName);
+
+			// remove && !staticmemberVariables.isEmpty()
+			if (!memberVariables.isEmpty()) {
+				// add a local variable as an intermediary to perform assignStmt
+				Local uuidtemp = Jimple.v().newLocal("uuidtemp", RefType.v("java.lang.String"));
+				aBody.getLocals().add(uuidtemp);
+
+				Unit currStmt = null;
+				Iterator<Unit> scanIt1 = units.snapshotIterator();
+				boolean ouuidFlag = true;
+				while (scanIt1.hasNext()) {
+					currStmt = scanIt1.next();
+					G.v().out.println("currStmt: " + currStmt);
+					if (currStmt instanceof IdentityStmt) {
+						continue;
+					}
+					if (ouuidFlag) { // generate Ouuid
+						SootMethod toCall1 = Scene.v().getMethod("<invoker.sgx_invoker: java.lang.String getUUID()>");
+						VirtualInvokeExpr getuuidExpr = Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall1.makeRef());
+						AssignStmt assignStmt1 = Jimple.v().newAssignStmt(uuidtemp, getuuidExpr);	// uuidtemp = <invoker.sgx_invoker: java.lang.String getUUID()>
+						units.insertBefore(assignStmt1, currStmt);  
+						G.v().out.println("zy3: " + assignStmt1.toString());
+						// MyMain sootfield-> String Ouuid
+						SootFieldRef sootFieldRef = Scene.v().makeFieldRef(
+								aBody.getMethod().getDeclaringClass(), "Ouuid",
+								RefType.v("java.lang.String"), false);
+						FieldRef fieldRef = Jimple.v().newInstanceFieldRef(
+								aBody.getLocals().getFirst(), sootFieldRef);
+						AssignStmt asStmt = Jimple.v().newAssignStmt(fieldRef, uuidtemp);  //object.Ouuid = uuidtemp
+						units.insertBefore(asStmt, currStmt);
+						ouuidFlag = false;
 					}
 				}
 			}
 		}
-		// ----------------------------------------------------------------------------------------------------------
 
-		// deal with Cuuid
-		if (declaredName.equals("<init>")
+		// deal with Cuuid 2023.07.17 (do not ignore <clinit> at first)
+		if (declaredMethodName.equals("<clinit>")
 				&& !declaredClassName.equals("invoker.sgx_invoker")
-				&& !declaredClassName
-						.equals("pegasus.PagerankNaive$PrCounters")) {
-			G.v().out.println("Cuuid Classname:" + declaredClassName
-					+ " declaredFunction:" + declaredName);
-			if (!memberVariables.isEmpty() || !staticmemberVariables.isEmpty()) {
+				&& !declaredClassName.equals("pegasus.PagerankNaive$PrCounters")) {
+			G.v().out.println("Cuuid Classname:" + declaredClassName + " declaredMethodName:" + declaredMethodName);
+			// TODO wrong staticmembervariables now, so have to use membervariables
+			if (!staticmemberVariables.isEmpty() || !memberVariables.isEmpty()) {
+				// add a local variable as an intermediary to perform assignStmt
+				Local uuidtemp = Jimple.v().newLocal("uuidtemp", RefType.v("java.lang.String"));
+				aBody.getLocals().add(uuidtemp);
 
-				Local uuidtemp = Jimple.v().newLocal("uuidtemp",
-						RefType.v("java.lang.String"));
-				aBody.getLocals().add(uuidtemp);// local variables
-				// aBody.getLocals().add(sgxObjLocal); //2.insert local reftype
-				// invokerLocal Value
-				// G.v().out.println("zy units:"+units.toString());
-				Unit CuuidStmt = null;
+				Unit currStmt = null;
 				Iterator<Unit> scanIt1 = units.snapshotIterator();
-				boolean cuuidflag = true;
+				boolean cuuidFlag = true;
 				while (scanIt1.hasNext()) {
-					// stmt
-					CuuidStmt = scanIt1.next();
-					if (CuuidStmt instanceof IdentityStmt) {
-						continue;
-					}
-					if (cuuidflag) {
-						SootMethod toCall1 = Scene
-								.v()
-								.getMethod(
-										"<invoker.sgx_invoker: java.lang.String getUUID()>");
-						VirtualInvokeExpr getuuidExpr = Jimple.v()
-								.newVirtualInvokeExpr(sgxObjLocal,
-										toCall1.makeRef());
-						AssignStmt assignStmt1 = Jimple.v().newAssignStmt(
-								uuidtemp, getuuidExpr);
-						units.insertBefore(assignStmt1, CuuidStmt);
-						G.v().out.println("zy3:" + assignStmt1.toString());
+					currStmt = scanIt1.next();
+					G.v().out.println("currStmt: " + currStmt);
+					if (cuuidFlag) {
+						SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: java.lang.String getUUID()>");
+						VirtualInvokeExpr getuuidExpr = Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef());
+						AssignStmt assignStmt = Jimple.v().newAssignStmt(uuidtemp, getuuidExpr);
+						units.insertBefore(assignStmt, currStmt);  //uuidtemp = <invoker.sgx_invoker: java.lang.String getUUID()>
+						G.v().out.println("zy3:" + assignStmt.toString());
+						// // MyMain sootfield-> String static Cuuid
 						SootFieldRef sootFieldRef = Scene.v().makeFieldRef(
 								aBody.getMethod().getDeclaringClass(), "Cuuid",
-								RefType.v("java.lang.String"), false);
-						FieldRef fieldRef = Jimple.v().newInstanceFieldRef(
-								aBody.getLocals().getFirst(), sootFieldRef);
-						AssignStmt asStmt = Jimple.v().newAssignStmt(fieldRef,
-								uuidtemp);
-						units.insertBefore(asStmt, CuuidStmt);
-						cuuidflag = false;
+								RefType.v("java.lang.String"), true);
+						FieldRef fieldRef = Jimple.v().newStaticFieldRef(sootFieldRef);
+						AssignStmt asStmt = Jimple.v().newAssignStmt(fieldRef, uuidtemp);  //Cuuid = uuidtemp
+						units.insertBefore(asStmt, currStmt);
+						cuuidFlag = false;
 					}
 				}
 			}
@@ -394,186 +402,162 @@ public class Transformer {
 		condValsTypeArray.add(IntConstant.v(condValsMultiArrayDouble.size()));
 		condValsTypeArray.add(IntConstant.v(condValsMultiArrayFloat.size()));
 		condValsTypeArray.add(IntConstant.v(condValsMultiArrayChar.size()));
-		condValsTypeArray.add(IntConstant.v(condValsMultiArrayLong.size()));
-		G.v().out.print("the value of param list:");
-		for (int i = 0; i < condValsInt.size(); i++) {
-			G.v().out.print(condValsInt.get(i) + " ");
-		}
-		G.v().out.println("");
+		condValsTypeArray.add(IntConstant.v(condValsMultiArrayLong.size()));		
+
+		
+		lastIdentityStmt = units.getFirst();
+		G.v().out.println("***zy+++lastIdentityStmt is： " + lastIdentityStmt.toString());
+
+		boolean flag = true;
+		HashSet<Value> identifiedLocal = new HashSet<Value>();
+
+		Map<Value, SootClass> needToDestoryForMemberVari = new HashMap<>(); //add 2020 0601
+
+		ArrayList<Unit> tempStmts = new ArrayList<>(); // for <init> temp, identitystmt only (int double... not array)
+
+
+		/**
+		 * 正式转化
+		 * 	插入SGX初始化语句(仅main函数一次?)
+		 * 	针对普通入参语句IdentityStmt：如果敏感参数涉入其中，会被全部删去。并且更改参数头的信息
+		 * 	针对普通赋值语句AssignStmt：在SGXindex文件记录八元组信息的同时进行转换成update函数
+		 * 	针对函数调用语句InvokeStmt和含调用语句的赋值语句:在SGXinvoke文件记录信息的同时进行转换。
+		 * 	对返回语句ReturnStmt：如果返回参数是敏感参数，将会被转换成update语句，同时在八元组记录信息
+		 */
+		Iterator<Unit> scanIt2 = units.snapshotIterator();
+		Unit currProStmt = null;
+		int index = 0;
+		boolean isSenstiveflag = false; //是否含有敏感参数
+
+		// flags for init SGX
+		boolean isInitValueInSgx = false;
 		boolean isInitSgxInvoker = false;
 
-		// add gpf
-		G.v().out.println("gpf senstive array: " + condValsArrayInt);
-		G.v().out.println("gpf member senstive array: " + condValsArrayInt);
-		G.v().out.println("gpf senstive array: " + condValsArrayChar);
-		G.v().out.println("gpf member senstive array: " + condValsArrayChar);
-		G.v().out
-				.println("gpf senstive array size: " + condValsArrayInt.size());
-		G.v().out.println("gpf identity array: " + identityArray);
-		
-		Iterator<Unit> it = units.snapshotIterator();
-		currProStmt = it.next();
-		G.v().out.println("gpf curStmt: " + currProStmt);
-
-		Map<Value, SootClass> needToDestoryForMemberVari = new HashMap<>(); // add
-																			// on
-																			// 0601
-																			// 2020
-		// boolean isInitValueInSgx = false;
-		// boolean isInitidentyLocal = false;
-		// boolean isInitInvoker = false;
-		lastIdentityStmt = units.getFirst();
-		G.v().out.println("***zy+++lastIdentityStmt is： "
-				+ lastIdentityStmt.toString() + ";");
-
-		G.v().out.println("localArray:" + localArray.toString());
-
-		G.v().out.println("ok condVals" + condVals.size());
-
-		ArrayList<Unit> tempStmts = new ArrayList<>(); // for <init> temp
-														// identitystmt only
-														// (int double... not
-														// array)
-
-		Iterator<Unit> scanIt2 = units.snapshotIterator();
-		int index = 0;
-		boolean isSenstiveflag = false;
+		G.v().out.println("-----Enter Formal Transformation-----");
 		while (scanIt2.hasNext()) {
 			currProStmt = scanIt2.next();
+			G.v().out.println("****currProStmt****: " + currProStmt);
+
+			// --------------------obtain sensitive DefBoxes value and UseBoxes value--------------------
+
+			ArrayList<Value> currDefVals = new ArrayList<Value>();
+			ArrayList<Value> currUseVals = new ArrayList<Value>();
+
+			// DefBoxes
+			Iterator<ValueBox> ubIt = currProStmt.getDefBoxes().iterator();
+			while (ubIt.hasNext()) {
+				ValueBox vBox = ubIt.next();
+				Value tmpValue = vBox.getValue();
+				
+				// new add "tmpValue instanceof ArrayRef" for a[i0] = 1 (可能是之前的FIX，有无必要还不太清楚)
+				if (tmpValue instanceof ArrayRef) {
+					if (!currDefVals.contains(((ArrayRef) ((AssignStmt) currProStmt).getLeftOpBox().getValue()).getBase())){
+						currDefVals.add(((ArrayRef) ((AssignStmt) currProStmt).getLeftOpBox().getValue()).getBase());
+					}
+				}
+				if (!currDefVals.contains(tmpValue)){
+					currDefVals.add(tmpValue);
+				}
+			}
+			G.v().out.println("currDefVals: " + currDefVals.toString());
+			// take the intersection, remove non-sensitive variables
+			currDefVals.retainAll(condVals);
+			G.v().out.println("currDefVals after retainAll: " + currDefVals.toString());
+
+			// UseBoxes
+			ubIt = currProStmt.getUseBoxes().iterator();
+			while (ubIt.hasNext()) {
+				ValueBox vBox = ubIt.next();
+				Value tmpValue = vBox.getValue();
+				if (!currUseVals.contains(tmpValue))
+					currUseVals.add(tmpValue);
+			}
+			G.v().out.println("currUseVals: " + currUseVals.toString());
+			// take the intersection, remove non-sensitive variables
+			currUseVals.retainAll(condVals);
+			G.v().out.println("currUseVals after retainAll:" + currUseVals.toString());
+
+			// --------------------[FINISH]obtain sensitive DefBoxes value and UseBoxes value--------------------
+
+
+
+
 			if ((currProStmt instanceof IdentityStmt)) {
-				G.v().out.println("currProStmt is IdentityStmt:"
-						+ currProStmt.toString());
-				if (((IdentityStmt) currProStmt).getRightOp().toString()
-						.startsWith("@caughtexception")) {
+				G.v().out.println("currProStmt is IdentityStmt: " + currProStmt.toString());
+				if (((IdentityStmt) currProStmt).getRightOp().toString().startsWith("@caughtexception")) {
 					continue;
 				}
+				// for what?
 				identifiedLocal.add(((IdentityStmt) currProStmt).getLeftOp());
-				// lastIdentityStmt = currProStmt;
-				// && INVOKEMAP.get(declaredClassName).containsKey(declaredName)
-				// &&
-				// INVOKEMAP.get(declaredClassName).get(declaredName)[Integer.parseInt(((IdentityStmt)
-				// currProStmt).getRightOp().toString().substring(10, 11))]==1
-				if (CFMAP.containsKey(declaredClassName)
-						&& CFMAP.get(declaredClassName).containsKey(
-								declaredName)) {
-					if (CFMAP.get(declaredClassName).get(declaredName)
-							.contains(((IdentityStmt) currProStmt).getLeftOp())
-							&& INVOKEMAP.get(declaredClassName).containsKey(
-									declaredName)
-							&& INVOKEMAP.get(declaredClassName).get(
-									declaredName)[Integer
-									.parseInt(((IdentityStmt) currProStmt)
-											.getRightOp().toString()
-											.substring(10, 11))] == 1
-							&& !declaredName.equals("buildTrie")&&
-							!declaredName.equals("estimate")) {
-						G.v().out.println("IdentityStmt: isSenstiveflag "
-								+ isSenstiveflag + " declaredName:"
-								+ declaredName);
-						// if (declaredName.equals("<init>")) {
-						// LocalGenerator localGenerator = new
-						// LocalGenerator(aBody);
-						// Local locali1 =
-						// localGenerator.generateLocal(((IdentityStmt)
-						// currProStmt).getRightOp().getType());
-						// IdentityStmt identityStmt =
-						// Jimple.v().newIdentityStmt(locali1, ((IdentityStmt)
-						// currProStmt).getRightOp());
-						// localArray.add(locali1);
-						// identifiedLocal.add(locali1);
-						// G.v().out.println("the new identityStmt is:"+identityStmt.toString());
-						// lastIdentityStmt = identityStmt;
-						// units.insertBefore(identityStmt, currProStmt);
-						// AssignStmt assignStmt =
-						// Jimple.v().newAssignStmt(((IdentityStmt)
-						// currProStmt).getLeftOp(), locali1);
-						// G.v().out.println("the new assignStmt is:"+assignStmt.toString());
-						// tempStmts.add(assignStmt);
-						// //DefValue transformation
-						// //
-						// G.v().out.println("***++++++currProStmt is:++++++++++"+currProStmt.toString());
-						// units.remove(currProStmt);
-						// }else {
+				// TODO 这里的leftOp敏感仅针对CFMAP中，如果是membervariables和staticmembervariables中是否会有问题？
+				if (CFMAP.containsKey(declaredClassName)&& CFMAP.get(declaredClassName).containsKey(declaredMethodName)) {
+					//leftOp is sensitive，and rightOp is a sensitive parameter. e.g. rightOp is @parameter4，INVOKEMAP, <class, <method, 4>> = 1
+					if (CFMAP.get(declaredClassName).get(declaredMethodName).contains(((IdentityStmt) currProStmt).getLeftOp())
+							&& INVOKEMAP.get(declaredClassName).containsKey(declaredMethodName)
+							&& INVOKEMAP.get(declaredClassName).get(declaredMethodName)[Integer
+									.parseInt(((IdentityStmt) currProStmt).getRightOp().toString().substring(10, 11))] == 1
+							&& !declaredMethodName.equals("buildTrie") 
+							&& !declaredMethodName.equals("estimate")) {
 						isSenstiveflag = true;
-						// if (TypeIndex(((IdentityStmt)
-						// currProStmt).getLeftOp())<6) { //delete
-						// tempStmts.add(currProStmt); //need to update because
-						// these are normal sensitive variables
-						condVals.add(((IdentityStmt) currProStmt).getLeftOp());
-						// }
+						G.v().out.println("IdentityStmt: isSenstiveflag: " + isSenstiveflag + "; declaredMethodName: " + declaredMethodName);
+						
+						// condVals已经包含所有敏感变量了，再加一遍的意义是什么？
+						// condVals.add(((IdentityStmt) currProStmt).getLeftOp());
+						// 删除该语句
 						units.remove(currProStmt);
-						// lastIdentityStmt = currProStmt;
-						// }
-					} else if (((IdentityStmt) currProStmt).getRightOp()
-							.toString().startsWith("@parameter")) { // no change
-						ParameterRef ref = Jimple.v().newParameterRef(
-								((IdentityStmt) currProStmt).getLeftOp()
-										.getType(), index);
+						// 进一步处理在if (isSenstiveflag)中，为什么不直接合并进来？
+						
+					} else if (((IdentityStmt) currProStmt).getRightOp().toString().startsWith("@parameter")) {  //右操作数是方法的参数但不敏感
+						ParameterRef ref = Jimple.v().newParameterRef(((IdentityStmt) currProStmt).getLeftOp().getType(), index);
 						index++;
-
-						if (CFMAP
-								.get(declaredClassName)
-								.get(declaredName)
-								.contains(
-										((IdentityStmt) currProStmt)
-												.getLeftOp())) {
-							LocalGenerator localGenerator = new LocalGenerator(
-									aBody);
+						//左操作数敏感，右操作数不敏感：添加新中间变量来接受参数（插入语句），再将新变量赋给左操作数（先记录在tempStmts）
+						if (CFMAP.get(declaredClassName).get(declaredMethodName)
+								.contains(((IdentityStmt) currProStmt).getLeftOp())) { //左操作数敏感
+							LocalGenerator localGenerator = new LocalGenerator(aBody);
+							// Local invokeUUIDLocal = Jimple.v().newLocal("invokeUUID", RefType.v("java.lang.String")); 创建local变量
 							Local locali1 = localGenerator
-									.generateLocal(((IdentityStmt) currProStmt)
-											.getRightOp().getType());
-							IdentityStmt identityStmt = Jimple.v()
-									.newIdentityStmt(
-											locali1,
-											((IdentityStmt) currProStmt)
-													.getRightOp());
+									.generateLocal(((IdentityStmt) currProStmt).getRightOp().getType());
+							IdentityStmt identityStmt = Jimple.v().newIdentityStmt(locali1,
+									((IdentityStmt) currProStmt).getRightOp());  //右操作数（参数）赋给新建的变量
 							localArray.add(locali1);
 							identifiedLocal.add(locali1);
 							lastIdentityStmt = identityStmt;
 							units.insertBefore(identityStmt, currProStmt);
-							AssignStmt assignStmt = Jimple.v().newAssignStmt(
-									((IdentityStmt) currProStmt).getLeftOp(),
-									locali1);
-							G.v().out.println("the new assignStmt is:"
-									+ assignStmt.toString());
+							AssignStmt assignStmt = Jimple.v().newAssignStmt(((IdentityStmt) currProStmt).getLeftOp(),
+									locali1); //上边的新变量赋给左操作数
+							G.v().out.println("the new assignStmt is:" + assignStmt.toString());
 							tempStmts.add(assignStmt);
 							units.remove(currProStmt);
 						} else {
-							IdentityStmt identity = Jimple.v().newIdentityStmt(
-									((IdentityStmt) currProStmt).getLeftOp(),
-									ref);
+							IdentityStmt identity = Jimple.v().newIdentityStmt(((IdentityStmt) currProStmt).getLeftOp(), ref);
 							units.insertBefore(identity, currProStmt);
 							units.remove(currProStmt);
-							G.v().out.println("0424 identity Vals "
-									+ identity.toString());
+							G.v().out.println("0424 identity Vals "+ identity.toString());
 							lastIdentityStmt = identity;
 						}
 					}
 				}
+				// 需要加continue??
 				continue;
 			}
-			G.v().out.println("line 701 current stmt is: ----------#"
-					+ currProStmt + "#----------------");
 
-			// After IndetityStmt
-			if (isSenstiveflag) { // we should add two parameters, calluuid and
-									// LineNo
+			// After IndetityStmt 
+			/**
+			 * 添加两个变量并为其建立IdentityStmt
+			 * 	invokeUUID ：调用者的uuid
+			 * 	invokeLineNo?
+			 */
+			if (isSenstiveflag) { // we should add two parameters, calluuid and LineNo
 				G.v().out.println("isSenstiveflag " + isSenstiveflag);
-				G.v().out.println(" this method " + declaredName);
-				ParameterRef ref = Jimple.v().newParameterRef(
-						invokeUUIDLocal.getType(), index);
-				IdentityStmt identity = Jimple.v().newIdentityStmt(
-						invokeUUIDLocal, ref);
-				G.v().out.println("units.insertBefore identity invokeUUIDLocal"
-						+ identity.toString());
+				G.v().out.println("this method " + declaredMethodName);
+				ParameterRef ref = Jimple.v().newParameterRef(invokeUUIDLocal.getType(), index); // invokeUUID
+				IdentityStmt identity = Jimple.v().newIdentityStmt(invokeUUIDLocal, ref);
+				G.v().out.println("units.insertBefore identity invokeUUIDLocal" + identity.toString());
 				units.insertBefore(identity, currProStmt);
 
-				ParameterRef reflineno = Jimple.v().newParameterRef(
-						invokeLineNo.getType(), index + 1);
-				IdentityStmt identitylineno = Jimple.v().newIdentityStmt(
-						invokeLineNo, reflineno);
-				G.v().out.println("units.insertBefore identity identitylineno"
-						+ identitylineno.toString());
+				ParameterRef reflineno = Jimple.v().newParameterRef(invokeLineNo.getType(), index + 1); // invokeLineNo
+				IdentityStmt identitylineno = Jimple.v().newIdentityStmt(invokeLineNo, reflineno);
+				G.v().out.println("units.insertBefore identity identitylineno" + identitylineno.toString());
 				units.insertBefore(identitylineno, currProStmt);
 
 				identifiedLocal.add(invokeUUIDLocal);
@@ -584,82 +568,12 @@ public class Transformer {
 				lastIdentityStmt = identitylineno;
 			}
 
-			ArrayList<Value> currDefVals = new ArrayList<Value>();
-			ArrayList<Value> currUseVals = new ArrayList<Value>();
-			G.v().out.println(" line632 current stmt is: ----------#"
-					+ currProStmt + "#----------------");
-			// G.v().out.println("currProStmt.getUseAndDefBoxes().toString():#"+currProStmt.getUseAndDefBoxes()+"#");
 
-			Iterator<ValueBox> ubIt = currProStmt.getDefBoxes().iterator();
-
-			while (ubIt.hasNext()) {
-				ValueBox vBox = ubIt.next();
-				Value tmpValue = vBox.getValue();
-				/**
-				 * new add "tmpValue instanceof ArrayRef" for a[i0] = 1
-				 */
-				if (tmpValue instanceof ArrayRef) {
-					if (!currDefVals
-							.contains(((ArrayRef) ((AssignStmt) currProStmt)
-									.getLeftOpBox().getValue()).getBase()))
-						currDefVals.add(((ArrayRef) ((AssignStmt) currProStmt)
-								.getLeftOpBox().getValue()).getBase());
-				}
-				if (!currDefVals.contains(tmpValue))
-					currDefVals.add(tmpValue);
-			}
-			G.v().out.println("currDefVals:" + currDefVals.toString());// def
-																		// number
-																		// ===
-																		// 1???
-			currDefVals.retainAll(condVals);
-
-			G.v().out.println("currDefVals after retainAll:"
-					+ currDefVals.toString());// def number === 1???
-
-			ubIt = currProStmt.getUseBoxes().iterator();
-			while (ubIt.hasNext()) {
-				ValueBox vBox = ubIt.next();
-				Value tmpValue = vBox.getValue();
-
-				if (!currUseVals.contains(tmpValue))
-					currUseVals.add(tmpValue);
-			}
-			G.v().out.println("currUseVals:" + currUseVals.toString());
-			currUseVals.retainAll(condVals);
-			G.v().out.println("currUseVals after retainAll:"
-					+ currUseVals.toString());
-
-			// init sgx enclave
-			if (!isInitSgxInvoker) {// && (!condVals.isEmpty())
-				initidentyLocal(localArray, units, currProStmt, identifiedLocal); // edit
-																					// on
-																					// 20
-																					// 04
-																					// 22
-				insertSgxInitStmt(aBody, sgxObjLocal, units, currProStmt,
-						"invoker.sgx_invoker");
-				isInitSgxInvoker = true;
-				if (!isInitValueInSgx && (!condVals.isEmpty())) {
-					insertValueInitStmt(aBody, sgxObjLocal, units, currProStmt,
-							getUUIDLocal, invokeUUIDLocal, invokeLineNo);
-
-					isInitValueInSgx = true;
-				}
-				// add temp 0610 2020
-				if (!isInitValueInSgx && declaredName.equals("getSplits")
-						|| declaredName.equals("run")) {
-					insertValueInitStmt(aBody, sgxObjLocal, units, currProStmt,
-							getUUIDLocal, invokeUUIDLocal, invokeLineNo);
-					isInitValueInSgx = true;
-				}
-			}
-
+			//插入上边保存在tempStmts中的语句并转化成update语句
 			if (!tempStmts.isEmpty() && flag) {
 				G.v().out.println("[0528]tempStmts is not empty!");
 				for (Unit unit : tempStmts) {
-					G.v().out
-							.println("[0528]tempStmts unit:" + unit.toString());
+					G.v().out.println("[0528]tempStmts unit:" + unit.toString());
 					units.insertBefore(unit, currProStmt);
 					replaceValueUpdateStmt(aBody, sgxObjLocal, units,
 							localArray, unit, getUUIDLocal, memberVariables,
@@ -667,112 +581,142 @@ public class Transformer {
 				}
 				flag = false;
 			}
+			// init SGX
+			if (!isInitSgxInvoker) {// && (!condVals.isEmpty())
+				// init all local variables
+				initAllLocalVariables(localArray, units, currProStmt, identifiedLocal);
+				// insert 3 SGX init stmts: new invoker.sgx_invoker; <init>(); initenclave();
+				insertSgxInitStmt(aBody, sgxObjLocal, units, currProStmt, "invoker.sgx_invoker");
+				isInitSgxInvoker = true;
+				if (!isInitValueInSgx && (!condVals.isEmpty())) {
+					insertValueInitStmt(aBody, sgxObjLocal, units, currProStmt,
+							getUUIDLocal, invokeUUIDLocal, invokeLineNo);
+					isInitValueInSgx = true;
+				}
+				// add temp 0610 2020
+				if (!isInitValueInSgx && declaredMethodName.equals("getSplits")
+						|| declaredMethodName.equals("run")) {
+					insertValueInitStmt(aBody, sgxObjLocal, units, currProStmt,
+							getUUIDLocal, invokeUUIDLocal, invokeLineNo);
+					isInitValueInSgx = true;
+				}
+			}
 
-			if (currProStmt instanceof InvokeStmt) { // deal with invoke
-														// statement 1
-
+			//处理函数调用语句，注意与下边包含函数调用表达式的AssignStmt区分
+			if (currProStmt instanceof InvokeStmt) { // deal with invoke statement 1   foo(x)
 				replaceInvokeStmtA(aBody, sgxObjLocal, units, localArray,
 						currProStmt, getUUIDLocal, INVOKEMAP, memberVariables,
 						staticmemberVariables);
 			}
 
 			if ((currProStmt instanceof AssignStmt)) {
-
+				// fix the problem $r17 = r0.<cfhider.PiEstimator$HaltonSequence:double[][] q>, q is sensitive, but $r17 is not sensitive
+				// 右操作数是敏感成员变量数组，则将左操作数放入condVal
+				// TODO membervariables and staticmembervariables are incorrect, so use fieldref, actually use instancefieldref + membervariables, staticfieldref + staticmembervariables
 				if (((AssignStmt) currProStmt).getRightOp() instanceof FieldRef
-						&& memberVariables.containsKey(declaredClassName)) {// fixed
-																			// the
-																			// problem
-																			// "$r17 = r0.<cfhider.PiEstimator$HaltonSequence: double[][] q>"
-																			// the
-																			// $r17
-																			// is
-																			// not
-																			// a
-																			// sensitive
-																			// exactly
-					SootField sField = ((FieldRef) ((AssignStmt) currProStmt)
-							.getRightOp()).getField();
-					if (memberVariables.get(declaredClassName).containsKey(
-							sField.getName())
+						&& memberVariables.containsKey(declaredClassName)) {
+					SootField sField = ((FieldRef) ((AssignStmt) currProStmt).getRightOp()).getField();
+					// 注意，错误的membervariables（包含hadoopPI中的K数组）才会使PI程序中的静态数组K进入这个分支
+					if (memberVariables.get(declaredClassName).containsKey(sField.getName())
 							&& TypeIndex(((AssignStmt) currProStmt).getLeftOp()) > 6) {
-						if (!condVals.contains(((AssignStmt) currProStmt)
-								.getLeftOp())) {
-							G.v().out.println("GGGGGGGGGGGGGGGGGG "
-									+ ((AssignStmt) currProStmt).getLeftOp());
-							condVals.add(((AssignStmt) currProStmt).getLeftOp());
-							currDefVals.add(((AssignStmt) currProStmt)
-									.getLeftOp());
+						if (!condVals.contains(((AssignStmt) currProStmt).getLeftOp())) {
+							G.v().out.println("leftOp: " + ((AssignStmt) currProStmt).getLeftOp());
+
+							// condVals.add(((AssignStmt) currProStmt).getLeftOp());
+							// G.v().out.println("condVals: " + condVals.toString());
+
+							// also add it into correspoding type condVals
+							preInitSensitiveVariables(((AssignStmt) currProStmt).getLeftOp());
+							currDefVals.add(((AssignStmt) currProStmt).getLeftOp());
+							G.v().out.println("currDefVals: " + currDefVals);
 						}
 					}
 				}
 
-				/**
-				 * Field init
-				 */
-				if (((AssignStmt) currProStmt).getLeftOp() instanceof FieldRef
-						&& memberVariables.containsKey(declaredClassName)) {
-					SootField sField = ((FieldRef) ((AssignStmt) currProStmt)
-							.getLeftOp()).getField();
-					G.v().out.println("gpf field:"+sField.getName());
-					if (memberVariables.get(declaredClassName).containsKey(
-							sField.getName())) {// &&
-												// TypeIndex(((AssignStmt)currProStmt).getLeftOp())>6
+				// init field(TODO 这里的counter与后面的表示第几行语句的counter是共用的，会导致后面从1L开始，同时代码中有很多local变量也都用了counter)
+				// 左操作数是敏感的成员变量（数组）
+				if (((AssignStmt) currProStmt).getLeftOp() instanceof InstanceFieldRef) {
+					SootField sField = ((FieldRef) ((AssignStmt) currProStmt).getLeftOp()).getField();
+					G.v().out.println("gpf field: " + sField.getName());
+					if (memberVariables.containsKey(declaredClassName)
+							&&memberVariables.get(declaredClassName).containsKey(sField.getName())) {// &&TypeIndex(((AssignStmt)currProStmt).getLeftOp())>6
 						// init fieldref array
-						G.v().out.println("currProStmt is init fieldref : "
-								+ currProStmt.toString() + ";");
-						G.v().out.println("currProStmt is init fieldref : "
-								+ sField.toString() + ";");
-						// G.v().out.println("currProStmt is init fieldref array: "+((AssignStmt)currProStmt).getLeftOp().getUseBoxes().get(0)+";");
+						G.v().out.println("currProStmt: " + currProStmt.toString());
+
 						Value ssValue = null;
-						ubIt = ((AssignStmt) currProStmt).getLeftOp()
-								.getUseBoxes().iterator();
+						ubIt = ((AssignStmt) currProStmt).getLeftOp().getUseBoxes().iterator();
 						while (ubIt.hasNext()) {
 							ValueBox vBox = ubIt.next();
 							ssValue = vBox.getValue();
 							break;
 						}
-						G.v().out.println("ssValue: " + ssValue.toString()
-								+ ";");
+						G.v().out.println("ssValue: " + ssValue.toString());
 						SootFieldRef sootFieldRef = Scene.v().makeFieldRef(
-								sField.getDeclaringClass(), "Cuuid",
+								sField.getDeclaringClass(), "Ouuid",
 								RefType.v("java.lang.String"), false);
-						G.v().out.println("sootFieldRef: "
-								+ sootFieldRef.toString() + ";");
 						FieldRef fieldRef = Jimple.v().newInstanceFieldRef(
 								ssValue, sootFieldRef);
-						G.v().out.println("fieldRef: " + fieldRef.toString()
-								+ ";");
-						Local tmpCuuid = Jimple.v().newLocal(
-								"tmpCuuid" + Long.toString(counter),
+						G.v().out.println("fieldRef: " + fieldRef.toString());
+						Local tmpOuuid = Jimple.v().newLocal(
+								"tmpOuuid" + Long.toString(counter),
 								RefType.v("java.lang.String"));
+						Local tmpCuuid = null;
+						aBody.getLocals().add(tmpOuuid);
+						localArray.add(tmpOuuid);
+						AssignStmt asStmt = Jimple.v().newAssignStmt(tmpOuuid, fieldRef);
+						G.v().out.println("asStmt: " + asStmt.toString());	// tmpOuuid = object.Ouuid(fieldRef)
+						units.insertBefore(asStmt, currProStmt);
+						replaceMemberFieldInitStmt(aBody, sgxObjLocal, units,
+								localArray, currProStmt, getUUIDLocal,
+								tmpOuuid, memberVariables, sField,
+								OriginFieldCuuidArray);
+					} else {
+						G.v().out.println("[hyr]memberVariables does not contains sField");
+					}
+				// 左操作数是敏感的静态成员变量（数组）
+				} else if(((AssignStmt) currProStmt).getLeftOp() instanceof StaticFieldRef) {
+					SootField sField = ((FieldRef) ((AssignStmt) currProStmt).getLeftOp()).getField();
+					G.v().out.println("[hyr]SootField:" + sField.getName());
+					// temporary, use memeberVariables, actually should use staticmembervariables
+					if (memberVariables.containsKey(declaredClassName)
+							&&memberVariables.get(declaredClassName).containsKey(sField.getName())) {// &&TypeIndex(((AssignStmt)currProStmt).getLeftOp())>6
+						G.v().out.println("currProStmt : " + currProStmt.toString());
+						SootFieldRef sootFieldRef = Scene.v().makeFieldRef(
+								sField.getDeclaringClass(), "Cuuid",
+								RefType.v("java.lang.String"), true);
+						FieldRef fieldRef = Jimple.v().newStaticFieldRef(sootFieldRef);
+						G.v().out.println("[hyr]fieldRef: " + fieldRef.toString());
+						Local tmpOuuid = null;
+						Local tmpCuuid = Jimple.v().newLocal("tmpCuuid", RefType.v("java.lang.String"));
 						aBody.getLocals().add(tmpCuuid);
 						localArray.add(tmpCuuid);
-						AssignStmt asStmt = Jimple.v().newAssignStmt(tmpCuuid,
-								fieldRef);
-						G.v().out.println("asStmt: " + asStmt.toString() + ";");
+						AssignStmt asStmt = Jimple.v().newAssignStmt(tmpCuuid, fieldRef);
+						G.v().out.println("asStmt: " + asStmt.toString());	// tmpCuuid = Cuuid
 						units.insertBefore(asStmt, currProStmt);
-						replaceFieldArrayInitStmt(aBody, sgxObjLocal, units,
+						// TODO 可以和上面的函数合并为一个，在参数列表中设置tmpCuuid和tmpOuuid两个函数
+						replaceStaticMemberFieldInitStmt(aBody, sgxObjLocal, units,
 								localArray, currProStmt, getUUIDLocal,
 								tmpCuuid, memberVariables, sField,
 								OriginFieldCuuidArray);
+					} else {
+						G.v().out.println("[hyr]staticmemberVariables does not contains sField");
 					}
-				} else if (((AssignStmt) currProStmt).getRightOp() instanceof NewArrayExpr) {
-    				G.v().out.println("currProStmt is NewArrayExpr: "+currProStmt.toString()+";");
-    				if (condVals.contains(((AssignStmt) currProStmt).getLeftOp())) {   // if this array is sensitive
-    					if (((AssignStmt) currProStmt).getLeftOp().toString().startsWith("$")) {      //xhy 数组静态初始化
-    						G.v().out.println("currProStmt is StaticNewArrayExpr: "+currProStmt.toString()+";");
-    						replaceArrayStaticInitStmt(aBody, sgxObjLocal, units, localArray, currProStmt,getUUIDLocal,scanIt2,memberVariables,staticmemberVariables, OriginFieldCuuidArray);
-						}else {
-							replaceArrayInitStmt(aBody, sgxObjLocal, units, localArray, currProStmt,getUUIDLocal);
+				} else if (((AssignStmt) currProStmt).getRightOp() instanceof NewArrayExpr) { // 一维数组的显示初始化和非显示初始化，多维数组的显示初始化
+					G.v().out.println("currProStmt is NewArrayExpr: " + currProStmt.toString() + ";");
+					if (condVals.contains(((AssignStmt) currProStmt).getLeftOp())) { // if this array is sensitive
+						if (((AssignStmt) currProStmt).getLeftOp().toString().startsWith("$")) { // 所有数组的显示初始化：jimple语句以$开头																		
+							G.v().out.println("currProStmt is StaticNewArrayExpr: " + currProStmt.toString() + ";");
+							replaceArrayStaticInitStmt(aBody, sgxObjLocal, units, localArray, currProStmt, getUUIDLocal,
+									scanIt2, memberVariables, staticmemberVariables, OriginFieldCuuidArray);
+						} else {//一维数组非显示初始化
+							replaceArrayInitStmt(aBody, sgxObjLocal, units, localArray, currProStmt, getUUIDLocal);
 						}
 					}
-				} else if (((AssignStmt) currProStmt).getRightOp() instanceof NewMultiArrayExpr) {
+				} else if (((AssignStmt) currProStmt).getRightOp() instanceof NewMultiArrayExpr) { // 多维数组的非显示初始化
 					G.v().out.println("currProStmt is NewArrayMultiExpr: "
 							+ currProStmt.toString() + ";");
-					if (condVals.contains(((AssignStmt) currProStmt)
-							.getLeftOp())) { // if this array is sensitive
-						replaceMultiArrayInitStmt(aBody, sgxObjLocal, units,
-								localArray, currProStmt, getUUIDLocal);
+					if (condVals.contains(((AssignStmt) currProStmt).getLeftOp())) { // if this array is sensitive
+						replaceMultiArrayInitStmt(aBody, sgxObjLocal, units, localArray, currProStmt, getUUIDLocal);
 					}
 				} else if (((AssignStmt) currProStmt).getRightOp() instanceof NewExpr) {
 					G.v().out.println("currProStmt is NewExpr: "
@@ -782,25 +726,16 @@ public class Transformer {
 					G.v().out.println("currProStmt is NewExpr TypeString: "
 							+ right.getType().toString() + ";");
 					if (memberVariables.containsKey(right.getType().toString())) {
-						if (!memberVariables.get(right.getType().toString())
-								.isEmpty()) {
-							G.v().out
-									.println("=========The NewExpr is Senstive! for SootField! "
-											+ currProStmt + "==========");
-							needToDestoryForMemberVari.put(
-									((AssignStmt) currProStmt).getLeftOp(),
-									((NewExpr) right).getBaseType()
-											.getSootClass());
+						if (!memberVariables.get(right.getType().toString()).isEmpty()) {
+							G.v().out.println(
+									"=========The NewExpr is Senstive! for SootField! " + currProStmt + "==========");
+							needToDestoryForMemberVari.put(((AssignStmt) currProStmt).getLeftOp(),
+									((NewExpr) right).getBaseType().getSootClass());
 						}
 					}
 
-				} else if (((AssignStmt) currProStmt).containsInvokeExpr()) { // deal
-																				// with
-																				// invoke
-																				// statement
-																				// 2
-					G.v().out.println("currProStmt is InvokeExpr: "
-							+ currProStmt.toString() + ";");
+				} else if (((AssignStmt) currProStmt).containsInvokeExpr()) { // 包含调用表达式的赋值语句  x = foo(y)
+					G.v().out.println("currProStmt is InvokeExpr: " + currProStmt.toString() + ";");
 					replaceInvokeStmtB(aBody, sgxObjLocal, units, localArray,
 							currProStmt, getUUIDLocal, INVOKEMAP,
 							memberVariables, staticmemberVariables,
@@ -809,7 +744,8 @@ public class Transformer {
 				} else {
 					G.v().out.println("currProStmt is AssignStmt: "
 							+ currProStmt.toString() + ";");
-					if (!currDefVals.isEmpty()) {// update
+					// 原本currDefVals经过retainAll之后为空，经过上面的FIX之后，右操作数为敏感（静态）成员变量数组，左操作数就被加入到了currDefVals
+					if (!currDefVals.isEmpty()) {// 左操作数敏感则转化成update语句
 						G.v().out.println("toBeHiddenDefValues:"
 								+ currDefVals.toString());
 						replaceValueUpdateStmt(aBody, sgxObjLocal, units,
@@ -817,7 +753,7 @@ public class Transformer {
 								memberVariables, staticmemberVariables,
 								OriginFieldCuuidArray);
 
-					} else if (!currUseVals.isEmpty()) {// getLocal
+					} else if (!currUseVals.isEmpty()) {// 左操作数不敏感，右操作数敏感，则转化成get语句
 						G.v().out.println("toBeHiddenUseValues:"
 								+ currUseVals.toString());
 
@@ -835,7 +771,7 @@ public class Transformer {
 
 				// IfStmt 判断if语句中变量是否有在污染变量数据集中的,如果存在则将if语句中的所有变量加入污染变量数据集合
 				String currentClsName = declaredClassName;
-				String currentMethodName = declaredName;
+				String currentMethodName = declaredMethodName;
 				Value orgIfCondition = ((IfStmt) currProStmt).getCondition();
 				// orgIfCondition.getUseBoxes().
 				Iterator<ValueBox> ublt = orgIfCondition.getUseBoxes()
@@ -874,43 +810,35 @@ public class Transformer {
 				// units, localArray, currProStmt,getUUIDLocal);
 
 			}
-			if ((currProStmt instanceof ReturnStmt)
-					|| (currProStmt instanceof ReturnVoidStmt)) {
+			if ((currProStmt instanceof ReturnStmt) || (currProStmt instanceof ReturnVoidStmt)) {
 				/**
 				 * if delete return?
 				 */
 				boolean isSenstive = false;
 				if (currProStmt instanceof ReturnStmt) {
-					G.v().out.println("[delete]currProStmt is returnstmt: "
-							+ currProStmt.toString());
+					G.v().out.println("[delete]currProStmt is returnstmt: " + currProStmt.toString());
 					Value reValue = ((ReturnStmt) currProStmt).getOp();
-					if (condVals.contains(reValue)) {   //
+					if (condVals.contains(reValue)) { //返回值敏感
 						isSenstive = true;
 						G.v().out.println("xhy--reValue is senstive");
 					}
 					if (INVOKEMAP.containsKey(declaredClassName)
-							&& INVOKEMAP.get(declaredClassName).containsKey(
-									declaredName)) {
-						int[] tem = INVOKEMAP.get(declaredClassName).get(
-								declaredName);
+							&& INVOKEMAP.get(declaredClassName).containsKey(declaredMethodName)) {
+						int[] tem = INVOKEMAP.get(declaredClassName).get(declaredMethodName);
 						for (int i = 0; i < tem.length; i++) {
-							if (tem[i] == 1) {
-								G.v().out
-										.println("currPro method is sensitive");
+							if (tem[i] == 1) { //有敏感参数
+								G.v().out.println("currPro method is sensitive");
 								isSenstive = true;
 								break;
 							}
 						}
 					}
-					
 
 				}
 
-				G.v().out
-						.println("currProStmt return stmt before deleteValuestmt: "
+				G.v().out.println("currProStmt return stmt before deleteValuestmt: "
 								+ currProStmt.toString());
-				G.v().out
-						.println("<<!!!!!!ZYreturn!!!!!!>>this processing function: "
+				G.v().out.println("<<!!!!!!ZYreturn!!!!!!>>this processing function: "
 								+ declaredFunction + ";");
 
 				if (isSenstive) { // need to change to update
@@ -929,8 +857,7 @@ public class Transformer {
 							"invoker.sgx_invoker");
 				}
 				if (isSenstive) { // need to delete
-					ReturnVoidStmt returnVoidStmt = Jimple.v()
-							.newReturnVoidStmt();
+					ReturnVoidStmt returnVoidStmt = Jimple.v().newReturnVoidStmt();
 					units.insertBefore(returnVoidStmt, currProStmt);
 					units.remove(currProStmt);
 				}
@@ -938,153 +865,228 @@ public class Transformer {
 		}
 		G.v().out.println("***++++++lastIdentityStmt is:++++++++++"
 				+ lastIdentityStmt.toString());
-		
+
 	}
 
-	private void replaceFieldArrayInitStmt(Body aBody, Local sgxObjLocal,
+	private void replaceMemberFieldInitStmt(Body aBody, Local sgxObjLocal,
 			PatchingChain<Unit> units, List<Local> localArray,
-			Unit currProStmt, Local getUUIDLocal, Local tempCuuid,
+			Unit currProStmt, Local getUUIDLocal, Local tmpOuuid,
 			Map<String, Map<String, Integer>> memberVariables,
 			SootField sField, Map<SootField, Value> OriginFieldCuuidArray) {
 
-		OriginFieldCuuidArray.put(sField, tempCuuid);
+		G.v().out.println("-----enter replaceMemberFieldInitStmt()-----");
+
+		// for what?
+		OriginFieldCuuidArray.put(sField, tmpOuuid);
 
 		int index = 0;
-		String left_index = "-1";
-		String right_index = "-1";
-		String return_index = "-1";
 
-		String return_flag_index = "-1"; // add on 4.46 for new solution about
-											// array&class
-		String left_flag_index = "-1"; // add on 4.46 for new solution about
-										// array&class
-		String right_flag_index = "-1"; // add on 4.46 for new solution about
-										// array&class
-		boolean setParam0 = false, setParam1 = false;
-		String symbolString = null;
-		int val_type = 0;
-		int pos_index = 0;
+		int typeListIndexLeft = 0;
+		int typeListIndexRight = 0;
 
-		SootMethod toCall = Scene.v().getMethod(
-				"<invoker.sgx_invoker: void clear()>");
+		int currStmtType = TypeIndex(((AssignStmt) currProStmt).getRightOp());
+		int returnValue = -1;
+		int returnArrayValue = -1;
+		int rightValue = -1;
+		int rightArrayValue = -1;
+
+		
+		SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: void setOuuid(java.lang.String)>");
 		Stmt newInvokeStmt = Jimple.v().newInvokeStmt(
-				Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
-						Arrays.asList()));
-
-		// 0527new solution for merging update function
-		// units.insertBefore(newInvokeStmt, currProStmt);
-		/*
-		 * 
-		 * toCall =
-		 * Scene.v().getMethod("<invoker.sgx_invoker: void setCounter(long)>");
-		 * newInvokeStmt = Jimple.v().newInvokeStmt(
-		 * Jimple.v().newVirtualInvokeExpr (sgxObjLocal, toCall.makeRef(),
-		 * Arrays.asList(LongConstant.v(counter)))); G.v().out.println(
-		 * "start insert before currStmt: ++++++++++++++++++++++++++ "
-		 * +currProStmt+"++++++++++++++++++++++"); //0527new solution for
-		 * merging update function units.insertBefore(newInvokeStmt,
-		 * currProStmt);
-		 */
-		toCall = Scene.v().getMethod(
-				"<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
-		newInvokeStmt = Jimple.v().newInvokeStmt(
-				Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
-						Arrays.asList(tempCuuid)));
-		G.v().out
-				.println("gpf field array init"
-						+ currProStmt );
+			Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList(tmpOuuid)));
+		G.v().out.println("[hyr]newInvokeStmt of tmpOuuid: " + newInvokeStmt);	
 		units.insertBefore(newInvokeStmt, currProStmt);
 
-		if (TypeIndex(((AssignStmt) currProStmt).getRightOp()) >= 7) {
-			//get the sensitive field array's logical postion
-			return_flag_index = memberVariables
-					.get(aBody.getMethod().getDeclaringClass().getName()
-							.toString()).get(sField.getName()).toString();
-			G.v().out.println("[replaceFieldArrayInitStmt]return_flag_index:"
-					+ return_flag_index);
-		} else if (TypeIndex(((AssignStmt) currProStmt).getRightOp()) < 7
-				&& TypeIndex(((AssignStmt) currProStmt).getRightOp()) != -1) {
-			//get the sensitive field variabe logical postion
-			return_index = memberVariables
-					.get(aBody.getMethod().getDeclaringClass().getName()
-							.toString()).get(sField.getName()).toString();
-			G.v().out.println("[replaceFieldValueInitStmt]return_index:"
-					+ return_index);
-		}
-
-		if (TypeIndex(((AssignStmt) currProStmt).getRightOp()) >= 7) {
-			Local tmpUpdateArray = Jimple.v().newLocal(
-					"tmpUpdateArray" + Long.toString(counter),
-					((AssignStmt) currProStmt).getRightOp().getType());
-			aBody.getLocals().add(tmpUpdateArray);
-			localArray.add(tmpUpdateArray);
-			DefinitionStmt assignStmts = initAssignStmt(tmpUpdateArray);
-			units.insertAfter(assignStmts, lastIdentityStmt);
-			G.v().out.println("c tmpUpdateArray: " + tmpUpdateArray.toString());
-			AssignStmt assignStmt = Jimple.v().newAssignStmt(tmpUpdateArray,
-					((AssignStmt) currProStmt).getRightOp());
-			G.v().out.println("newAssignStmt is: " + assignStmt.toString());
-			units.insertBefore(assignStmt, currProStmt);
-			newInvokeStmt = prepareInsertStmt(tmpUpdateArray, sgxObjLocal,
-					"invoker.sgx_invoker");// 只add类型相同的变量
-			G.v().out.println("add: values.get(0) else array :"
-					+ newInvokeStmt.toString() + "  index:" + index);
-			left_flag_index = "0";
-			units.insertBefore(newInvokeStmt, currProStmt);
-		}
-		if (condVals.contains(((AssignStmt) currProStmt).getRightOp())) {
-			val_type = TypeIndex(((AssignStmt) currProStmt).getRightOp());// int
-																			// or
-																			// float
-			pos_index = typeToList(val_type).indexOf(
-					((AssignStmt) currProStmt).getRightOp());
-			left_index = Integer.toString(val_type * 100 + pos_index);//
-		}
-
-		indexwriter(Integer.toString(TypeIndex(((AssignStmt) currProStmt)
-				.getRightOp()))+"  lineNo: ");// tuple-1
-		indexwriter(left_index);// tuple-1
-		indexwriter(left_flag_index);// tuple-1
-		indexwriter(right_index);// tuple-2
-		indexwriter(right_flag_index);// tuple-2
-		indexwriter("-1");
-		indexwriter(return_index);
-		indexwriter(return_flag_index);
-		G.v().out.println("return_index:" + return_index);
-		G.v().out.println("counter:" + counter);
-		if (Integer.parseInt(return_flag_index) >= 1300) {
-			toCall = Scene
-					.v()
-					.getMethod(
-							"<invoker.sgx_invoker: void updateMultArray(java.lang.String,int,int,long)>");
-			newInvokeStmt = Jimple.v()
-					.newInvokeStmt(
-							Jimple.v().newVirtualInvokeExpr(
-									sgxObjLocal,
-									toCall.makeRef(),
-									Arrays.asList(getUUIDLocal,
-											IntConstant.v(0), IntConstant.v(0),
-											LongConstant.v(counter))));
-
-			units.insertBefore(newInvokeStmt, currProStmt);
-			units.remove(currProStmt);
+		if (TypeIndex(((AssignStmt) currProStmt).getRightOp()) >= 7) {	// array
+			// get the sensitive member array's logical postion
+			typeListIndexLeft = typeToList(currStmtType).indexOf(((AssignStmt) currProStmt).getLeftOp());
+			// sensitive member array, *100 ([sensitive]function array, *10; member array, *100; static member array, *1000), the last position(8th) in SGXIndex 
+			returnArrayValue = currStmtType * 100 + typeListIndexLeft;
+			G.v().out.println("[hyr]returnArrayValue: " + returnArrayValue);
+			// 此时右操作数应该也是敏感的?(前后向分析的逻辑如何设置)
+			typeListIndexRight = typeToList(currStmtType).indexOf(((AssignStmt) currProStmt).getRightOp());
+			// sensitive array, *10 ([sensitive]function array, *10; member array, *100; static member array, *1000), the last position(8th) in SGXIndex 
+			rightArrayValue = currStmtType * 10 + typeListIndexRight;
 		} else {
-			toCall = Scene
-					.v()
-					.getMethod(
-							"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
-			newInvokeStmt = Jimple.v().newInvokeStmt(
-					Jimple.v().newVirtualInvokeExpr(
-							sgxObjLocal,
-							toCall.makeRef(),
-							Arrays.asList(getUUIDLocal, IntConstant.v(1),
-									LongConstant.v(counter))));
-
-			units.insertBefore(newInvokeStmt, currProStmt);
-			units.remove(currProStmt);
+			// get the sensitive member variable's logical postion
+			typeListIndexLeft = typeToList(currStmtType).indexOf(((AssignStmt) currProStmt).getLeftOp());
+			// sensitive member variable, *1000 ([sensitive]function vari, *100; member vari, *1000; static member vari, *10000), the 7th position in SGXIndex 
+			returnValue = currStmtType * 1000 + typeListIndexLeft;
+			G.v().out.println("[hyr]returnValue: " + returnValue);
+			// 此时右操作数应该也是敏感的?(前后向分析的逻辑如何设置)
+			typeListIndexRight = typeToList(currStmtType).indexOf(((AssignStmt) currProStmt).getRightOp());
+			// sensitive variable, *100 ([sensitive]function vari, *100; member vari, *1000; static member vari, *10000), the 7th position in SGXIndex 
+			rightValue = currStmtType * 100 + typeListIndexRight;
 		}
+		toCall = Scene.v().getMethod("<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+		newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
+							Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
+		units.insertBefore(newInvokeStmt, currProStmt);
+
+		toCall = Scene.v().getMethod("<invoker.sgx_invoker: void clearOuuid()>");
+		newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList()));
+		units.insertBefore(newInvokeStmt, currProStmt);
+		units.remove(currProStmt);
 		counter++;
+
+		indexwriter("" + currStmtType);
+		indexwriter("" + rightValue);
+		indexwriter("" + rightArrayValue);
+		indexwriter("" + (-1));
+		indexwriter("" + (-1));
+		indexwriter("" + (-1));
+		indexwriter("" + returnValue);
+		indexwriter("" + returnArrayValue);
+		// if (TypeIndex(((AssignStmt) currProStmt).getRightOp()) >= 7) {
+		// 	Local tmpUpdateArray = Jimple.v().newLocal(
+		// 			"tmpUpdateArray" + Long.toString(counter),
+		// 			((AssignStmt) currProStmt).getRightOp().getType());
+		// 	aBody.getLocals().add(tmpUpdateArray);
+		// 	localArray.add(tmpUpdateArray);
+		// 	DefinitionStmt assignStmts = initLocalVariable(tmpUpdateArray);
+		// 	units.insertAfter(assignStmts, lastIdentityStmt);
+		// 	G.v().out.println("c tmpUpdateArray: " + tmpUpdateArray.toString());
+		// 	AssignStmt assignStmt = Jimple.v().newAssignStmt(tmpUpdateArray,
+		// 			((AssignStmt) currProStmt).getRightOp());
+		// 	G.v().out.println("newAssignStmt is: " + assignStmt.toString());
+		// 	units.insertBefore(assignStmt, currProStmt);
+		// 	newInvokeStmt = prepareInsertStmt(tmpUpdateArray, sgxObjLocal,
+		// 			"invoker.sgx_invoker");// 只add类型相同的变量
+		// 	G.v().out.println("add: values.get(0) else array :"
+		// 			+ newInvokeStmt.toString() + "  index:" + index);
+		// 	left_flag_index = "0";
+		// 	units.insertBefore(newInvokeStmt, currProStmt);
+		// }
+		// if (condVals.contains(((AssignStmt) currProStmt).getRightOp())) {
+		// 	val_type = TypeIndex(((AssignStmt) currProStmt).getRightOp());// int
+		// 																	// or
+		// 																	// float
+		// 	pos_index = typeToList(val_type).indexOf(
+		// 			((AssignStmt) currProStmt).getRightOp());
+		// 	left_index = Integer.toString(val_type * 100 + pos_index);//
+		// }
+
+		// indexwriter(Integer.toString(TypeIndex(((AssignStmt) currProStmt)
+		// 		.getRightOp())) + "  lineNo: ");// tuple-1
+		// indexwriter(left_index);// tuple-1
+		// indexwriter(left_flag_index);// tuple-1
+		// indexwriter(right_index);// tuple-2
+		// indexwriter(right_flag_index);// tuple-2
+		// indexwriter("-1");
+		// indexwriter(return_index);
+		// indexwriter(return_flag_index);
+		// G.v().out.println("return_index:" + return_index);
+		// G.v().out.println("counter:" + counter);
+		// if (Integer.parseInt(return_flag_index) >= 1300) {
+		// 	toCall = Scene
+		// 			.v()
+		// 			.getMethod(
+		// 					"<invoker.sgx_invoker: void updateMultArray(java.lang.String,int,int,long)>");
+		// 	newInvokeStmt = Jimple.v()
+		// 			.newInvokeStmt(
+		// 					Jimple.v().newVirtualInvokeExpr(
+		// 							sgxObjLocal,
+		// 							toCall.makeRef(),
+		// 							Arrays.asList(getUUIDLocal,
+		// 									IntConstant.v(0), IntConstant.v(0),
+		// 									LongConstant.v(counter))));
+
+		// 	units.insertBefore(newInvokeStmt, currProStmt);
+		// 	units.remove(currProStmt);
+		// } else {
+		// 	toCall = Scene
+		// 			.v()
+		// 			.getMethod(
+		// 					"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+		// 	newInvokeStmt = Jimple.v().newInvokeStmt(
+		// 			Jimple.v().newVirtualInvokeExpr(
+		// 					sgxObjLocal,
+		// 					toCall.makeRef(),
+		// 					Arrays.asList(getUUIDLocal, IntConstant.v(1),
+		// 							LongConstant.v(counter))));
+
+		// 	units.insertBefore(newInvokeStmt, currProStmt);
+		// 	units.remove(currProStmt);
+		// }
+		// counter++;
 	}
+
+
+	private void replaceStaticMemberFieldInitStmt(Body aBody, Local sgxObjLocal,
+			PatchingChain<Unit> units, List<Local> localArray,
+			Unit currProStmt, Local getUUIDLocal, Local tmpCuuid,
+			Map<String, Map<String, Integer>> memberVariables,
+			SootField sField, Map<SootField, Value> OriginFieldCuuidArray) {
+
+		G.v().out.println("-----enter replaceStaticMemberFieldInitStmt()-----");
+
+		// for what?
+		OriginFieldCuuidArray.put(sField, tmpCuuid);
+
+		int index = 0;
+
+		int typeListIndexLeft = 0;
+		int typeListIndexRight = 0;
+
+		int currStmtType = TypeIndex(((AssignStmt) currProStmt).getRightOp());
+		int returnValue = -1;
+		int returnArrayValue = -1;
+		int rightValue = -1;
+		int rightArrayValue = -1;
+		
+		
+		SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
+		Stmt newInvokeStmt = Jimple.v().newInvokeStmt(
+			Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList(tmpCuuid)));
+		G.v().out.println("[hyr]newInvokeStmt of tmpCuuid: " + newInvokeStmt);	
+		units.insertBefore(newInvokeStmt, currProStmt);
+
+		if (TypeIndex(((AssignStmt) currProStmt).getRightOp()) >= 7) {	// array
+			// get the sensitive static member array's logical postion
+			typeListIndexLeft = typeToList(currStmtType).indexOf(((AssignStmt) currProStmt).getLeftOp());
+			// sensitive static member array, *1000 ([sensitive]function array, *10; member array, *100; static member array, *1000), the last position(8th) in SGXIndex 
+			returnArrayValue = currStmtType * 1000 + typeListIndexLeft;
+			G.v().out.println("[hyr]returnArrayValue: " + returnArrayValue);
+			// 此时右操作数应该也是敏感的?(前后向分析的逻辑如何设置)
+			typeListIndexRight = typeToList(currStmtType).indexOf(((AssignStmt) currProStmt).getRightOp());
+			// sensitive array, *10 ([sensitive]function array, *10; member array, *100; static member array, *1000), the last position(8th) in SGXIndex 
+			rightArrayValue = currStmtType * 10 + typeListIndexRight;
+		} else {
+			// get the sensitive member variable's logical postion
+			typeListIndexLeft = typeToList(currStmtType).indexOf(((AssignStmt) currProStmt).getLeftOp());
+			// sensitive static member variable, *10000 ([sensitive]function vari, *100; member vari, *1000; static member vari, *10000), the 7th position in SGXIndex 
+			returnValue = currStmtType * 10000 + typeListIndexLeft;
+			G.v().out.println("[hyr]returnValue: " + returnValue);
+			// 此时右操作数应该也是敏感的?(前后向分析的逻辑如何设置)
+			typeListIndexRight = typeToList(currStmtType).indexOf(((AssignStmt) currProStmt).getRightOp());
+			// sensitive variable, *100 ([sensitive]function vari, *100; member vari, *1000; static member vari, *10000), the 7th position in SGXIndex 
+			rightValue = currStmtType * 100 + typeListIndexRight;
+		}
+		toCall = Scene.v().getMethod("<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+		newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
+							Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
+		units.insertBefore(newInvokeStmt, currProStmt);
+
+		toCall = Scene.v().getMethod("<invoker.sgx_invoker: void clearCuuid()>");
+		newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList()));
+		units.insertBefore(newInvokeStmt, currProStmt);
+		units.remove(currProStmt);
+		counter++;
+
+		indexwriter("" + currStmtType);
+		indexwriter("" + rightValue);
+		indexwriter("" + rightArrayValue);
+		indexwriter("" + (-1));
+		indexwriter("" + (-1));
+		indexwriter("" + (-1));
+		indexwriter("" + returnValue);
+		indexwriter("" + returnArrayValue);
+		
+		// counter++;
+	}
+
+
+
 
 	// 转换return语句
 	private void replaceReturnStmt(Body aBody, Local sgxObjLocal,
@@ -1134,7 +1136,7 @@ public class Transformer {
 			indexwriter("-2");// op
 			indexwriter("-2");// re
 			indexwriter(identityArray.get(value)); // r
-		} else if (condVals.contains(value)) {  // xhy: remove( && TypeIndex(value) <= 12)
+		} else if (condVals.contains(value)) { // xhy: remove( && TypeIndex(value) <= 12)
 			G.v().out.println("return sensitive array");
 			indexwriter(Integer.toString(pos));// type
 			indexwriter("-2");// left
@@ -1212,7 +1214,7 @@ public class Transformer {
 		// G.v().out.println("We will return!");
 		// return;
 		// }
-		if (methodname.equals("buildTrie")||methodname.equals("estimate")) {
+		if (methodname.equals("buildTrie") || methodname.equals("estimate")) {
 			issensitive = false;
 		}
 		// 当前语句存在敏感变量
@@ -1230,11 +1232,12 @@ public class Transformer {
 						// 插入add混淆
 						Local tmpValue = Jimple.v().newLocal(
 								"tmpResult" + Long.toString(counter)
-										+ Integer.toString(i), v.getType());
+										+ Integer.toString(i),
+								v.getType());
 						aBody.getLocals().add(tmpValue);
 						localArray.add(tmpValue);
 
-						DefinitionStmt assignStmt = initAssignStmt(tmpValue);
+						DefinitionStmt assignStmt = initLocalVariable(tmpValue);
 						// G.v().out.println("newAssignStmt is: "+assignStmt.toString());
 						// G.v().out.println("lastIdentityStmt is: "+lastIdentityStmt.toString());
 						units.insertAfter(assignStmt, lastIdentityStmt);
@@ -1265,7 +1268,8 @@ public class Transformer {
 		List<Type> oldtypes = sootMethod.getParameterTypes();
 		// G.v().out.println("20210618===3");
 		int size = ((InvokeStmt) currProStmt).getInvokeExpr().getArgCount();
-		// G.v().out.println("[invoke]size:"+size+"  oldtypes.size()"+oldtypes.size()+" "+oldtypes.get(0)+" "+oldtypes.get(1));
+		// G.v().out.println("[invoke]size:"+size+" oldtypes.size()"+oldtypes.size()+"
+		// "+oldtypes.get(0)+" "+oldtypes.get(1));
 		List<Value> newValues = new ArrayList<>();
 		List<Type> newtypes = new ArrayList<>();
 		G.v().out.println("20210618===4");
@@ -1285,7 +1289,7 @@ public class Transformer {
 				int pos_index = typeToList(val_type).indexOf(qesValue);
 				int index = val_type * (val_type > 6 ? 10 : 100) + pos_index;
 				G.v().out.println("[invoke] index:" + index + "  i=" + i);
-				G.v().out.println("arr:"+qesValue+"   "+typeToList(val_type));
+				G.v().out.println("arr:" + qesValue + "   " + typeToList(val_type));
 				invokeWriter(String.valueOf(index)); // is from self
 			} else if (qesValue instanceof Constant) { // constant
 				invokeWriter(String.valueOf(i)); // paraformINdex
@@ -1370,7 +1374,7 @@ public class Transformer {
 		methodname = ((AssignStmt) currProStmt).getInvokeExpr().getMethodRef()
 				.name();
 		G.v().out.println("20210618 assi methodname :" + methodname);
-		if(methodname.equals("nextPoint")){
+		if (methodname.equals("nextPoint")) {
 			return;
 		}
 		classname = ((AssignStmt) currProStmt).getInvokeExpr().getMethodRef()
@@ -1400,7 +1404,7 @@ public class Transformer {
 		// if (methodname.equals("<init>") && issensitive) {
 		// return;
 		// }
-		if (methodname.equals("buildTrie")||methodname.equals("estimate")) {
+		if (methodname.equals("buildTrie") || methodname.equals("estimate")) {
 			issensitive = false;
 		}
 
@@ -1419,7 +1423,7 @@ public class Transformer {
 				aBody.getLocals().add(tmpValue);
 				localArray.add(tmpValue);
 
-				DefinitionStmt assignStmt = initAssignStmt(tmpValue);
+				DefinitionStmt assignStmt = initLocalVariable(tmpValue);
 				// G.v().out.println("newAssignStmt is: "+assignStmt.toString());
 				// G.v().out.println("lastIdentityStmt is: "+lastIdentityStmt.toString());
 				units.insertAfter(assignStmt, lastIdentityStmt);
@@ -1452,7 +1456,7 @@ public class Transformer {
 						aBody.getLocals().add(tmpValue);
 						localArray.add(tmpValue);
 						// 插入了混淆add
-						DefinitionStmt assignStmt = initAssignStmt(tmpValue);
+						DefinitionStmt assignStmt = initLocalVariable(tmpValue);
 						// G.v().out.println("newAssignStmt is: "+assignStmt.toString());
 						// G.v().out.println("lastIdentityStmt is: "+lastIdentityStmt.toString());
 						units.insertAfter(assignStmt, lastIdentityStmt);
@@ -1483,7 +1487,8 @@ public class Transformer {
 		List<Type> oldtypes = sootMethod.getParameterTypes();
 
 		int size = ((AssignStmt) currProStmt).getInvokeExpr().getArgCount();
-		// G.v().out.println("[invoke]size:"+size+"  oldtypes.size()"+oldtypes.size()+" "+oldtypes.get(0)+" "+oldtypes.get(1));
+		// G.v().out.println("[invoke]size:"+size+" oldtypes.size()"+oldtypes.size()+"
+		// "+oldtypes.get(0)+" "+oldtypes.get(1));
 		List<Value> newValues = new ArrayList<>();
 		List<Type> newtypes = new ArrayList<>();
 
@@ -1503,7 +1508,7 @@ public class Transformer {
 				int index = val_type * (val_type > 5 ? 10 : 100) + pos_index;
 				G.v().out.println("[invoke] index:" + index + "  i=" + i);
 				G.v().out.println(typeToList(val_type));
-				 
+
 				invokeWriter(String.valueOf(index)); // is from self
 			} else if (qesValue instanceof Constant) { // constant
 				invokeWriter(String.valueOf(i)); // paraformINdex
@@ -1520,10 +1525,10 @@ public class Transformer {
 		/**
 		 * deal with re like "d0"
 		 */
-		
+
 		boolean needtobechange = false;
 		Value re = ((AssignStmt) currProStmt).getLeftOp();
-		G.v().out.println("re="+re+" condVals="+condVals);
+		G.v().out.println("re=" + re + " condVals=" + condVals);
 		if (identityArray.containsKey(re)) {
 			invokeWriter("re"); // paraformINdexinvokeWriter("re")
 			invokeWriter(String.valueOf(0)); // not from self
@@ -1632,7 +1637,7 @@ public class Transformer {
 						toCall.makeRef(),
 						Arrays.asList(getUUIDLocal, IntConstant.v(0),
 								LongConstant.v(counter))));
-		units.insertBefore(newInvokeStmt, currProStmt);//insert first update
+		units.insertBefore(newInvokeStmt, currProStmt);// insert first update
 		counter++;
 		newInvokeStmt = Jimple.v().newInvokeStmt(
 				Jimple.v().newVirtualInvokeExpr(
@@ -1640,7 +1645,7 @@ public class Transformer {
 						toCall.makeRef(),
 						Arrays.asList(getUUIDLocal, IntConstant.v(0),
 								LongConstant.v(counter))));
-		units.insertBefore(newInvokeStmt, currProStmt);//insert second update
+		units.insertBefore(newInvokeStmt, currProStmt);// insert second update
 		counter++;
 		G.v().out.println("NewArrayExpr4");
 		units.remove(currProStmt);
@@ -1654,7 +1659,7 @@ public class Transformer {
 		indexwriter("-1");
 		indexwriter("" + (-1));
 		indexwriter("" + index);
-		
+
 		// 以下八元组为更新维度loc和oriLoc
 
 		indexwriter("" + type);
@@ -1731,24 +1736,23 @@ public class Transformer {
 					+ (val_type * 10 + pos_index));
 			dimensions[i] = val_type2 * 100 + pos_index + "";
 		}
-		for(int i =0;i<3;i++){
-			if(dimensions[i]==null){
-				dimensions[i]="0";
+		for (int i = 0; i < 3; i++) {
+			if (dimensions[i] == null) {
+				dimensions[i] = "0";
 			}
 		}
 		G.v().out.println("dimsnesions: " + Arrays.toString(dimensions));
 
 		// 以下八元组为更新维度和申请data空间
-		indexwriter(""+val_type);
+		indexwriter("" + val_type);
 		indexwriter("" + dimensions[0]);// tuple-1
 		indexwriter("" + dimensions[1]);// tuple-1
-		indexwriter(""+0);// tuple-2
+		indexwriter("" + 0);// tuple-2
 		indexwriter("" + dimensions[2]);// tuple-2
 		indexwriter("-1");
 		indexwriter("" + (-1));
 		indexwriter("" + index);
 
-		
 		// 以下八元组为更新维度loc和oriLoc
 		indexwriter("" + val_type);
 		indexwriter("" + index);// tuple-1
@@ -1774,14 +1778,16 @@ public class Transformer {
 			rightOp = ((AssignStmt) currProStmt).getRightOp();
 			leftOpValue = ((AssignStmt) currProStmt).getLeftOp();
 			G.v().out
-					.println("<<<<<<ZYSTBLE>>>>>>replaceValueGetStmt AssignStmt leftOpValue is: ++++++++++++++++++++++++++"
-							+ leftOpValue.toString() + "++++++++++++++++++++++");
+					.println(
+							"<<<<<<ZYSTBLE>>>>>>replaceValueGetStmt AssignStmt leftOpValue is: ++++++++++++++++++++++++++"
+									+ leftOpValue.toString() + "++++++++++++++++++++++");
 		} else if (currProStmt instanceof IdentityStmt) {
 			rightOp = ((IdentityStmt) currProStmt).getRightOp();
 			leftOpValue = ((IdentityStmt) currProStmt).getLeftOp();
 			G.v().out
-					.println("<<<<<<ZYSTBLE>>>>>> replaceValueGetStmt IdentityStmt leftOpValue is: ++++++++++++++++++++++++++"
-							+ leftOpValue.toString() + "++++++++++++++++++++++");
+					.println(
+							"<<<<<<ZYSTBLE>>>>>> replaceValueGetStmt IdentityStmt leftOpValue is: ++++++++++++++++++++++++++"
+									+ leftOpValue.toString() + "++++++++++++++++++++++");
 		} else if (currProStmt instanceof InvokeStmt) {
 			G.v().out.println(" currProStmt InvokeStmt IN GET: "
 					+ currProStmt.toString() + ";");
@@ -1810,7 +1816,7 @@ public class Transformer {
 				G.v().out.println("tmpArrRefBase: " + tmpArrRefBase.toString());
 
 				/* insert tmpArrRefBase init stmt after all identitystmt */
-				DefinitionStmt assignStmt = initAssignStmt(tmpArrRefBase);
+				DefinitionStmt assignStmt = initLocalVariable(tmpArrRefBase);
 				// G.v().out.println("newAssignStmt is: "+assignStmt.toString());
 				// G.v().out.println("lastIdentityStmt is: "+lastIdentityStmt.toString());
 				units.insertAfter(assignStmt, lastIdentityStmt);
@@ -1827,11 +1833,13 @@ public class Transformer {
 
 				/* replace leftOpValue */
 				((ArrayRef) leftOpValue).setIndex(tmpArrRefBase);
-				// G.v().out.println("<<<<<<ZYSTBLE>>>>>> new leftOpValue is: ++++++++++++++++++++++++++ "+leftOpValue+"++++++++++++++++++++++");
+				// G.v().out.println("<<<<<<ZYSTBLE>>>>>> new leftOpValue is:
+				// ++++++++++++++++++++++++++ "+leftOpValue+"++++++++++++++++++++++");
 
 				/* replace currProstmt */
 				((AssignStmt) currProStmt).setLeftOp(leftOpValue);
-				// G.v().out.println("<<<<<<ZYSTBLE>>>>>> currProStmt is: ++++++++++++++++++++++++++ "+currProStmt+"++++++++++++++++++++++");
+				// G.v().out.println("<<<<<<ZYSTBLE>>>>>> currProStmt is:
+				// ++++++++++++++++++++++++++ "+currProStmt+"++++++++++++++++++++++");
 
 			}
 		}
@@ -1964,16 +1972,16 @@ public class Transformer {
 					G.v().out.println("val_type:" + val_type);
 					pos_index = typeToList(val_type).indexOf(values.get(0));
 					G.v().out.println("pos_index:" + pos_index);
-					if (val_type > 6) {   //xhy: MultiBaseMap don't need
-//						if (MultiBaseMap.containsKey(values.get(0))) {
-//							left_flag_index = Integer.toString(MultiBaseMap
-//									.get(values.get(0)));
-//							right_index = Integer.toString(MultiIndexMap
-//									.get(values.get(0)));
-//						} else {
-//							left_flag_index = Integer.toString(val_type * 10
-//									+ pos_index);
-//						}
+					if (val_type > 6) { // xhy: MultiBaseMap don't need
+						// if (MultiBaseMap.containsKey(values.get(0))) {
+						// left_flag_index = Integer.toString(MultiBaseMap
+						// .get(values.get(0)));
+						// right_index = Integer.toString(MultiIndexMap
+						// .get(values.get(0)));
+						// } else {
+						// left_flag_index = Integer.toString(val_type * 10
+						// + pos_index);
+						// }
 						left_flag_index = Integer.toString(val_type * 10
 								+ pos_index);
 					} else {
@@ -2164,19 +2172,17 @@ public class Transformer {
 				indexwriter("5");
 			else if (symbolString.equals(" & ")) { // new add on 8.18 by ZyStBle
 				indexwriter("12");
-			}
-			else if (symbolString.equals(" | ")) { // new add on 8.18 by ZyStBle
+			} else if (symbolString.equals(" | ")) { // new add on 8.18 by ZyStBle
 				indexwriter("13");
 			} else if (symbolString.equals(" ^ ")) { // new add on 8.18 by ZyStBle
 				indexwriter("14");
-			}  else if (symbolString.equals(" << ")) { // new add on 8.18 by ZyStBle
+			} else if (symbolString.equals(" << ")) { // new add on 8.18 by ZyStBle
 				indexwriter("15");
-			}  else if (symbolString.equals(" >>> ")) { // new add on 8.18 by ZyStBle
+			} else if (symbolString.equals(" >>> ")) { // new add on 8.18 by ZyStBle
 				indexwriter("16");
-			}  else if (symbolString.equals(" >>> ")) { // new add on 8.18 by ZyStBle
+			} else if (symbolString.equals(" >>> ")) { // new add on 8.18 by ZyStBle
 				indexwriter("17");
-			} 
-			else
+			} else
 				indexwriter("-1");
 		} else {
 			indexwriter("-1");
@@ -2188,9 +2194,11 @@ public class Transformer {
 		G.v().out.println("stmt get second operand:********" + right_index
 				+ "*************");
 		// if(left_index == "-1")
-		// G.v().out.println("stmt has no first operand:********"+left_index+"*************");
+		// G.v().out.println("stmt has no first
+		// operand:********"+left_index+"*************");
 		// if(right_index == "-1")
-		// G.v().out.println("A stmt has no second operand:********"+right_index+"*************");
+		// G.v().out.println("A stmt has no second
+		// operand:********"+right_index+"*************");
 
 		boolean LeftOpIsArrayRef = false;
 		boolean LeftOpIsObject = false;
@@ -2243,7 +2251,7 @@ public class Transformer {
 			G.v().out.println("tmpValue: " + tmpRef.toString());
 
 			/* tmpRef init stmt after all identitystmt */
-			assignStmt = initAssignStmt(tmpRef);
+			assignStmt = initLocalVariable(tmpRef);
 			// G.v().out.println("newAssignStmt is: "+assignStmt.toString());
 			// G.v().out.println("lastIdentityStmt is: "+lastIdentityStmt.toString());
 			units.insertAfter(assignStmt, lastIdentityStmt);
@@ -2268,7 +2276,7 @@ public class Transformer {
 		 * G.v().out.println("tmpValue: "+tmpRef.toString());
 		 * 
 		 * //tmpRef init stmt after all identitystmt assignStmt =
-		 * initAssignStmt(tmpRef);
+		 * initLocalVariable(tmpRef);
 		 * G.v().out.println("object newAssignStmt is: "+assignStmt.toString());
 		 * G
 		 * .v().out.println("object lastIdentityStmt is: "+lastIdentityStmt.toString
@@ -2306,13 +2314,16 @@ public class Transformer {
 		// G.v().out.println("zystble");
 		// InvokeExpr invokeExprtmpExpr = Jimple.v().newVirtualInvokeExpr
 		// (sgxObjLocal, toCall.makeRef(), Arrays.asList());
-		// G.v().out.println("invokeExprtmpExpr is:++++++"+invokeExprtmpExpr+"++++++++");
+		// G.v().out.println("invokeExprtmpExpr
+		// is:++++++"+invokeExprtmpExpr+"++++++++");
 		// //
-		// G.v().out.println("invokeExprtmpExpr type is:++++++"+invokeExprtmpExp+"++++++++");
+		// G.v().out.println("invokeExprtmpExpr type
+		// is:++++++"+invokeExprtmpExp+"++++++++");
 		// ((AssignStmt)currProStmt).setRightOp((Value)invokeExprtmpExpr);
 
 		// G.v().out.println("rightOpvalueOfAssignment is:++++++"+rightOp+"++++++++");
-		// G.v().out.println("currProStmt units is: ++++ "+currProStmt.getUseBoxes()+"++++++++++++");
+		// G.v().out.println("currProStmt units is: ++++
+		// "+currProStmt.getUseBoxes()+"++++++++++++");
 		G.v().out.println("get counter:" + counter);
 		counter++;
 	}
@@ -2321,44 +2332,44 @@ public class Transformer {
 	private String returnTypeIndexToCallFunc(int returnTypeIndex) {
 		String funcString = new String();
 		switch (returnTypeIndex) {
-		case 1:
-			funcString = "<invoker.sgx_invoker: int getIntValue(java.lang.String,int,long)>";// getIntValue
-			break;
-		case 2:
-			funcString = "<invoker.sgx_invoker: double getDoubleValue(java.lang.String,int,long)>";
-			break;
-		case 3:
-			funcString = "<invoker.sgx_invoker: float getFloatValue(java.lang.String,int,long)>";
-			break;
-		case 4:
-			funcString = "<invoker.sgx_invoker: char getCharValue(java.lang.String,int,long)>";
-			break;
-		case 5:
-			funcString = "<invoker.sgx_invoker: long getLongValue(java.lang.String,int,long)>";
-			break;
-		case 6:
-			funcString = "<invoker.sgx_invoker: byte getByteValue(java.lang.String,int,long)>";
-			break;
-		case 7:
-			funcString = "<invoker.sgx_invoker: int[] getIntArray(java.lang.String,int,long)>";
-			break;
-		case 8:
-			funcString = "<invoker.sgx_invoker: double[] getDoubleArray(java.lang.String,int,long)>";
-			break;
-		case 9:
-			funcString = "<invoker.sgx_invoker: float[] getFloatArray(java.lang.String,int,long)>";
-			break;
-		case 10:
-			funcString = "<invoker.sgx_invoker: char[] getCharArray(java.lang.String,int,long)>";
-			break;
-		case 11:
-			funcString = "<invoker.sgx_invoker: long[] getLongArray(java.lang.String,int,long)>";
-			break;
-		case 12:
-			funcString = "<invoker.sgx_invoker: byte[] getByteArray(java.lang.String,int,long)>";
-			break;
-		default:
-			break;
+			case 1:
+				funcString = "<invoker.sgx_invoker: int getIntValue(java.lang.String,int,long)>";// getIntValue
+				break;
+			case 2:
+				funcString = "<invoker.sgx_invoker: double getDoubleValue(java.lang.String,int,long)>";
+				break;
+			case 3:
+				funcString = "<invoker.sgx_invoker: float getFloatValue(java.lang.String,int,long)>";
+				break;
+			case 4:
+				funcString = "<invoker.sgx_invoker: char getCharValue(java.lang.String,int,long)>";
+				break;
+			case 5:
+				funcString = "<invoker.sgx_invoker: long getLongValue(java.lang.String,int,long)>";
+				break;
+			case 6:
+				funcString = "<invoker.sgx_invoker: byte getByteValue(java.lang.String,int,long)>";
+				break;
+			case 7:
+				funcString = "<invoker.sgx_invoker: int[] getIntArray(java.lang.String,int,long)>";
+				break;
+			case 8:
+				funcString = "<invoker.sgx_invoker: double[] getDoubleArray(java.lang.String,int,long)>";
+				break;
+			case 9:
+				funcString = "<invoker.sgx_invoker: float[] getFloatArray(java.lang.String,int,long)>";
+				break;
+			case 10:
+				funcString = "<invoker.sgx_invoker: char[] getCharArray(java.lang.String,int,long)>";
+				break;
+			case 11:
+				funcString = "<invoker.sgx_invoker: long[] getLongArray(java.lang.String,int,long)>";
+				break;
+			case 12:
+				funcString = "<invoker.sgx_invoker: byte[] getByteArray(java.lang.String,int,long)>";
+				break;
+			default:
+				break;
 		}
 		return funcString;
 	}
@@ -2580,8 +2591,8 @@ public class Transformer {
 		Value leftOpValue = null;
 		G.v().out.println("enter replaceValueUpdateStmt:"
 				+ currProStmt.toString());
-		boolean flag=false;//flag为true说明int a=arr[0]触发 为了使得涉及数组类型的操作的type都>=7 
-		boolean isArrayLength=false;
+		boolean flag = false;// flag为true说明int a=arr[0]触发 为了使得涉及数组类型的操作的type都>=7
+		boolean isArrayLength = false;
 		if (currProStmt instanceof AssignStmt) {
 			rightOp = ((AssignStmt) currProStmt).getRightOp();
 			leftOpValue = ((AssignStmt) currProStmt).getLeftOp();
@@ -2611,10 +2622,9 @@ public class Transformer {
 		boolean isRightOpStaticFiled = false;
 
 		boolean rightCast = false;
-		
-		
 
-		analyzeExp(rightOp, values, operator, cons, variable);//
+		// 判断右操作数的类型
+		analyzeExp(rightOp, values, operator, cons, variable);  // values中添加了rightOP
 
 		int index = 0;
 		String left_index = "-1";
@@ -2631,7 +2641,10 @@ public class Transformer {
 		String symbolString = null;
 		int val_type = 0;
 		int pos_index = 0;
-        if (values.get(0) instanceof JLengthExpr) {   //求数组长度时 type=7，right_index=5 方便处理
+
+		// -----------------------------逻辑混乱--------------------------
+		// 求数组长度的语句
+		if (values.get(0) instanceof JLengthExpr) { // 求数组长度时 type=7，right_index=5 方便处理
 			isArrayLength = true;
 			G.v().out.println("xhy: " + "JLengthExpr:" + values.get(0));
 		}
@@ -2639,6 +2652,7 @@ public class Transformer {
 			G.v().out.println("values:********" + local + "*************");
 			G.v().out.println("values.type:********"
 					+ local.getType().toString() + "*************");
+			// 类型强转语句
 			if (local instanceof CastExpr) {
 				G.v().out.println("CastExpr");
 				rightCast = true;
@@ -2648,6 +2662,7 @@ public class Transformer {
 		boolean rOpArr = rightOp instanceof ArrayRef;
 
 		G.v().out.println("rOpArr********" + rOpArr + "*************");
+		// 强转类型语句
 		if (rightCast) {
 			G.v().out.println("This is CastExpr to be replaced is: ++++++++"
 					+ currProStmt + "+++++update+++++++++");
@@ -2655,6 +2670,7 @@ public class Transformer {
 			Type type = ((CastExpr) rightOp).getType();
 			G.v().out.println("value :" + value + " type:" + type);
 
+			// CastExpr的右操作数敏感
 			if (condVals.contains(value)) {
 				G.v().out.println("indexWriter 1: "
 						+ Integer.toString(TypeIndex(leftOpValue)));
@@ -2685,20 +2701,6 @@ public class Transformer {
 				Stmt newInvokeStmt = Jimple.v().newInvokeStmt(
 						Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
 								toCall.makeRef(), Arrays.asList()));
-				// 0527new solution for merging update function
-				// units.insertBefore(newInvokeStmt, currProStmt);
-				/*
-				 * toCall = Scene.v().getMethod(
-				 * "<invoker.sgx_invoker: void setCounter(long)>");
-				 * newInvokeStmt = Jimple.v().newInvokeStmt(
-				 * Jimple.v().newVirtualInvokeExpr (sgxObjLocal,
-				 * toCall.makeRef(), Arrays.asList(LongConstant.v(counter))));
-				 * G.v().out.println(
-				 * "start insert before currStmt: ++++++++++++++++++++++++++ "
-				 * +currProStmt+"++++++++++++++++++++++"); //0527new solution
-				 * for merging update function units.insertBefore(newInvokeStmt,
-				 * currProStmt);
-				 */
 				toCall = Scene
 						.v()
 						.getMethod(
@@ -2710,8 +2712,10 @@ public class Transformer {
 								toCall.makeRef(),
 								Arrays.asList(getUUIDLocal, IntConstant.v(0),
 										LongConstant.v(counter)))); // IntConstant.v(returnTypeIndex)));
-				// G.v().out.println("newInvokeStmt to insert is: ++++++++++++++++++++++++++ "+newInvokeStmt+"++++++++++++++++++++++");
-				// G.v().out.println("start insert before currStmt: ++++++++++++++++++++++++++ "+currProStmt+"++++++++++++++++++++++");
+				// G.v().out.println("newInvokeStmt to insert is: ++++++++++++++++++++++++++
+				// "+newInvokeStmt+"++++++++++++++++++++++");
+				// G.v().out.println("start insert before currStmt: ++++++++++++++++++++++++++
+				// "+currProStmt+"++++++++++++++++++++++");
 				units.insertBefore(newInvokeStmt, currProStmt);
 				units.remove(currProStmt);
 				counter++;
@@ -2736,7 +2740,7 @@ public class Transformer {
 			return null;
 		}
 		// right op is array int[] arr1=arr2[0]
-		//右边多维数组引用类型（数组+下标）
+		// 右边多维数组引用类型（数组+下标）
 		else if (rightOp instanceof ArrayRef
 				&& TypeIndex(((ArrayRef) ((AssignStmt) currProStmt)
 						.getRightOp()).getBase()) >= 13) { // temp = a[0][];
@@ -2762,7 +2766,7 @@ public class Transformer {
 					SenstiveFieldCuuidArray.put(leftOpValue,
 							SenstiveFieldCuuidArray.get(Arrvalue));
 				}
-			}else {
+			} else {
 
 				val_type = TypeIndex(Arrvalue);
 				if (!typeToList(val_type).contains(Arrvalue)) {
@@ -2788,9 +2792,8 @@ public class Transformer {
 					Index = "" + (val_type * 100 + pos_index);// 右侧敏感数组下标是变量
 																// 该变量的逻辑位置
 				}
-				
 
-			SootMethod	toCall = Scene
+				SootMethod toCall = Scene
 						.v()
 						.getMethod(
 								"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
@@ -2803,7 +2806,7 @@ public class Transformer {
 				units.insertBefore(newInvokeStmt, currProStmt);
 
 				counter++;
-				//a=b[0]形式的第一条update语句 复制b中的数据到a
+				// a=b[0]形式的第一条update语句 复制b中的数据到a
 				indexwriter("" + leftType);// l
 				indexwriter("" + (-1));// l
 				indexwriter("" + base);
@@ -2828,11 +2831,10 @@ public class Transformer {
 
 				indexwriter("" + leftType);// l
 				indexwriter("" + (Index));// l
-				if(identityArray.containsKey(Arrvalue)){
-					indexwriter("" + identityArray.get(Arrvalue).substring(5,6));// l
-					identityArray.put(leftOpValue,identityArray.get(Arrvalue));
-				}
-				else {
+				if (identityArray.containsKey(Arrvalue)) {
+					indexwriter("" + identityArray.get(Arrvalue).substring(5, 6));// l
+					identityArray.put(leftOpValue, identityArray.get(Arrvalue));
+				} else {
 					indexwriter("" + (-1));// l
 				}
 				indexwriter("" + (4));// l
@@ -2866,15 +2868,14 @@ public class Transformer {
 					.getRightOp()).getBase();
 			Value Indevalue = ((ArrayRef) ((AssignStmt) currProStmt)
 					.getRightOp()).getIndex();
-			String rightBase="";
-		
-			val_type=TypeIndex(Arrvalue);
+			String rightBase = "";
+
+			val_type = TypeIndex(Arrvalue);
 			pos_index = typeToList(val_type).indexOf(Arrvalue);
-			rightBase= val_type * 10 + pos_index+"";// 右侧敏感数组的逻辑位置
-			
-		
+			rightBase = val_type * 10 + pos_index + "";// 右侧敏感数组的逻辑位置
+
 			String Index = "";
-			flag=true;
+			flag = true;
 			if (Indevalue instanceof Constant) {
 				Index = "int_" + Integer.parseInt(Indevalue.toString());
 			} else {
@@ -2904,7 +2905,7 @@ public class Transformer {
 			units.insertBefore(newInvokeStmt, currProStmt);
 			units.remove(currProStmt);
 			counter++;
-			indexwriter("" +TypeIndex(Arrvalue) );// 2022 08 19
+			indexwriter("" + TypeIndex(Arrvalue));// 2022 08 19
 			indexwriter("" + (Index));// l
 			indexwriter("" + rightBase);
 			indexwriter("2");// l
@@ -2928,7 +2929,7 @@ public class Transformer {
 			aBody.getLocals().add(tmpGetIndex);
 			localArray.add(tmpGetIndex);
 
-			DefinitionStmt assignStmts = initAssignStmt(tmpGetIndex);
+			DefinitionStmt assignStmts = initLocalVariable(tmpGetIndex);
 			units.insertAfter(assignStmts, lastIdentityStmt);
 
 			AssignStmt assignStmt = Jimple.v().newAssignStmt(
@@ -2948,7 +2949,7 @@ public class Transformer {
 			aBody.getLocals().add(tmpGetValue);
 			localArray.add(tmpGetValue);
 
-			assignStmts = initAssignStmt(tmpGetValue);
+			assignStmts = initLocalVariable(tmpGetValue);
 			units.insertAfter(assignStmts, lastIdentityStmt);
 
 			assignStmt = Jimple.v().newAssignStmt(tmpGetValue,
@@ -2969,7 +2970,7 @@ public class Transformer {
 			aBody.getLocals().add(tmpGetLength);
 			localArray.add(tmpGetLength);
 
-			DefinitionStmt assignStmts = initAssignStmt(tmpGetLength);
+			DefinitionStmt assignStmts = initLocalVariable(tmpGetLength);
 			units.insertAfter(assignStmts, lastIdentityStmt);
 
 			AssignStmt assignStmt = Jimple.v().newAssignStmt(tmpGetLength,
@@ -2979,75 +2980,97 @@ public class Transformer {
 			values.set(0, tmpGetLength);
 			G.v().out.println("+++++++" + currProStmt + "+++++update+++++++++");
 
-		} else if (rightOp instanceof FieldRef) {
-			G.v().out.println("=======G=======" + rightOp.toString());
-
+		} else if (rightOp instanceof InstanceFieldRef) {
+			G.v().out.println("[hyr]rightOp" + rightOp.toString());
 			SootField sField = ((FieldRef) rightOp).getField();
-			G.v().out.println("SootField sField：" + sField);
-			G.v().out.println("SootField sField：" + sField.getName());
-			G.v().out.println("curPr:" + currProStmt.toString());
-			G.v().out.println(memberVariables.containsKey(aBody.getMethod()
-					.getDeclaringClass().getName()));
-			// G.v().out.println(memberVariables.get(aBody.getMethod().getDeclaringClass().getName()).containsKey(sField.getName()));
-			if (memberVariables.containsKey(aBody.getMethod()
-					.getDeclaringClass().getName())
-					&& memberVariables.get(
-							aBody.getMethod().getDeclaringClass().getName())
-							.containsKey(sField.getName())) { // this sootfield
-																// is sensitive
-				G.v().out.println("SootField is sensitve20201029!");
+			G.v().out.println("[hyr]sField：" + sField);
+			G.v().out.println("[hyr]currProStmt: " + currProStmt.toString());
 
+			if (memberVariables.containsKey(aBody.getMethod().getDeclaringClass().getName())
+					&& memberVariables.get(aBody.getMethod().getDeclaringClass().getName())
+							.containsKey(sField.getName())) {
+				G.v().out.println("[hyr]sensitive InstanceFieldRef!!");
 				Value ssValue = null;
-				G.v().out
-						.println("=======o======="
-								+ ((AssignStmt) currProStmt).getRightOp()
-										.getUseBoxes());
-
-				Iterator<ValueBox> ubIt = ((AssignStmt) currProStmt)
-						.getRightOp().getUseBoxes().iterator();
+				G.v().out.println("[hyr]RightOp's UseBoxes: " + ((AssignStmt) currProStmt).getRightOp().getUseBoxes());
+				// to obtain the object ssValue
+				Iterator<ValueBox> ubIt = ((AssignStmt) currProStmt).getRightOp().getUseBoxes().iterator();
 				while (ubIt.hasNext()) {
 					ValueBox vBox = ubIt.next();
 					ssValue = vBox.getValue();
 					break;
 				}
-				// G.v().out.println("ssValue: "+ssValue.toString()+";");
-				SootFieldRef sootFieldRef = Scene.v().makeFieldRef(
-						sField.getDeclaringClass(), "Cuuid",
+				SootFieldRef sootFieldRef = Scene.v().makeFieldRef(sField.getDeclaringClass(), "Ouuid",
 						RefType.v("java.lang.String"), false);
-				G.v().out.println("sootFieldRef: " + sootFieldRef.toString()
-						+ ";");
-				FieldRef fieldRef = Jimple.v().newInstanceFieldRef(ssValue,
-						sootFieldRef);
-				G.v().out.println("fieldRef: " + fieldRef.toString() + ";");
-				Local tmpCuuid = Jimple.v().newLocal(
-						"tmpCuuid" + Long.toString(counter),
-						RefType.v("java.lang.String"));
-				aBody.getLocals().add(tmpCuuid);
-				localArray.add(tmpCuuid);
-				AssignStmt asStmt = Jimple.v()
-						.newAssignStmt(tmpCuuid, fieldRef);
-				G.v().out.println("asStmt: " + asStmt.toString() + ";");
+				G.v().out.println("[hyr]sootFieldRef: " + sootFieldRef.toString());
+				FieldRef fieldRef = Jimple.v().newInstanceFieldRef(ssValue, sootFieldRef);
+				G.v().out.println("[hyr]fieldRef: " + fieldRef.toString());
+				Local tmpOuuid = Jimple.v().newLocal("tmpOuuid" + Long.toString(counter), RefType.v("java.lang.String"));
+				aBody.getLocals().add(tmpOuuid);
+				localArray.add(tmpOuuid);
+				AssignStmt asStmt = Jimple.v().newAssignStmt(tmpOuuid, fieldRef);	// tmpOuuid = object.Ouuid
+				G.v().out.println("[hyr]asStmt: " + asStmt.toString());
 				units.insertBefore(asStmt, currProStmt);
 
+				SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: void setOuuid(java.lang.String)>");
+				Stmt newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList(tmpOuuid)));
+				G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
+				units.insertBefore(newInvokeStmt, currProStmt);
+
+				toCall = Scene.v().getMethod(
+								"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+				newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
+								Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
+				G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
+				units.insertBefore(newInvokeStmt, currProStmt);
+
+				toCall = Scene.v().getMethod("<invoker.sgx_invoker: void clearOuuid()>");
+				newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList()));
+				units.insertBefore(newInvokeStmt, currProStmt);
+				units.remove(currProStmt);
+				counter++;
+				
+
+				// symbol对应Map<String, Map<String, Integer>> memberVariables中的Integer，值为TypeIndex*100
 				int symbol = memberVariables.get(
 						aBody.getMethod().getDeclaringClass().getName()).get(
-						sField.getName());
-				if (TypeIndex(leftOpValue) >= 7) { // this field is array type
-													// feild
+								sField.getName());
+				if (TypeIndex(leftOpValue) >= 7) {
+					// array type field e.g. $r17 = r0.<cfhider.PiEstimator$HaltonSequence: double[][] q>
+					// -----original------
 					if (!SenstiveFieldArray.containsKey(leftOpValue)) {
 						SenstiveFieldArray.put(leftOpValue, symbol);
 						SenstiveFieldIndexArray.put(leftOpValue, -1);
-						SenstiveFieldCuuidArray.put(leftOpValue, tmpCuuid);
+						SenstiveFieldCuuidArray.put(leftOpValue, tmpOuuid);
 						G.v().out
 								.println("SenstiveFieldCuuidArray leftOpValue:"
 										+ leftOpValue);
 						G.v().out.println("SenstiveFieldCuuidArray value:"
-								+ tmpCuuid);
+								+ tmpOuuid);
 					}
-					units.remove(currProStmt);
+					// ---------------------
+
+					// 0718 hyr
+					int currStmtType = TypeIndex(leftOpValue);
+					// rightOpIndex is incorrect, value is -1
+					int rightOpIndex = typeToList(currStmtType).indexOf(rightOp);
+					int leftOpIndex = typeToList(currStmtType).indexOf(leftOpValue);
+					int rightValue = currStmtType * 100 + rightOpIndex;	// member array r0.q, *100
+					int leftValue = currStmtType * 10 + leftOpIndex;	  // array $r17, *10
+					G.v().out.println("[hyr]currStmtType: " + currStmtType);
+					G.v().out.println("[hyr]rightOpIndex: " + rightOpIndex + "; [hyr]rightValue: " + rightValue);
+					G.v().out.println("[hyr]leftOpIndex: " + leftOpIndex + "; [hyr]leftValue: " + leftValue);
+					indexwriter("" + currStmtType);
+					indexwriter("" + (-1));
+					indexwriter("" + rightValue);
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + leftValue);
+
 					return null;
-				} else {
-					// this field is 1-6 type feild
+				} else {	// 这里的逻辑还没有改
+					// this field is 1-6 type field
 
 					if (identityArray.containsKey(leftOpValue)) {
 						return_index = identityArray.get(leftOpValue); // maybe
@@ -3062,9 +3085,9 @@ public class Transformer {
 					G.v().out.println("indexWriter 2: "
 							+ Integer.toString(TypeIndex(leftOpValue)));
 
-					if(!flag){
+					if (!flag) {
 						indexwriter(Integer.toString(TypeIndex(leftOpValue)));
-					}else{
+					} else {
 						indexwriter(Integer.toString(7));
 					}
 					indexwriter(Integer.toString(symbol));// tuple-1
@@ -3075,11 +3098,11 @@ public class Transformer {
 					indexwriter(return_index);
 					indexwriter(return_flag_index);
 
-					SootMethod toCall = Scene.v().getMethod(
+					SootMethod toCall1 = Scene.v().getMethod(
 							"<invoker.sgx_invoker: void clear()>");
-					Stmt newInvokeStmt = Jimple.v().newInvokeStmt(
+					Stmt newInvokeStmt1 = Jimple.v().newInvokeStmt(
 							Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
-									toCall.makeRef(), Arrays.asList()));
+									toCall1.makeRef(), Arrays.asList()));
 					// 0527new solution for merging update function
 					// units.insertBefore(newInvokeStmt, currProStmt);
 					/*
@@ -3092,26 +3115,26 @@ public class Transformer {
 					 * solution for merging update function
 					 * units.insertBefore(newInvokeStmt, currProStmt);
 					 */
-					toCall = Scene
+					toCall1 = Scene
 							.v()
 							.getMethod(
 									"<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
-					newInvokeStmt = Jimple.v().newInvokeStmt(
+					newInvokeStmt1 = Jimple.v().newInvokeStmt(
 							Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
-									toCall.makeRef(), Arrays.asList(tmpCuuid)));
-					units.insertBefore(newInvokeStmt, currProStmt);
-					toCall = Scene
+									toCall1.makeRef(), Arrays.asList(tmpOuuid)));
+					units.insertBefore(newInvokeStmt1, currProStmt);
+					toCall1 = Scene
 							.v()
 							.getMethod(
 									"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
-					newInvokeStmt = Jimple.v().newInvokeStmt(
+					newInvokeStmt1 = Jimple.v().newInvokeStmt(
 							Jimple.v().newVirtualInvokeExpr(
 									sgxObjLocal,
-									toCall.makeRef(),
+									toCall1.makeRef(),
 									Arrays.asList(getUUIDLocal,
 											IntConstant.v(1),
 											LongConstant.v(counter)))); // IntConstant.v(returnTypeIndex)));
-					units.insertBefore(newInvokeStmt, currProStmt);
+					units.insertBefore(newInvokeStmt1, currProStmt);
 					units.remove(currProStmt);
 					counter++;
 					return null;
@@ -3125,7 +3148,7 @@ public class Transformer {
 				aBody.getLocals().add(tmpGetField);
 				localArray.add(tmpGetField);
 
-				DefinitionStmt assignStmt = initAssignStmt(tmpGetField);
+				DefinitionStmt assignStmt = initLocalVariable(tmpGetField);
 				units.insertAfter(assignStmt, lastIdentityStmt);
 
 				assignStmt = Jimple.v().newAssignStmt(tmpGetField, rightOp);// temp
@@ -3138,13 +3161,151 @@ public class Transformer {
 			}
 		} else if (rightOp instanceof StaticFieldRef) {
 			SootField sField = ((StaticFieldRef) rightOp).getField();
-			if (staticmemberVariables.containsKey(currProStmt.getClass()
-					.getName())
-					&& staticmemberVariables.get(
-							currProStmt.getClass().getName()).contains(
-							sField.getName())) { // this sootfield is sensitive
-				G.v().out.println("static SootField is sensitve!");
-				// waiting for new step 0527
+			G.v().out.println("[hyr]SootField: " + sField.toString());
+			// TODO incorrect membervariables now, actually should use staticmembervariables
+			if (memberVariables.containsKey(aBody.getMethod().getDeclaringClass().getName())
+					&& memberVariables.get(aBody.getMethod().getDeclaringClass().getName())
+						.containsKey(sField.getName())) { // sensitive field
+				G.v().out.println("[hyr]static SootField is sensitve!");
+				SootFieldRef sootFieldRef = Scene.v().makeFieldRef(
+						sField.getDeclaringClass(), "Cuuid",
+						RefType.v("java.lang.String"), true);
+				G.v().out.println("[hyr]sootFieldRef: " + sootFieldRef.toString());
+				FieldRef fieldRef = Jimple.v().newStaticFieldRef(sootFieldRef);
+				G.v().out.println("[hyr]fieldRef: " + fieldRef.toString());
+
+				Local tmpCuuid = Jimple.v().newLocal("tmpCuuid", RefType.v("java.lang.String"));
+				aBody.getLocals().add(tmpCuuid);
+				localArray.add(tmpCuuid);
+				AssignStmt asStmt = Jimple.v().newAssignStmt(tmpCuuid, fieldRef);	// tmpCuuid = Cuuid
+				G.v().out.println("[hyr]asStmt: " + asStmt.toString());
+				units.insertBefore(asStmt, currProStmt);
+
+				SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
+				Stmt newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList(tmpCuuid)));
+				G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
+				units.insertBefore(newInvokeStmt, currProStmt);
+
+				toCall = Scene.v().getMethod(
+								"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+				newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
+								Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
+				G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
+				units.insertBefore(newInvokeStmt, currProStmt);
+
+				toCall = Scene.v().getMethod("<invoker.sgx_invoker: void clearCuuid()>");
+				newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList()));
+				units.insertBefore(newInvokeStmt, currProStmt);
+				units.remove(currProStmt);
+				counter++;
+				
+
+				// symbol对应Map<String, Map<String, Integer>> memberVariables中的Integer，值为TypeIndex*100
+				int symbol = memberVariables.get(
+						aBody.getMethod().getDeclaringClass().getName()).get(sField.getName());
+				if (TypeIndex(leftOpValue) >= 7) {
+					// static array type field e.g. $r4 = <cfhider.PiEstimator$HaltonSequence: int[] K>
+					// -----original------
+					if (!SenstiveFieldArray.containsKey(leftOpValue)) {
+						SenstiveFieldArray.put(leftOpValue, symbol);
+						SenstiveFieldIndexArray.put(leftOpValue, -1);
+						SenstiveFieldCuuidArray.put(leftOpValue, tmpCuuid);
+						G.v().out
+								.println("SenstiveFieldCuuidArray leftOpValue:"
+										+ leftOpValue);
+						G.v().out.println("SenstiveFieldCuuidArray value:"
+								+ tmpCuuid);
+					}
+					// units.remove(currProStmt);
+					// ---------------------
+
+					// 0718 hyr
+					int currStmtType = TypeIndex(leftOpValue);
+					int rightOpIndex = typeToList(currStmtType).indexOf(rightOp);
+					int leftOpIndex = typeToList(currStmtType).indexOf(leftOpValue);
+					int rightValue = currStmtType * 1000 + rightOpIndex;	// static member array K, *1000
+					int leftValue = currStmtType * 10 + leftOpIndex;	  // array $r4, *10
+					G.v().out.println("[hyr]currStmtType: " + currStmtType);
+					G.v().out.println("[hyr]rightOpIndex: " + rightOpIndex + "; [hyr]rightValue: " + rightValue);
+					G.v().out.println("[hyr]leftOpIndex: " + leftOpIndex + "; [hyr]leftValue: " + leftValue);
+					indexwriter("" + currStmtType);
+					indexwriter("" + (-1));
+					indexwriter("" + rightValue);
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + leftValue);
+					return null;
+				} else {	// 这里还没有改
+					// this field is 1-6 type static field
+					if (identityArray.containsKey(leftOpValue)) {
+						return_index = identityArray.get(leftOpValue); // maybe "call+number"
+					} else {
+						val_type = TypeIndex(leftOpValue);// int or float
+						pos_index = typeToList(val_type).indexOf(leftOpValue);
+						return_index = Integer.toString(val_type * 100
+								+ pos_index);
+					}
+
+					G.v().out.println("indexWriter 2: "
+							+ Integer.toString(TypeIndex(leftOpValue)));
+
+					if (!flag) {
+						indexwriter(Integer.toString(TypeIndex(leftOpValue)));
+					} else {
+						indexwriter(Integer.toString(7));
+					}
+					indexwriter(Integer.toString(symbol));// tuple-1
+					indexwriter(left_flag_index);// tuple-1
+					indexwriter(right_index);// tuple-2
+					indexwriter(right_flag_index);// tuple-2
+					indexwriter("-1");
+					indexwriter(return_index);
+					indexwriter(return_flag_index);
+
+					SootMethod toCall1 = Scene.v().getMethod(
+							"<invoker.sgx_invoker: void clear()>");
+					Stmt newInvokeStmt1 = Jimple.v().newInvokeStmt(
+							Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
+									toCall1.makeRef(), Arrays.asList()));
+					// 0527new solution for merging update function
+					// units.insertBefore(newInvokeStmt, currProStmt);
+					/*
+					 * toCall = Scene.v().getMethod(
+					 * "<invoker.sgx_invoker: void setCounter(long)>");
+					 * newInvokeStmt = Jimple.v().newInvokeStmt(
+					 * Jimple.v().newVirtualInvokeExpr (sgxObjLocal,
+					 * toCall.makeRef(),
+					 * Arrays.asList(LongConstant.v(counter)))); //0527new
+					 * solution for merging update function
+					 * units.insertBefore(newInvokeStmt, currProStmt);
+					 */
+					toCall1 = Scene
+							.v()
+							.getMethod(
+									"<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
+					newInvokeStmt1 = Jimple.v().newInvokeStmt(
+							Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
+									toCall1.makeRef(), Arrays.asList(tmpCuuid)));
+					units.insertBefore(newInvokeStmt1, currProStmt);
+					toCall1 = Scene
+							.v()
+							.getMethod(
+									"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+					newInvokeStmt1 = Jimple.v().newInvokeStmt(
+							Jimple.v().newVirtualInvokeExpr(
+									sgxObjLocal,
+									toCall1.makeRef(),
+									Arrays.asList(getUUIDLocal,
+											IntConstant.v(1),
+											LongConstant.v(counter)))); // IntConstant.v(returnTypeIndex)));
+					units.insertBefore(newInvokeStmt1, currProStmt);
+					units.remove(currProStmt);
+					counter++;
+					return null;
+				}
+
 			} else { // this field is not sensitive
 				Local tmpGetStaticField = Jimple.v().newLocal(
 						"tmpGetStaticField" + Long.toString(counter),
@@ -3152,7 +3313,7 @@ public class Transformer {
 				aBody.getLocals().add(tmpGetStaticField);
 				localArray.add(tmpGetStaticField);
 
-				DefinitionStmt assignStmt = initAssignStmt(tmpGetStaticField);
+				DefinitionStmt assignStmt = initLocalVariable(tmpGetStaticField);
 				units.insertAfter(assignStmt, lastIdentityStmt);
 
 				assignStmt = Jimple.v().newAssignStmt(tmpGetStaticField,
@@ -3211,7 +3372,7 @@ public class Transformer {
 		// G.v().out.println("RightOpIsInvoke tmpValue: "+tmpValue.toString());
 		//
 		// //insert tmpValue init stmt after all IdentityStmts
-		// DefinitionStmt assignStmt = initAssignStmt(tmpValue);
+		// DefinitionStmt assignStmt = initLocalVariable(tmpValue);
 		// G.v().out.println("newAssignStmt is: "+assignStmt.toString());
 		// G.v().out.println("lastIdentityStmt is: "+lastIdentityStmt.toString());
 		// units.insertAfter(assignStmt, lastIdentityStmt);
@@ -3230,14 +3391,19 @@ public class Transformer {
 		// (Unit)assignStmt, rightCondValue,getUUIDLocal);
 		// }
 		//
-		// G.v().out.println("newInvokeStmt to insert is: ++++++++++++++++++++++++++ "+assignStmt+"++++++++++++++++++++++");
-		// G.v().out.println("start insert before currStmt: ++++++++++++++++++++++++++ "+currProStmt+"++++++++++++++++++++++");
+		// G.v().out.println("newInvokeStmt to insert is: ++++++++++++++++++++++++++
+		// "+assignStmt+"++++++++++++++++++++++");
+		// G.v().out.println("start insert before currStmt: ++++++++++++++++++++++++++
+		// "+currProStmt+"++++++++++++++++++++++");
 		// //
-		// G.v().out.println("InvokeExpr class is: ++++++++++++++++++++++++++ "+rightOp.getClass()+"++++++++++++++++++++++");
+		// G.v().out.println("InvokeExpr class is: ++++++++++++++++++++++++++
+		// "+rightOp.getClass()+"++++++++++++++++++++++");
 		// ((AssignStmt)currProStmt).setRightOp(tmpValue);
 		// //
-		// G.v().out.println("InvokeExpr class is: ++++++++++++++++++++++++++ "+tmpValue.getClass()+"++++++++++++++++++++++");
-		// G.v().out.println("currStmt: ++++++++++++++++++++++++++ "+currProStmt+"++++++++++++++++++++++");
+		// G.v().out.println("InvokeExpr class is: ++++++++++++++++++++++++++
+		// "+tmpValue.getClass()+"++++++++++++++++++++++");
+		// G.v().out.println("currStmt: ++++++++++++++++++++++++++
+		// "+currProStmt+"++++++++++++++++++++++");
 		// values.clear();
 		// operator.clear();
 		// analyzeExp(tmpValue, values, operator, cons, variable);//
@@ -3273,8 +3439,8 @@ public class Transformer {
 
 		boolean isNeedCuuidFlag = false;
 		Value tempCuuidValue = null;
-		boolean arrayAssign=false;
-		Value Arrvalue=null;
+		boolean arrayAssign = false;
+		Value Arrvalue = null;
 		/**
 		 * edit on 4.26 for array re
 		 */
@@ -3284,8 +3450,8 @@ public class Transformer {
 					.getLeftOpBox().getValue()).getBase();
 			Value Indevalue = ((ArrayRef) ((AssignStmt) currProStmt)
 					.getLeftOpBox().getValue()).getIndex();
-			flag=true;
-			arrayAssign=true;
+			flag = true;
+			arrayAssign = true;
 			/**
 			 * deal with Base Arrvalue
 			 */
@@ -3302,26 +3468,25 @@ public class Transformer {
 				val_type = TypeIndex(Arrvalue);// int or float
 				pos_index = typeToList(val_type).indexOf(Arrvalue);
 				return_flag_index = Integer.toString(val_type * 10 + pos_index);
-				right_index="2";//right标志为2表示数组元素更新
-				
-			}else if (condValsArrayInt.contains(Arrvalue)) {//a[0]=1 or a[i]=1 a是普通數組
+				right_index = "2";// right标志为2表示数组元素更新
+
+			} else if (condValsArrayInt.contains(Arrvalue)) {// a[0]=1 or a[i]=1 a是普通數組
 				val_type = TypeIndex(Arrvalue);// int or float
 				G.v().out.println(val_type);
 				pos_index = typeToList(val_type).indexOf(Arrvalue);
 				return_flag_index = Integer.toString(val_type * 10 + pos_index);
-				right_index="2";//right标志为2表示数组元素更新
+				right_index = "2";// right标志为2表示数组元素更新
 				G.v().out.println("gpf 20220706 arr[i]=0 or arr [0]=0");
-				
-			} else if (condValsArrayChar.contains(Arrvalue)) {//a[0]=1 or a[i]=1 a是普通數組
+
+			} else if (condValsArrayChar.contains(Arrvalue)) {// a[0]=1 or a[i]=1 a是普通數組
 				val_type = TypeIndex(Arrvalue);// int or float
 				G.v().out.println(val_type);
 				pos_index = typeToList(val_type).indexOf(Arrvalue);
 				return_flag_index = Integer.toString(val_type * 10 + pos_index);
-				right_index="2";//right标志为2表示数组元素更新
+				right_index = "2";// right标志为2表示数组元素更新
 				G.v().out.println("gpf 20220706 arr[i]=0 or arr [0]=0");
-				
-			}
-			else {
+
+			} else {
 				val_type = TypeIndex(Arrvalue);// int or float
 				pos_index = typeToList(val_type).indexOf(Arrvalue);
 				return_flag_index = Integer.toString(val_type * 10 + pos_index);
@@ -3333,10 +3498,9 @@ public class Transformer {
 			int list_size = 0;
 			int MaxSize = (localArray.size() > N) ? N : localArray.size();
 			Random rand = new Random();
-			if(Indevalue instanceof Constant){
-				return_index="int_"+Indevalue.toString();
-			}
-			else if (condVals.contains(Indevalue)) {
+			if (Indevalue instanceof Constant) {
+				return_index = "int_" + Indevalue.toString();
+			} else if (condVals.contains(Indevalue)) {
 				val_type = TypeIndex(Indevalue);// int or float
 				pos_index = typeToList(val_type).indexOf(Indevalue);
 				return_index = Integer.toString(val_type * 100 + pos_index);//
@@ -3384,34 +3548,34 @@ public class Transformer {
 				}
 			}
 		} else if (TypeIndex(leftOpValue) > 6) { // r1 = r2
-			
+
 			G.v().out.println("gpf r1=r2");
-			
+
 			G.v().out.println("TypeIndex > 6:" + leftOpValue);
 			G.v().out.println("TypeIndex > 6:identityArray = "
 					+ identityArray.toString());
-			G.v().out.println("double arrays"+condValsArrayDouble);
-			G.v().out.println("left: "+leftOpValue+" right: "+rightOp);
+			G.v().out.println("double arrays" + condValsArrayDouble);
+			G.v().out.println("left: " + leftOpValue + " right: " + rightOp);
 			if (identityArray.containsKey(leftOpValue)) {
 
 				return_flag_index = identityArray.get(leftOpValue); // maybe
 																	// "call+number"
-				G.v().out.println("if one d array left: "+val_type+" "+pos_index);
+				G.v().out.println("if one d array left: " + val_type + " " + pos_index);
 			} else {
 				val_type = TypeIndex(leftOpValue);// int or float
 				pos_index = typeToList(val_type).indexOf(leftOpValue);
 				return_flag_index = Integer.toString(val_type * 10 + pos_index);
-				G.v().out.println("else one d array left: "+val_type+" "+pos_index);
+				G.v().out.println("else one d array left: " + val_type + " " + pos_index);
 			}
 			if (identityArray.containsKey(rightOp)) {
-				G.v().out.println("if one d array right: "+val_type+" "+pos_index);
+				G.v().out.println("if one d array right: " + val_type + " " + pos_index);
 				return_flag_index = identityArray.get(rightOp); // maybe
-																	// "call+number"
+																// "call+number"
 			} else {
 				val_type = TypeIndex(rightOp);// int or float
 				pos_index = typeToList(val_type).indexOf(rightOp);
-				left_flag_index= Integer.toString(val_type * 10 + pos_index);
-				G.v().out.println("else one d array right: "+val_type+" "+pos_index);
+				left_flag_index = Integer.toString(val_type * 10 + pos_index);
+				G.v().out.println("else one d array right: " + val_type + " " + pos_index);
 			}
 			toCall = Scene
 					.v()
@@ -3426,11 +3590,11 @@ public class Transformer {
 			units.insertBefore(newInvokeStmt, currProStmt);
 			units.remove(currProStmt);
 			counter++;
-			
-			G.v().out.println("left: "+leftOpValue+"  pos: "+return_flag_index);
-			G.v().out.println("right: "+rightOp+"  pos:"+left_flag_index);
-			//同维度数组之间相互赋值
-			indexwriter(""+TypeIndex(leftOpValue));
+
+			G.v().out.println("left: " + leftOpValue + "  pos: " + return_flag_index);
+			G.v().out.println("right: " + rightOp + "  pos:" + left_flag_index);
+			// 同维度数组之间相互赋值
+			indexwriter("" + TypeIndex(leftOpValue));
 			indexwriter("-1");
 			indexwriter(left_flag_index);
 			indexwriter("3");
@@ -3439,8 +3603,7 @@ public class Transformer {
 			indexwriter("-1");
 			indexwriter(return_flag_index);
 			return null;
-			
-			
+
 		} else { // i0 = i1
 			int returnTypeIndex = TypeIndex(leftOpValue);// return value type
 															// index
@@ -3462,15 +3625,15 @@ public class Transformer {
 																	// 它的index
 		G.v().out.println("pos_index=" + pos_index);
 		G.v().out.println("123321");
-		//当求数组长度时 type用7表示
-		if(!isArrayLength&&!arrayAssign){
-			G.v().out.println("not array length type: "+val_type);
-			indexwriter(""+Integer.toString(val_type));// tuple-0: opOne's type
+		// 当求数组长度时 type用7表示
+		if (!isArrayLength && !arrayAssign) {
+			G.v().out.println("not array length type: " + val_type);
+			indexwriter("" + Integer.toString(val_type));// tuple-0: opOne's type
 		}
-		if(arrayAssign){
-			indexwriter(""+TypeIndex(Arrvalue));
+		if (arrayAssign) {
+			indexwriter("" + TypeIndex(Arrvalue));
 		}
-		
+
 		G.v().out
 				.println("<<<<<<ZYSTBLE>>>>>> tuple-0 update: ++++++++++++++++++++++++++ "
 						+ Integer.toString(val_type) + "++++++++++++++++++++++");
@@ -3483,7 +3646,7 @@ public class Transformer {
 		int MaxSize = (localArray.size() > N) ? N : localArray.size();
 		Random rand = new Random();
 		G.v().out.println("values.size=" + values.size());
-		if (values.size() == 1) {//这里处理int a=arr[0]  拿到前面处理了 // int a=arr[0] 右边是一维数组引用类型（数组+下标） 
+		if (values.size() == 1) {// 这里处理int a=arr[0] 拿到前面处理了 // int a=arr[0] 右边是一维数组引用类型（数组+下标）
 			G.v().out.println("0515 :" + values.get(0) + " "
 					+ values.get(0).getType());
 			/**
@@ -3493,7 +3656,8 @@ public class Transformer {
 					&& TypeIndex(values.get(0)) <= 6
 					&& TypeIndex(values.get(0)) != -1) {
 				G.v().out
-						.println("???--> values.get(0) instanceof ArrayRef && TypeIndex(values.get(0))<=6 && TypeIndex(values.get(0)) != -1 :");
+						.println(
+								"???--> values.get(0) instanceof ArrayRef && TypeIndex(values.get(0))<=6 && TypeIndex(values.get(0)) != -1 :");
 				Arrvalue = ((ArrayRef) ((AssignStmt) currProStmt)
 						.getRightOp()).getBase();
 				Value Indevalue = ((ArrayRef) ((AssignStmt) currProStmt)
@@ -3607,14 +3771,14 @@ public class Transformer {
 				G.v().out.println("60 or70	flag");
 				// left_index = "1";//in enclave
 			} else if (condVals.contains(values.get(0))) {
-				if(values.get(0) instanceof Constant){
-					left_index="int_"+values.get(0).toString();
-				}else{
+				if (values.get(0) instanceof Constant) {
+					left_index = "int_" + values.get(0).toString();
+				} else {
 					val_type = TypeIndex(values.get(0));// int or float flag
 					pos_index = typeToList(val_type).indexOf(values.get(0));
 					left_index = Integer.toString(val_type * 100 + pos_index);//
 				}
-				
+
 				G.v().out.println("int or float flag");
 
 				G.v().out.println("values.get(0):" + values.get(0));
@@ -3626,8 +3790,9 @@ public class Transformer {
 			 */
 			else if (values.get(0) instanceof JLengthExpr
 					&& (condVals
-							.contains(((JLengthExpr) values.get(0)).getOp()) || identityArray
-							.containsKey(((JLengthExpr) values.get(0)).getOp()))) {
+							.contains(((JLengthExpr) values.get(0)).getOp())
+							|| identityArray
+									.containsKey(((JLengthExpr) values.get(0)).getOp()))) {
 				G.v().out.println("[0527]=curr method is==" + currProStmt
 						+ " and rightop is:" + values.get(0) + " Array is"
 						+ ((JLengthExpr) values.get(0)).getOp());
@@ -3637,25 +3802,25 @@ public class Transformer {
 					Value value = vBox.getValue();
 					G.v().out.println("use:" + value);
 					if (identityArray.containsKey(value)) {
-						
-						//left_flag_index = identityArray.get(value); // maybe
+
+						// left_flag_index = identityArray.get(value); // maybe
 						val_type = TypeIndex(value);// int or float
-						indexwriter(""+val_type);// tuple-1
+						indexwriter("" + val_type);// tuple-1
 						pos_index = typeToList(val_type).indexOf(value);
 						left_flag_index = Integer.toString(val_type * 10
-								+ pos_index);										// "call+number"
+								+ pos_index); // "call+number"
 						left_index = "10000"; // we define "10000" in left_index
-						right_index="5";					// represent length
+						right_index = "5"; // represent length
 						G.v().out.println("3 :" + left_flag_index);
 						break;
 					} else if (condVals.contains(value)) {
 						val_type = TypeIndex(value);// int or float
-						indexwriter(""+val_type);// tuple-1
+						indexwriter("" + val_type);// tuple-1
 						pos_index = typeToList(val_type).indexOf(value);
 						left_flag_index = Integer.toString(val_type * 10
 								+ pos_index);
 						left_index = "10000"; // we define "10000" in left_index
-						right_index="5";				// represent length
+						right_index = "5"; // represent length
 						break;
 					}
 				}
@@ -3664,7 +3829,7 @@ public class Transformer {
 
 				if (TypeIndex(values.get(0)) > 6) { // array
 					if (values.get(0) instanceof ArrayRef) {// 2x array
-					   Arrvalue = ((ArrayRef) ((AssignStmt) currProStmt)
+						Arrvalue = ((ArrayRef) ((AssignStmt) currProStmt)
 								.getRightOp()).getBase();
 						Value Indevalue = ((ArrayRef) ((AssignStmt) currProStmt)
 								.getRightOp()).getIndex();
@@ -3684,7 +3849,7 @@ public class Transformer {
 					aBody.getLocals().add(tmpUpdateArray);
 					localArray.add(tmpUpdateArray);
 
-					DefinitionStmt assignStmts = initAssignStmt(tmpUpdateArray);
+					DefinitionStmt assignStmts = initLocalVariable(tmpUpdateArray);
 					units.insertAfter(assignStmts, lastIdentityStmt);
 
 					G.v().out.println("tmpUpdateArray: "
@@ -3799,7 +3964,8 @@ public class Transformer {
 						continue;
 					if ((loc.equals(values.get(0))
 							|| (loc.equals(values.get(1))) || (rand
-							.nextDouble() <= ratio)) && (index < N)) {
+									.nextDouble() <= ratio))
+							&& (index < N)) {
 						if (loc.equals(values.get(0))) {
 							// val_type = TypeIndex(values.get(0));//int or
 							// float
@@ -3928,14 +4094,14 @@ public class Transformer {
 				indexwriter("13");
 			} else if (symbolString.equals(" ^ ")) { // new add on 8.18 by ZyStBle
 				indexwriter("14");
-			}  else if (symbolString.equals(" << ")) { // new add on 8.18 by ZyStBle
+			} else if (symbolString.equals(" << ")) { // new add on 8.18 by ZyStBle
 				indexwriter("15");
-			}  else if (symbolString.equals(" >>> ")) { // new add on 8.18 by ZyStBle
+			} else if (symbolString.equals(" >>> ")) { // new add on 8.18 by ZyStBle
 				indexwriter("16");
-			}  else if (symbolString.equals(" >>> ")) { // new add on 8.18 by ZyStBle
+			} else if (symbolString.equals(" >>> ")) { // new add on 8.18 by ZyStBle
 				indexwriter("17");
-			} 
-			
+			}
+
 			else {
 				G.v().out.println("not normal operator:" + operator);
 				indexwriter("-1");
@@ -4002,9 +4168,10 @@ public class Transformer {
 
 		return newInvokeStmt;
 	}
-//转化数组静态初始化语句
-    @SuppressWarnings("unused")
-    private void replaceArrayStaticInitStmt(
+
+	// 转化数组静态初始化语句
+	@SuppressWarnings("unused")
+	private void replaceArrayStaticInitStmt(
 			Body aBody,
 			Local sgxObjLocal,
 			PatchingChain<Unit> units,
@@ -4012,27 +4179,27 @@ public class Transformer {
 			Unit currProStmt,
 			Local getUUIDLocal,
 			Iterator<Unit> scanIt,
-			Map<String,Map<String, Integer>> memberVariables,
+			Map<String, Map<String, Integer>> memberVariables,
 			Map<String, List<String>> staticmemberVariables,
 			Map<SootField, Value> OriginFieldCuuidArray) {
 		// TODO Auto-generated method stub
-   
-    	Unit currStmt = null;
-    	int totalSize = 1;  //对应一维数组大小(总元素个数)
-    	int d = 1;  //数组的维度
-    	String[] dimensions = new String[4];
-    	List<String> data = new ArrayList<>();
-    	boolean flag = true;
 
-    	Value right = ((AssignStmt) currProStmt).getRightOp();
-    	NewArrayExpr n = (NewArrayExpr)right;
-    	
-    	dimensions[0] = "int_"+n.getSize().toString();
-    	G.v().out.println("StaticNewArrayExpr :"+n+"  "+n.getSize());
-    	
-    	Value left = ((AssignStmt) currProStmt).getLeftOp();
-    	
-    	while (scanIt.hasNext()) {
+		Unit currStmt = null;
+		int totalSize = 1; // 对应一维数组大小(总元素个数)
+		int d = 1; // 数组的维度
+		String[] dimensions = new String[4];
+		List<String> data = new ArrayList<>();
+		boolean flag = true;
+
+		Value right = ((AssignStmt) currProStmt).getRightOp();
+		NewArrayExpr n = (NewArrayExpr) right;
+
+		dimensions[0] = "int_" + n.getSize().toString();
+		G.v().out.println("StaticNewArrayExpr :" + n + "  " + n.getSize());
+
+		Value left = ((AssignStmt) currProStmt).getLeftOp();
+
+		while (scanIt.hasNext()) {
 			currStmt = scanIt.next();
 			if (((AssignStmt) currStmt).getRightOp() == left) {
 				break;
@@ -4040,88 +4207,93 @@ public class Transformer {
 			if (!(((AssignStmt) currStmt).getRightOp() instanceof NewArrayExpr)) {
 				flag = false;
 			}
-			if(flag){
+			if (flag) {
 				d++;
 				right = ((AssignStmt) currStmt).getRightOp();
-		    	n = (NewArrayExpr)right;
-		    	dimensions[d-1] = "int_"+n.getSize().toString();
+				n = (NewArrayExpr) right;
+				dimensions[d - 1] = "int_" + n.getSize().toString();
 			}
 			if (TypeIndex(((AssignStmt) currStmt).getRightOp()) < 7) {
-				data.add(((AssignStmt) currStmt).getRightOp().getType().toString()+"_"+((AssignStmt) currStmt).getRightOp().toString());
+				data.add(((AssignStmt) currStmt).getRightOp().getType().toString() + "_"
+						+ ((AssignStmt) currStmt).getRightOp().toString());
 			}
 			G.v().out.println(currStmt);
 			units.remove(currStmt);
 		}
-    	totalSize = data.size();
-    	G.v().out.println("xhy--arrayStaticInitInfo:" );
-    	G.v().out.println("d: " + d);
-    	G.v().out.println("totalSize: " + totalSize);
-    	G.v().out.println("data: " + data.toString());
-    	G.v().out.println("dimensions: " + Arrays.toString(dimensions));
+		totalSize = data.size();
+		G.v().out.println("xhy--arrayStaticInitInfo:");
+		G.v().out.println("d: " + d);
+		G.v().out.println("totalSize: " + totalSize);
+		G.v().out.println("data: " + data.toString());
+		G.v().out.println("dimensions: " + Arrays.toString(dimensions));
 		G.v().out.println("currStmt: " + currStmt);
 		G.v().out.println("currProStmt: " + currProStmt);
-    	
+
 		units.remove(currProStmt);
-		for(int i =0;i<4;i++){
-			if(dimensions[i]==null){
-				dimensions[i]="0";
+		for (int i = 0; i < 4; i++) {
+			if (dimensions[i] == null) {
+				dimensions[i] = "0";
 			}
 		}
-		//更新d、dimension、为data申请空间
-		int val_type = TypeIndex(((AssignStmt) currProStmt).getLeftOp());//int or float
+		// 更新d、dimension、为data申请空间
+		int val_type = TypeIndex(((AssignStmt) currProStmt).getLeftOp());// int or float
 		int pos_index = typeToList(val_type).indexOf(((AssignStmt) currProStmt).getLeftOp());
-		int index = val_type*10+pos_index;
-		G.v().out.println("leftOp: "+((AssignStmt) currProStmt).getLeftOp().toString()+"  val_type: "+val_type+"  pos_index: "+pos_index+"  index: "+index);
-		SootMethod toCall = Scene.v().getMethod ("<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+		int index = val_type * 10 + pos_index;
+		G.v().out.println("leftOp: " + ((AssignStmt) currProStmt).getLeftOp().toString() + "  val_type: " + val_type
+				+ "  pos_index: " + pos_index + "  index: " + index);
+		SootMethod toCall = Scene.v()
+				.getMethod("<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
 		Stmt newInvokeStmt1 = Jimple.v().newInvokeStmt(
-				Jimple.v().newVirtualInvokeExpr
-		           (sgxObjLocal, toCall.makeRef(), Arrays.asList(getUUIDLocal,IntConstant.v(0),LongConstant.v(counter))));
+				Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
+						Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
 		units.insertBefore(newInvokeStmt1, currStmt);
 		counter++;
-		indexwriter(""+TypeIndex(((AssignStmt) currProStmt).getLeftOp()));
-		indexwriter(""+dimensions[0]);
-		indexwriter(""+dimensions[1]);
-		indexwriter(""+0);
-		indexwriter(""+dimensions[2]);
+		indexwriter("" + TypeIndex(((AssignStmt) currProStmt).getLeftOp()));
+		indexwriter("" + dimensions[0]);
+		indexwriter("" + dimensions[1]);
+		indexwriter("" + 0);
+		indexwriter("" + dimensions[2]);
 		indexwriter("-1");
-		indexwriter(""+(-1));
-		indexwriter(""+index);
-		
-		//更新location originloc
+		indexwriter("" + (-1));
+		indexwriter("" + index);
+
+		// 更新location originloc
 		Stmt newInvokeStmt2 = Jimple.v().newInvokeStmt(
-				Jimple.v().newVirtualInvokeExpr
-		           (sgxObjLocal, toCall.makeRef(), Arrays.asList(getUUIDLocal,IntConstant.v(0),LongConstant.v(counter))));
+				Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
+						Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
 		units.insertBefore(newInvokeStmt2, currStmt);
 		counter++;
-		indexwriter(""+ TypeIndex(((AssignStmt) currProStmt).getLeftOp()));
-		indexwriter(""+index);
-		indexwriter(""+index);
-		indexwriter(""+1);
-		indexwriter(""+(-1));
+		indexwriter("" + TypeIndex(((AssignStmt) currProStmt).getLeftOp()));
+		indexwriter("" + index);
+		indexwriter("" + index);
+		indexwriter("" + 1);
+		indexwriter("" + (-1));
 		indexwriter("-1");
-		indexwriter(""+(-1));
-		indexwriter(""+index);
-		
-		//更新data
+		indexwriter("" + (-1));
+		indexwriter("" + index);
+
+		// 更新data
 		for (int i = 0; i < totalSize; i++) {
 			Stmt newInvokeStmt3 = Jimple.v().newInvokeStmt(
-					Jimple.v().newVirtualInvokeExpr
-			           (sgxObjLocal, toCall.makeRef(), Arrays.asList(getUUIDLocal,IntConstant.v(0),LongConstant.v(counter))));
+					Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
+							Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
 			units.insertBefore(newInvokeStmt3, currStmt);
 			counter++;
-			indexwriter(""+ TypeIndex(((AssignStmt) currProStmt).getLeftOp()));
+			indexwriter("" + TypeIndex(((AssignStmt) currProStmt).getLeftOp()));
 			indexwriter("" + data.get(i));
 			indexwriter("" + (-1));
 			indexwriter("2");
-			indexwriter(""+(-1));
+			indexwriter("" + (-1));
 			indexwriter("-1");
-			indexwriter(""+ "int_" + i);
-			indexwriter(""+index);
+			indexwriter("" + "int_" + i);
+			indexwriter("" + index);
 		}
-		
-	    //处理最后一条语句 r1 = $r2
-	    replaceValueUpdateStmt(aBody, sgxObjLocal, units, localArray, currStmt,getUUIDLocal,memberVariables,staticmemberVariables, OriginFieldCuuidArray);
-    }
+
+		// 处理最后一条语句 r1 = $r2
+		replaceValueUpdateStmt(aBody, sgxObjLocal, units, localArray, currStmt, getUUIDLocal, memberVariables,
+				staticmemberVariables, OriginFieldCuuidArray);
+	}
+
 	private InvokeStmt prepareInsertStmt(Value loggedValue, Local loggerLocal,
 			String className) {
 		Type vType = loggedValue.getType();
@@ -4147,83 +4319,83 @@ public class Transformer {
 			toCall = Scene.v().getMethod("<" + className + ": void add(byte)>");
 		} else if (vType instanceof ArrayType) {
 			switch (TypeIndex(loggedValue)) {
-			case 7:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(int[])>");
-				break;
-			case 8:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(double[])>");
-				break;
-			case 9:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(float[])>");
-				break;
-			case 10:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(char[])>");
-				break;
-			case 11:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(long[])>");
-				break;
-			case 12:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(byte[])>");
-				break;
-			case 13:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(int[][])>");
-				break;
-			case 14:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(double[][])>");
-				break;
-			case 15:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(float[][])>");
-				break;
-			case 16:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(char[][])>");
-				break;
-			case 17:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(long[][])>");
-				break;
-			case 18:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(byte[][])>");
-				break;
-			case 19:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(int[][][])>");
-				break;
-			case 20:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(double[][][])>");
-				break;
-			case 21:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(float[][][])>");
-				break;
-			case 22:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(char[][][])>");
-				break;
-			case 23:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(long[][][])>");
-				break;
-			case 24:
-				toCall = Scene.v().getMethod(
-						"<" + className + ": void add(byte[][][])>");
-				break;
-			case -1:
-				toCall = null;
-				break;
-			default:
-				break;
+				case 7:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(int[])>");
+					break;
+				case 8:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(double[])>");
+					break;
+				case 9:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(float[])>");
+					break;
+				case 10:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(char[])>");
+					break;
+				case 11:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(long[])>");
+					break;
+				case 12:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(byte[])>");
+					break;
+				case 13:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(int[][])>");
+					break;
+				case 14:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(double[][])>");
+					break;
+				case 15:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(float[][])>");
+					break;
+				case 16:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(char[][])>");
+					break;
+				case 17:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(long[][])>");
+					break;
+				case 18:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(byte[][])>");
+					break;
+				case 19:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(int[][][])>");
+					break;
+				case 20:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(double[][][])>");
+					break;
+				case 21:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(float[][][])>");
+					break;
+				case 22:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(char[][][])>");
+					break;
+				case 23:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(long[][][])>");
+					break;
+				case 24:
+					toCall = Scene.v().getMethod(
+							"<" + className + ": void add(byte[][][])>");
+					break;
+				case -1:
+					toCall = null;
+					break;
+				default:
+					break;
 			}
 			// toCall = Scene.v().getMethod
 			// ("<"+className+": void add(java.lang.Object)>");
@@ -4254,7 +4426,7 @@ public class Transformer {
 
 	@SuppressWarnings("unused")
 	private void analyzeExp(
-			Value exp,// x>y //rightop
+			Value exp, // x>y //rightop
 			// ArrayList<String> params,
 			ArrayList<Value> values, ArrayList<String> operator,
 			ArrayList<Value> cons, ArrayList<Value> variable) {
@@ -4333,30 +4505,32 @@ public class Transformer {
 	private int TypeIndex(Value tValue) {
 		int typeIndex = -1;
 		String typeStr = tValue.getType().toString();
-		G.v().out
-				.println("<<<<<<ZYSTBLE>>>>>> in Function TypeIndex typeStr:********"
-						+ typeStr + "*************");
-
-		if (typeStr.equals("int") || typeStr.equals("short")||typeStr.equals("byte")||typeStr.equals("char")
-				|| typeStr.equals("java.lang.Integer")
-				|| typeStr.equals("boolean")) {
+		G.v().out.println("<<<<<<ZYSTBLE>>>>>> in Function TypeIndex typeStr:********: " + typeStr + "*************");
+		if (typeStr.equals("int") || typeStr.equals("java.lang.Integer") || typeStr.equals("boolean") || typeStr.equals("short")) {
 			typeIndex = 1;
 		} else if (typeStr.equals("double")) {
 			typeIndex = 2;
 		} else if (typeStr.equals("float")) {
 			typeIndex = 3;
+		} else if (typeStr.equals("char")) {
+			typeIndex = 4;
 		} else if (typeStr.equals("long")) {
 			typeIndex = 5;
-		}else if (typeStr.equals("int[]")||typeStr.equals("char[]")
-				||typeStr.equals("byte[]")) {
+		} else if (typeStr.equals("byte")) {
+			typeIndex = 6;
+		} else if (typeStr.equals("int[]") || typeStr.equals("boolean[]") || typeStr.equals("short[]")) {
 			typeIndex = 7;
 		} else if (typeStr.equals("double[]")) {
 			typeIndex = 8;
 		} else if (typeStr.equals("float[]")) {
 			typeIndex = 9;
+		} else if (typeStr.equals("char[]")) {
+			typeIndex = 10;
 		} else if (typeStr.equals("long[]")) {
 			typeIndex = 11;
-		}else if (typeStr.equals("int[][]")) {
+		} else if (typeStr.equals("byte[]")) {
+			typeIndex = 12;
+		} else if (typeStr.equals("int[][]") || typeStr.equals("boolean[][]") || typeStr.equals("short[][]")) {
 			typeIndex = 13;
 		} else if (typeStr.equals("double[][]")) {
 			typeIndex = 14;
@@ -4368,7 +4542,7 @@ public class Transformer {
 			typeIndex = 17;
 		} else if (typeStr.equals("byte[][]")) {
 			typeIndex = 18;
-		} else if (typeStr.equals("int[][][]")) {
+		} else if (typeStr.equals("int[][][]") || typeStr.equals("boolean[][][]") || typeStr.equals("short[][][]")) {
 			typeIndex = 13;
 		} else if (typeStr.equals("double[][][]")) {
 			typeIndex = 14;
@@ -4380,10 +4554,9 @@ public class Transformer {
 			typeIndex = 17;
 		} else if (typeStr.equals("byte[][][]")) {
 			typeIndex = 18;
-		} else { // TODO: contains type object , boolean , short
-			G.v().out.println("<<<<<<ZYSTBLE>>>>>>other Value.getType():"
-					+ tValue.getType());
-			typeIndex = -1; // for hashcode
+		} else { // TODO: contains type object, boolean, short
+			G.v().out.println("<<<<<<ZYSTBLE>>>>>>other Value.getType(): " + tValue.getType());
+			typeIndex = -1; 
 		}
 		return typeIndex;
 	}
@@ -4426,9 +4599,9 @@ public class Transformer {
 		else if (typeIndex == 18)
 			return condValsArrayByte;
 		else
-			// TODO: contains type object , boolean , short
+			// TODO: contains type object, boolean, short
 			G.v().out.println("other condvalstype");
-		return condValsOtherType;
+			return condValsOtherType;
 	}
 
 	// 插入删除语句
@@ -4567,139 +4740,109 @@ public class Transformer {
 			units.insertBefore(newInitInvokeStmt, currStmt);
 		}
 		G.v().out.println("更新形参中的敏感数组的param值为1");
-		G.v().out.println("identi array: "+identityArray);
-		for(Value key:identityArray.keySet()){
-			G.v().out.println("counter="+counter);
-			int type=TypeIndex(key);
+		G.v().out.println("identi array: " + identityArray);
+		for (Value key : identityArray.keySet()) {
+			G.v().out.println("counter=" + counter);
+			int type = TypeIndex(key);
 			int pos_index = typeToList(type).indexOf(key);
-			String return_index = Integer.toString(type*10 + pos_index);
-			G.v().out.println("arr: "+key+"  pos:"+return_index);
+			String return_index = Integer.toString(type * 10 + pos_index);
+			G.v().out.println("arr: " + key + "  pos:" + return_index);
 			toCall = Scene
 					.v()
 					.getMethod(
 							"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
 
-		Stmt newInvokeStmt = Jimple.v().newInvokeStmt(
+			Stmt newInvokeStmt = Jimple.v().newInvokeStmt(
 					Jimple.v().newVirtualInvokeExpr(
 							sgxObjLocal,
 							toCall.makeRef(),
 							Arrays.asList(getUUID, IntConstant.v(0),
-									LongConstant.v(counter)))); 
-		units.insertBefore(newInvokeStmt, currStmt);
-	
-		
-		
-		indexwriter(""+type);
-		indexwriter("0");
-		indexwriter(identityArray.get(key).substring(5,6));
-		indexwriter("4");
-		indexwriter("-1");
-		indexwriter("-1");
-		indexwriter("-1");
-		indexwriter(return_index);
-		counter++;
-		
-			
+									LongConstant.v(counter))));
+			units.insertBefore(newInvokeStmt, currStmt);
+
+			indexwriter("" + type);
+			indexwriter("0");
+			indexwriter(identityArray.get(key).substring(5, 6));
+			indexwriter("4");
+			indexwriter("-1");
+			indexwriter("-1");
+			indexwriter("-1");
+			indexwriter(return_index);
+			counter++;
+
 		}
 	}
 
 	@SuppressWarnings("unused")
-	private void insertSgxInitStmt(Body aBody, Local sgxObjLocal, // sgxObjLocal
-			PatchingChain<Unit> units, Unit currStmt, // first stmt
-			String className) { // Object NewArrayExpr)
-	// String funcNameString = aBody.getMethod().toString();
-	// G.v().out.println("funcNameString: "+funcNameString+";");
-	// int argsString = aBody.getMethod().equivHashCode();
-	// G.v().out.println("argsString: "+argsString+";");
-	// G.v().out.println("getNumberedSubSignature: "+aBody.getMethod().getNumberedSubSignature()+";");
-	// G.v().out.println("getTags: "+aBody.getTags());
-	// G.v().out.println("hashCode: "+aBody.hashCode());
-	// G.v().out.println("getParameterCount: "+aBody.getMethod().getParameterCount());
-	// StringBuilder methodID = new StringBuilder();
-	// methodID.append(funcNameString);
-	// for(int i=0; i<aBody.getMethod().getParameterCount(); i++){
-	// G.v().out.println("ParameterLocal-"+i+": "+aBody.getParameterLocal(i).toString());
-	// methodID.append("_");
-	// methodID.append(aBody.getParameterLocal(i));
-	// }
-	// G.v().out.println("methodID: "+methodID);
+	private void insertSgxInitStmt(Body aBody, Local sgxObjLocal,
+			PatchingChain<Unit> units, Unit currStmt, 
+			String className) { 
+		
+		G.v().out.println("-----enter insertSgxInitStmt()-----");
 
-		G.v().out.println("2199 currStmt: " + currStmt.toString());
-
-		// /"sgxInvoker = new invoker.sgx_invoker;"
-		soot.jimple.NewExpr sootNew = soot.jimple.Jimple.v().newNewExpr(
-				RefType.v(className));
-		soot.jimple.AssignStmt stmt = soot.jimple.Jimple.v().newAssignStmt(
-				sgxObjLocal, sootNew);
-		G.v().out.println("2204 stmt: " + stmt.toString());
+		// sgxInvoker = new invoker.sgx_invoker;
+		NewExpr sootNew = Jimple.v().newNewExpr(RefType.v(className));
+		AssignStmt stmt = Jimple.v().newAssignStmt(sgxObjLocal, sootNew);
+		G.v().out.println("sgxInvoker init stmt: " + stmt.toString());
 		units.insertBefore(stmt, currStmt);
 
-		G.v().out.println("2206 currStmt: " + currStmt.toString());
-		// "specialinvoke sgxInvoker.<invoker.sgx_invoker: void <init>()>();"
-		SpecialInvokeExpr newTrans = Jimple.v().newSpecialInvokeExpr(
-				sgxObjLocal,
-				Scene.v().getMethod("<invoker.sgx_invoker: void <init>()>")
-						.makeRef(), Arrays.asList());
-		soot.jimple.Stmt invokeStmt = soot.jimple.Jimple.v().newInvokeStmt(
-				newTrans);
+		// specialinvoke sgxInvoker.<invoker.sgx_invoker: void <init>()>"
+		SpecialInvokeExpr invokeExpr = Jimple.v().newSpecialInvokeExpr(
+				sgxObjLocal, Scene.v().getMethod("<invoker.sgx_invoker: void <init>()>").makeRef(), Arrays.asList());
+		Stmt invokeStmt = Jimple.v().newInvokeStmt(invokeExpr);
 		units.insertBefore(invokeStmt, currStmt);
 
-		// "virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initenclave()>();"
+		// virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initenclave()>"
 		SootMethod toCall = Scene.v().getMethod(
 				"<invoker.sgx_invoker: boolean initenclave()>");
-		Stmt newInvokeStmt = Jimple.v().newInvokeStmt(
-				Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
-						Arrays.asList()));// IntConstant.v(1)
+		Stmt newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList()));
 		units.insertBefore(newInvokeStmt, currStmt);
 	}
 
 	// 赋值语句中的变量赋初始值
-	private AssignStmt initAssignStmt(Local l) {
+	private AssignStmt initLocalVariable(Local l) {
 		Type t = l.getType();
-		G.v().out.println("20210603=" + l.toString());
-		G.v().out.println("20210603=" + t);
-		soot.jimple.AssignStmt stmt = null;
+		G.v().out.println("local variable: " + l.toString());
+		G.v().out.println("local variable type: " + t);
+		AssignStmt stmt = null;
 		if (t instanceof RefLikeType) {
-			stmt = soot.jimple.Jimple.v().newAssignStmt(l, NullConstant.v());
-			G.v().out.println("20210603=" + stmt.toString());
+			stmt = Jimple.v().newAssignStmt(l, NullConstant.v());
 		} else if (t instanceof IntType) {
-			stmt = soot.jimple.Jimple.v().newAssignStmt(l, IntConstant.v(0));
-			G.v().out.println("20210603=" + stmt.toString());
+			stmt = Jimple.v().newAssignStmt(l, IntConstant.v(0));
 		} else if (t instanceof DoubleType) {
-			stmt = soot.jimple.Jimple.v().newAssignStmt(l, DoubleConstant.v(0));
+			stmt = Jimple.v().newAssignStmt(l, DoubleConstant.v(0));
 		} else if (t instanceof FloatType) {
-			stmt = soot.jimple.Jimple.v().newAssignStmt(l, FloatConstant.v(0));
+			stmt = Jimple.v().newAssignStmt(l, FloatConstant.v(0));
 		} else if (t instanceof soot.LongType) {
-			stmt = soot.jimple.Jimple.v().newAssignStmt(l, LongConstant.v(0));
+			stmt = Jimple.v().newAssignStmt(l, LongConstant.v(0));
 		} else if (t instanceof BooleanType) {
-			stmt = soot.jimple.Jimple.v().newAssignStmt(l, IntConstant.v(0));
+			stmt = Jimple.v().newAssignStmt(l, IntConstant.v(0));
 		} else if (t instanceof ShortType) {
-			stmt = soot.jimple.Jimple.v().newAssignStmt(l, IntConstant.v(0));
+			stmt = Jimple.v().newAssignStmt(l, IntConstant.v(0));
 		} else if (t instanceof CharType) {
-			stmt = soot.jimple.Jimple.v().newAssignStmt(l, IntConstant.v(0));
+			stmt = Jimple.v().newAssignStmt(l, IntConstant.v(0));
 		} else if (t instanceof ByteType) {
-			stmt = soot.jimple.Jimple.v().newAssignStmt(l, IntConstant.v(0));
+			stmt = Jimple.v().newAssignStmt(l, IntConstant.v(0));
 		}
 		return stmt;
 	}
 
 	// 初始化声明变量
-	private void initidentyLocal(List<Local> localList,
+	private void initAllLocalVariables(List<Local> localList,
 			PatchingChain<Unit> units, Unit currStmt,
 			HashSet<Value> identifiedLocal) {
-
-		soot.jimple.AssignStmt stmt = null;
-		for (Local l : localList) {
-			// G.v().out.println("++++++Local is:++++++++++"+l.toString());
-			if (identifiedLocal.contains(l)) {
-				G.v().out.println(l.toString()
-						+ ": has been inited in original javafile!");
+		G.v().out.println("-----enter initAllLocalVariables()-----");
+		AssignStmt stmt = null;
+		for (Local local : localList) {
+			// G.v().out.println("++++++Local is:++++++++++"+local.toString());
+			// TODO 这里应该是指函数内的local variable是通过identityStmt初始化的，值为传入的参数值，但目前选择先初始化所有值，
+			// 再判断是不是identityStmt，所以identifielLocal实际上是空的。当然原来先处理赋值语句的话，这个hashset就不为空
+			if (identifiedLocal.contains(local)) {
+				G.v().out.println(local.toString() + " has been inited in original javafile!");
 				continue;
 			}
-			stmt = initAssignStmt(l);
-			G.v().out.println(l.toString()
-					+ ": init stmt will be inserted into jimplefile! :"
-					+ stmt.toString());
+			stmt = initLocalVariable(local);
+			G.v().out.println("variable: " + local.toString() + " init stmt will be inserted into jimplefile: " + stmt.toString());
 			units.insertBefore(stmt, currStmt);
 		}
 	}
@@ -4718,20 +4861,15 @@ public class Transformer {
 	}
 
 	private void preInitSensitiveVariables(Value tValue) {
-
-		if (!condVals.contains(tValue)&&!(tValue instanceof Constant)) {
+		if (!condVals.contains(tValue) && !(tValue instanceof Constant)) {
 			condVals.add(tValue);
-			// G.v().out.println("---==condVals:"+condVals.toString());
 		}
 
 		String tValueTypeStr = tValue.getType().toString();
-		if (tValueTypeStr.equals("int")||tValueTypeStr.equals("char")||tValueTypeStr.equals("byte")
+		if (tValueTypeStr.equals("int")
 				|| tValueTypeStr.equals("java.lang.Integer")
+				|| tValueTypeStr.equals("boolean") 
 				|| tValueTypeStr.equals("short")) {
-			if (!condValsInt.contains(tValue)) {
-				condValsInt.add(tValue);
-			}
-		} else if (tValueTypeStr.equals("boolean")) {
 			if (!condValsInt.contains(tValue)) {
 				condValsInt.add(tValue);
 			}
@@ -4743,55 +4881,65 @@ public class Transformer {
 			if (!condValsFloat.contains(tValue)) {
 				condValsFloat.add(tValue);
 			}
-		} 
-//		else if (tValueTypeStr.equals("char")) {
-//			if (!condValsChar.contains(tValue)) {
-//				condValsChar.add(tValue);
-//			}
-//		} 
-		else if (tValueTypeStr.equals("long")) {
+		} else if (tValueTypeStr.equals("char")) {
+			if (!condValsChar.contains(tValue)) {
+			condValsChar.add(tValue);
+			}
+		} else if (tValueTypeStr.equals("long")) {
 			if (!condValsLong.contains(tValue)) {
 				condValsLong.add(tValue);
 			}
+		} else if (tValueTypeStr.equals("byte")) {
+			if (!condValsLong.contains(tValue)) {
+				condValsByte.add(tValue);
+			}
 		} else if (tValueTypeStr.equals("int[]")
-				||tValueTypeStr.equals("char[]")
-				||tValueTypeStr.equals("byte[]")
 				|| tValueTypeStr.equals("int[][]")
-				|| tValueTypeStr.equals("int[][][]")) {
+				|| tValueTypeStr.equals("int[][][]")
+				|| tValueTypeStr.equals("boolean[]")
+				|| tValueTypeStr.equals("boolean[][]")
+				|| tValueTypeStr.equals("short[]")
+				|| tValueTypeStr.equals("short[][]")) {
 			if (!condValsArrayInt.contains(tValue)) {
 				condValsArrayInt.add(tValue);
 			}
-		} else if (tValueTypeStr.equals("double[]")) {
+		} else if (tValueTypeStr.equals("double[]")
+				|| tValueTypeStr.equals("double[][]")
+				|| tValueTypeStr.equals("double[][][]")) {
 			if (!condValsArrayDouble.contains(tValue)) {
 				condValsArrayDouble.add(tValue);
 			}
-		} else if (tValueTypeStr.equals("float[]")) {
+		} else if (tValueTypeStr.equals("float[]")
+				|| tValueTypeStr.equals("float[][]")
+				|| tValueTypeStr.equals("float[][][]")) {
 			if (!condValsArrayFloat.contains(tValue)) {
 				condValsArrayFloat.add(tValue);
 			}
-		} 
-//		else if (tValueTypeStr.equals("char[]")) {
-//			if (!condValsArrayChar.contains(tValue)) {
-//				condValsArrayChar.add(tValue);
-//			}
-//		} 
-		else if (tValueTypeStr.equals("long[]")) {
+		} else if (tValueTypeStr.equals("char[]")
+				|| tValueTypeStr.equals("char[][]")
+				|| tValueTypeStr.equals("char[][][]")) {
+			if (!condValsArrayChar.contains(tValue)) {
+				condValsArrayChar.add(tValue);
+			}
+		}
+		else if (tValueTypeStr.equals("long[]")
+				|| tValueTypeStr.equals("long[][]")
+				|| tValueTypeStr.equals("long[][][]")) {
 			if (!condValsArrayLong.contains(tValue)) {
 				condValsArrayLong.add(tValue);
 			}
-		} 
-//		else if (tValueTypeStr.equals("byte")) {
-//			if (!condValsByte.contains(tValue)) {
-//				condValsByte.add(tValue);
-//			}
-//		}
-		else if (tValueTypeStr.equals("byte[]")) {
+		} else if (tValueTypeStr.equals("byte[]")
+				|| tValueTypeStr.equals("byte[][]")
+				|| tValueTypeStr.equals("byte[][][]")) {
 			if (!condValsArrayByte.contains(tValue)) {
 				condValsArrayByte.add(tValue);
 			}
-		} else {
-			G.v().out.println("Other condValsOtherType" + tValueTypeStr);
-
+		} else { 
+			// actually boolean, short should have its typeList, we simply add it into condValsInt, condValsOtherType may includes object type
+			if (!condValsOtherType.contains(tValue)) {
+				condValsOtherType.add(tValue);
+			}
+			G.v().out.println("Other condValsOtherType: " + tValueTypeStr);
 		}
 	}
 

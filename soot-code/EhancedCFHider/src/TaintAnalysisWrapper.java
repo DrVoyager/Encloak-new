@@ -171,13 +171,13 @@ class TaintAnalysis extends ForwardFlowAnalysis<Unit, Set<Value>> {
     public Map<String, Map<String, List<Value>>> cfmap;
     public List<Value> SourceList;
     public Map<String, Map<String, int[]>> invokemap;
-    public TaintAnalysis(UnitGraph graph,String calname,String name,List<Value> sourceList,Map<String, Map<String, List<Value>>> CFMAP, Map<String, Map<String, int[]>> INVOKEMAP) {
+    public TaintAnalysis(UnitGraph graph,String clsname,String name,List<Value> sourceList,Map<String, Map<String, List<Value>>> CFMAP, Map<String, Map<String, int[]>> INVOKEMAP) {
 		super(graph);
 		//tainted = taintMap;
 		taintedSinks = new HashMap();
 		outSet = new HashSet<>();
 		MethodName = name;
-		ClassName = calname;
+		ClassName = clsname;
 		SourceList = sourceList;
 		cfmap = CFMAP;
 		invokemap = INVOKEMAP;

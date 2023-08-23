@@ -36,6 +36,7 @@ void printf(const char *fmt, ...)
 }
 
 //----------------struct--------------
+// 八元组
 struct Table_meta{
 	int type;
 	int p1;//index 0-100 from array  ,100-200 hash-int
@@ -47,6 +48,7 @@ struct Table_meta{
 	int para_i;
 };
 
+// function node
 typedef struct Node {
 	int v_int[20];
 	double v_double[20];
@@ -55,15 +57,46 @@ typedef struct Node {
 	int v_byte[20];
 	long v_long[20];
 	
-	char calluuid[33];
+	char calluuid[33];	// 调用者uuid
 
-	char array[10][33];
-	int  arrayIndex[10];
+	char array[10][33];	// array[0] = "某个32位uuid"， 表示0号形参是从该uuid的caller函数中传递而来的
+	int  arrayIndex[10];	// 形参变量在caller中的编号
 	long lineNo;
 
 	int re[3];
 }*SNODE, Node;
 
+typedef struct ArrayNode2{
+
+	IntArrayNode * int_arrNodes[30];
+	CharArrayNode * char_arrNodes[30];
+	DoubleArrayNode * double_arrNodes[30];
+	int double_sz;
+	int int_sz;
+	int char_sz;
+}*ANODE2,ArrayNode2;
+
+// 新增0712
+typedef struct ClassNode {
+	int v_int[20];
+	double v_double[20];
+	float v_float[10];
+	char v_char[20];
+	int v_byte[20];
+	long v_long[20];
+}*ClNODE, ClassNode;
+
+typedef struct ObjectNode {
+	int v_int[20];
+	double v_double[20];
+	float v_float[10];
+	char v_char[20];
+	int v_byte[20];
+	long v_long[20];
+}*ONODE, ObjectNode;
+
+
+// 原方案，弃用
 typedef struct ArrayNode {
 	int* arr_int[10];
 	double* arr_double[10];
@@ -77,15 +110,8 @@ typedef struct ArrayNode {
 	int longsize[10];
 	int bytesize[10];
 }*ANODE, ArrayNode;
-typedef struct ArrayNode2{
 
-	IntArrayNode * int_arrNodes[30];
-	CharArrayNode * char_arrNodes[30];
-	DoubleArrayNode * double_arrNodes[30];
-	int double_sz;
-	int int_sz;
-	int char_sz;
-}*ANODE2,ArrayNode2;
+// 原方案，弃用
 typedef struct MultiArrayNode{
 	int arr_int[10][100];
 	double arr_double[10][100];
@@ -95,6 +121,7 @@ typedef struct MultiArrayNode{
 	int doublesize[10];
 }*MNODE, MultiArrayNode;
 
+// 原方案，弃用
 typedef struct PublicVariableNode{
 	
 	int v_i;	
@@ -120,7 +147,9 @@ typedef struct PublicVariableNode{
 	int longemultisize[10];
 }*PNODE, PublicVariableNode;
 
-//------------==================--------HASHMAP-----------========================-------------------
+
+
+//------------==================--------拷贝而来的HASHMAP的具体实现，可略过-----------========================-------------------
 template<class Key, class Value>
 class HashNode
 {
@@ -304,14 +333,18 @@ public:
 	}
 };
 
-HashMap<string, SNODE, HashFunc, EqualKey> hashmap(30); // HashMap
-
+// 弃用
 HashMap<string, ANODE, HashFunc, EqualKey> hashmapArray(30); // HashMap
-HashMap<string, ANODE2, HashFunc, EqualKey> hashmapArray2(30); // HashMap
-
 HashMap<string, MNODE, HashFunc, EqualKey> hashmapMultiArray(1); // HashMap
-
 HashMap<string, PNODE, HashFunc, EqualKey> hashmapPublicV(30); // HashMap
+
+HashMap<string, SNODE, HashFunc, EqualKey> hashmap(30);
+HashMap<string, ONODE, HashFunc, EqualKey> hashmapMemberVariables(30);
+HashMap<string, ClNODE, HashFunc, EqualKey> hashmapStaticMemberVariables(30);
+HashMap<string, ANODE2, HashFunc, EqualKey> hashmapArray2(30);
+HashMap<string, ANODE2, HashFunc, EqualKey> hashmapMemberArray(30);
+HashMap<string, ANODE2, HashFunc, EqualKey> hashmapStaticMemberArray(30);
+
 
 //------------==================--------HASHMAP-----------========================-------------------
 
@@ -346,7 +379,7 @@ int hash_invoke_index[Table_Len]; //for constant if it is int or double...
 int lineIndex[100];
 
 
-
+// 八元组解密
 int ecall_ctr_decrypt(uint8_t *sql, 
 	const char *sgx_ctr_key, uint8_t *p_dst,int len)    //ecall_ctr_decrypt(c,key_t,ppp,64);
 {
@@ -373,7 +406,7 @@ int ecall_ctr_decrypt(uint8_t *sql,
 }
 
 
-
+// 读取数据
 int encall_hash_readin(char* buf,long line)
 {
 	char buffer[50];
@@ -423,6 +456,7 @@ int encall_hash_readin(char* buf,long line)
 	}
 	return 1;
 }
+// 读取数据
 int encall_hash_invoke_readin(char* buf,long line)
 {
 	char buffer[50];
@@ -463,6 +497,8 @@ int encall_hash_invoke_readin(char* buf,long line)
 	}
 	return 1;
 }
+
+// 解析数据，是在读取数据之后进行的，即先在encall_read_line中对table进行了处理
 Table_meta get_table_meta(long Line)
 {
 	Table_meta meta;
@@ -479,6 +515,8 @@ Table_meta get_table_meta(long Line)
 char ret[50000];
 long ret_len=0;
 long g_line_num=0;
+
+// 根据行号分割文件
 int split_file(int isIndex)
 {
 	char line[50]={0};
@@ -734,40 +772,33 @@ int encall_table_load(void)
 
 int encall_read_line(char* in_buf,int buf_len,long line,int isIndex)
 {
-	//printf("line=%s\n",line);
 	int read_num=0;
-	if(*in_buf>=48 && *in_buf<=57){// number
+	if(*in_buf>=48 && *in_buf<=57){// a number (ASCII values between 48 and 57)
+		// convert the string to an integer
 		read_num=atoi(in_buf);
-	}else if(*in_buf == 45){
+	}else if(*in_buf == 45){// a minus sign (ASCII value 45)
 		read_num=atoi(in_buf);
-	}else if (!strncmp(in_buf,"call_", 5)){ //call_
+	}else if (!strncmp(in_buf,"call_", 5)){ //call_, If the string starts with "call_", it extracts the numeric portion of the string after "call_" and converts it to an integer
 		char buffer[50];
 		strncpy(buffer,in_buf+5,44);
 		int call = atoi(buffer);
 		read_num = call;
-
 	}else if (!strncmp(in_buf,"re", 2)){ 
 		read_num = -2;
-	}else{
-		//int in_flag=999; //int_0 double_2.5  
+	}else{// int_0 double_2.5, constant 
 		read_num=0-line;
-		//printf("%d\n",read_num);
 		if(isIndex == 1){
 			encall_hash_readin(in_buf,line);
 		}else{
 			encall_hash_invoke_readin(in_buf,line);	
 		}
 	}
-	//printf("read_num:%d\n",read_num);
 	if(isIndex == 1){
 		table[line]=read_num;
 	}else{
-		//printf("invoke %ld %d\n",line,read_num);
 		invoketable[line] = read_num;
 	}
-	//Enclave_Table_length++;
 
-	//printf("over\n");
 	return 0;
 }
 
@@ -778,19 +809,14 @@ int encall_read_line(char* in_buf,int buf_len,long line,int isIndex)
 void EcallStartResponder( HotCall* hotEcall )
 {
     //printf("create thread======\n");
-    void (*callbacks[1])(void*,void*,int*,int,double*,int,float*,int,char*,int,long*,int,char*,int,char*,char*);
+    void (*callbacks[1])(void*,void*,int*,int,double*,int,float*,int,char*,int,long*,int,char*,int,char*,char*,char*);
     callbacks[0] = encall_switch_type_branch;
     callbacks[3] = encall_switch_type_update;
     callbacks[4] = encall_switch_type_get_i;
     HotCallTable callTable;
     callTable.numEntries = 1;
     callTable.callbacks  = callbacks;
-    //printf("111111111===========\n");
     HotCall_waitForCall( hotEcall, &callTable );
-    //void* s = hotEcall -> re;
-    //int *x = (int*)s;
-    //printf("return num=%d\n",*x);
-    //printf("waiting===========\n");
 }
 /*void EcallStartResponder1( HotCall* hotEcall1 )
 {
@@ -823,17 +849,8 @@ void EcallStartResponder3( HotCall* hotEcall3 )
 }
 //-----------------------------------------
 
-
+// 涉及ANODE，原方案，弃用
 void InitArray(ArrayNode *ANODE, int m){
-	
-	//int k=0;
-	//printf("init num:%d",k++);
-	//ANODE->arr_int = (int**)malloc(m * sizeof(int*));
-	//ANODE->arr_double = (double**)malloc(m * sizeof(double*));
-	//ANODE->arr_char = (char**)malloc(m * sizeof(char*));
-	//ANODE->arr_long = (long**)malloc(m * sizeof(long*));
-	//ANODE->arr_byte = (int**)malloc(m * sizeof(int*));
-
 	for(int i=0;i<m;i++){
 		ANODE->arr_int[i] = NULL;
 		ANODE->arr_double[i] = NULL;
@@ -843,6 +860,7 @@ void InitArray(ArrayNode *ANODE, int m){
 	}
 }
 
+// 涉及ANODE，原方案，弃用
 void initArrayRow(ArrayNode *ANODE,int type, int size) {
 	switch (type/10){
 		case 7:
@@ -876,7 +894,7 @@ void initArrayRow(ArrayNode *ANODE,int type, int size) {
 			break;
 	}
 }
-
+// 释放数组，似乎也是弃用
 void FreeArray(ArrayNode *ANODE,int m)
 {
 	for (int i = 0;i < m;i++) {
@@ -921,6 +939,7 @@ void FreeArray(ArrayNode *ANODE,int m)
 	free(ANODE->arr_byte);
 }
 
+// 将调用者caller函数中的形参敏感变量加载到被调用者函数callee中
 void encall_varible(void* data,char* uuid,char* calluuid) { //int* k,
 
 	//printf("[INIT] uuid=%s\n",uuid);
@@ -942,7 +961,7 @@ void encall_varible(void* data,char* uuid,char* calluuid) { //int* k,
 		int cc=0;
 		int ll=0;
 		int bb=0;
-//printf("[B]this method has invokeuuid. start:%d end:%d\n",start,end);
+		//printf("[B]this method has invokeuuid. start:%d end:%d\n",start,end);
 		for(int i=start;i<end;i=i+3){
 			int paraindex = invoketable[i];
 			int isFromSelf = invoketable[i+1];
@@ -950,10 +969,8 @@ void encall_varible(void* data,char* uuid,char* calluuid) { //int* k,
 			if(paraindex == 0 && isFromSelf==0 && index==0) break;//out
 			//printf("=paraindex:%d =isFromSelf:%d =index:%d\n",paraindex,isFromSelf,index);
 			
-			if(isFromSelf == 1 && paraindex !=-2){
+			if(isFromSelf == 1 && paraindex !=-2){	// paraindex=-2 -> re
 				if(index < 0){ //constant
-					//printf("=%d is a constant=\n",i);
-					//printf("=hash_invoke_index[-index]=%d\n",hash_invoke_index[-index]);
 					switch (hash_invoke_index[-index]) {
 						case 1:
 							s->v_int[ii++] = hash_invoke_int[-index];
@@ -972,19 +989,15 @@ void encall_varible(void* data,char* uuid,char* calluuid) { //int* k,
 							s->v_byte[bb++] = hash_invoke_byte[-index];
 							break;
 					}
-				}else if(index<100){ //array
-					//printf("=%d is an array=\n",i);
+				}else if(index<100){ //array，没有像constant和variable一样进行深拷贝，index是形参在caller函数中的编号
 					memcpy(s->array[paraindex],calluuid,32);			
 					s->arrayIndex[paraindex] = index;
-					//printf("%s\n",s->array[paraindex]);
-					//printf("hashmapArray.find(%s)->arr_int[0][1]=%d\n",s->array[paraindex],hashmapArray.find(s->array[paraindex])->arr_int[0][1]);
 
-				}else if(index>=100){           //variables
-					//printf("=%d is a variables=\n",i);
+				}else if(index>=100){ //variables
+					// TODO 考虑ONODE和CNODE是否需要calluuid？
 					switch (index/100) {
 						case 1:
 							s->v_int[ii++] = hashmap.find(calluuid)->v_int[index-100];
-							//printf("v_int[%d] = %d\n",index-100,hashmap.find(calluuid)->v_int[index-100]);
 							break;
 						case 2:
 							s->v_double[dd++] = hashmap.find(calluuid)->v_double[index-200];
@@ -1016,6 +1029,7 @@ void encall_varible(void* data,char* uuid,char* calluuid) { //int* k,
 		//printf("[xx]hashmapArray.find(%s)->arr_int[0][1]=%d\n",s->array[0],hashmapArray.find(s->array[0])->arr_int[0][1]);
 	}else{
 		//printf("[A]this method has no invokeuuid.\n");
+
 	}
 	
 
@@ -1086,9 +1100,6 @@ void encall_deleteValue(void* data,char* uuid,char* cuuid) {
 			}
 		}
 	}
-	//printf("6\n");
-//污染变量中没有数组将916-922进行注释可以提高效率
-	//printf("0\n");
 	free(hashmapArray.find(uuid));   // I don't know if it will success free 0508
 	hashmapArray.find(uuid) = NULL;
 	hashmapArray.del(uuid);
@@ -1104,59 +1115,21 @@ void encall_deleteValue(void* data,char* uuid,char* cuuid) {
 	//hashmapMultiArray.del(uuid);
 	//printf("delete all success uuid=%s, status=%ld\n",uuid,status);
 }
-
-void encall_initmultiArray(long line,char* uuid,char* cuuid){
+// 原方案
+// void encall_initmultiArray(long line,char* uuid,char* cuuid){
 	
 	
-	if(!hashmapPublicV.find(cuuid)){
-		printf("init PNODE cuuid=%s\n",cuuid);
+// 	if(!hashmapPublicV.find(cuuid)){
+// 		printf("init PNODE cuuid=%s\n",cuuid);
 	
-		PNODE p = (PNODE)malloc(10*sizeof(PublicVariableNode));
-		if(!hashmapPublicV.insert(cuuid,p)){
-			printf("insert fail!! %s\n",cuuid);
-		}
-	}
-}
+// 		PNODE p = (PNODE)malloc(10*sizeof(PublicVariableNode));
+// 		if(!hashmapPublicV.insert(cuuid,p)){
+// 			printf("insert fail!! %s\n",cuuid);
+// 		}
+// 	}
+// }
 
-
-/*int encall_switch_type_i(long Line,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid) {
-//ocall_print_string("go in encall_switch_type_i\n"); void* data,void* rei
-//printf("encall_switch_type_i in enclave uuid:%s\n",uuid);
-	//int *data1 = (int*)data;
-        //int Line = *data1;
-//printf("Line=%ld\n",Line);
-	int type=*(table+Line*8);
-	//hashmap.find(uuid)->Line = Line;
-	//hashmap.find(uuid)->re = -99;
-	//memcpy(hashmap.find(uuid)->int_array,int_array,20);
-//printf("type=%d\n",type);
-	//if (type == 10) {
-		//return 0;
-	//}
-	int return_flag = -1;
-
-	switch (type) {
-		case 1:return_flag = print_int(Line, int_array,uuid);break;
-		case 2:return_flag = print_double(Line, double_array,int_array,uuid);break;
-		//case 3:return_flag = print_float(Line, float_array,uuid);break;
-		case 4:return_flag = print_char(Line, char_array,uuid);break;
-		case 5:return_flag = print_long(Line, long_array,uuid);break;
-
-		case 6:return_flag = print_array_i(Line, int_array,int_tail,uuid);break;
-		case 7:return_flag = print_array_d(Line, double_array,double_tail,uuid);break;
-		//case 8:return_flag = print_array_f(Line, float_array,uuid);break;
-		//case 9:return_flag = print_array_c(Line, char_array,uuid);break;
-		//case 10:return_flag = print_array_l(Line, long_array,uuid);break;
-		default:return_flag = -5;
-	}
-	// print_array();
-        //printf("return num=%d\n",return_flag);
-        //ocall_send_i(return_flag);
-       //int *re = (int*)rei;
-      // *re = return_flag;
-	return return_flag;
-}*/
-
+// 原方案？
 int encall_getArraySize(long Line,char* uuid){
 
 	Table_meta meta=get_table_meta(Line);
@@ -1229,76 +1202,76 @@ printf("----------------\n");*/
 	return return_size;
 }
 
-
-void encall_getIntArray(int* re,int size,long Line,char* uuid){
+// 返回int数组，原方案
+// void encall_getIntArray(int* re,int size,long Line,char* uuid){
 	
-	Table_meta meta=get_table_meta(Line);
-	//int p1 = meta.p1;
-	int p1_i = meta.p1_i;
-	if(p1_i >=700 && p1_i<=1200){ //this uuid is cuuid
-		for(int i=0;i<size;i++){
-			re[i] = hashmapPublicV.find(uuid)[p1_i%10].arr_int[i];
-		}
-	}else if(p1_i >= 70 && p1_i<=120){
-		if(hashmapArray.find(uuid)->intsize[p1_i%10]<0){
-			int a = -hashmapArray.find(uuid)->intsize[p1_i%10];
-			int b = hashmap.find(uuid)->v_int[a-100];
-			//printf("hashmapMultiArray.find(%s)[%d].arr_int[%d] ",uuid,p1_i%10,b);
-			for(int i=0;i<size;i++){
-				re[i] = hashmapMultiArray.find(uuid)[p1_i%10].arr_int[b][i];
-				//printf("%d ",re[i]);
-			}
-			//printf("\n");
-		}else{
-			for(int i=0;i<size;i++){
-				re[i] = hashmapArray.find(uuid)->arr_int[p1_i%10][i];
-			}	
-		}
-	}else if(p1_i <10){
-		//memcpy(re,hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_int[hashmap.find(uuid)->arrayIndex[p1_i]%10],size);
-		for(int i=0;i<size;i++){
-			re[i] = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_int[hashmap.find(uuid)->arrayIndex[p1_i]%10][i];
-		}
-	}
+// 	Table_meta meta=get_table_meta(Line);
+// 	//int p1 = meta.p1;
+// 	int p1_i = meta.p1_i;
+// 	if(p1_i >=700 && p1_i<=1200){ //this uuid is cuuid
+// 		for(int i=0;i<size;i++){
+// 			re[i] = hashmapPublicV.find(uuid)[p1_i%10].arr_int[i];
+// 		}
+// 	}else if(p1_i >= 70 && p1_i<=120){
+// 		if(hashmapArray.find(uuid)->intsize[p1_i%10]<0){
+// 			int a = -hashmapArray.find(uuid)->intsize[p1_i%10];
+// 			int b = hashmap.find(uuid)->v_int[a-100];
+// 			//printf("hashmapMultiArray.find(%s)[%d].arr_int[%d] ",uuid,p1_i%10,b);
+// 			for(int i=0;i<size;i++){
+// 				re[i] = hashmapMultiArray.find(uuid)[p1_i%10].arr_int[b][i];
+// 				//printf("%d ",re[i]);
+// 			}
+// 			//printf("\n");
+// 		}else{
+// 			for(int i=0;i<size;i++){
+// 				re[i] = hashmapArray.find(uuid)->arr_int[p1_i%10][i];
+// 			}	
+// 		}
+// 	}else if(p1_i <10){
+// 		//memcpy(re,hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_int[hashmap.find(uuid)->arrayIndex[p1_i]%10],size);
+// 		for(int i=0;i<size;i++){
+// 			re[i] = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_int[hashmap.find(uuid)->arrayIndex[p1_i]%10][i];
+// 		}
+// 	}
 
-	/*if(Line==22L){
-		for(int i=0;i<size;i++){
-			printf("[Enclave] re[%d]=%d\n",i,re[i]);
-		}
-	}*/
-}
+// 	if(Line==22L){
+// 		for(int i=0;i<size;i++){
+// 			printf("[Enclave] re[%d]=%d\n",i,re[i]);
+// 		}
+// 	}
+// }
 
-void encall_getDoubleArray(double* re,int size,long Line,char* uuid){
+// void encall_getDoubleArray(double* re,int size,long Line,char* uuid){
 	
-	Table_meta meta=get_table_meta(Line);
-	//int p1 = meta.p1;
-	int p1_i = meta.p1_i;
-	if(p1_i >=700 && p1_i<=1200){ //this uuid is cuuid
-		for(int i=0;i<size;i++){
-			re[i] = hashmapPublicV.find(uuid)[p1_i%10].arr_double[i];
-		}
-		//printf("[encall_getDoubleArray]%lf %lf\n",hashmapPublicV.find(uuid)[p1_i%10].arr_double[0],hashmapPublicV.find(uuid)[p1_i%10].arr_double[1]);
+// 	Table_meta meta=get_table_meta(Line);
+// 	//int p1 = meta.p1;
+// 	int p1_i = meta.p1_i;
+// 	if(p1_i >=700 && p1_i<=1200){ //this uuid is cuuid
+// 		for(int i=0;i<size;i++){
+// 			re[i] = hashmapPublicV.find(uuid)[p1_i%10].arr_double[i];
+// 		}
+// 		//printf("[encall_getDoubleArray]%lf %lf\n",hashmapPublicV.find(uuid)[p1_i%10].arr_double[0],hashmapPublicV.find(uuid)[p1_i%10].arr_double[1]);
 
-	}else if(p1_i >= 70 && p1_i<=120){
-		if(hashmapArray.find(uuid)->doublesize[p1_i%10]<0){
-			int a = -hashmapArray.find(uuid)->doublesize[p1_i%10];
-			int b = hashmap.find(uuid)->v_int[a-100];
-			for(int i=0;i<size;i++){
-				re[i] = hashmapMultiArray.find(uuid)[p1_i%10].arr_double[b][i];
-			}
-		}else{
-			for(int i=0;i<size;i++){
-				re[i] = hashmapArray.find(uuid)->arr_double[p1_i%10][i];
-			}	
-		}
-	}else if(p1_i <10){
-		for(int i=0;i<size;i++){
-			re[i] = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_double[hashmap.find(uuid)->arrayIndex[p1_i]%10][i];
-		}
-	}
-}
+// 	}else if(p1_i >= 70 && p1_i<=120){
+// 		if(hashmapArray.find(uuid)->doublesize[p1_i%10]<0){
+// 			int a = -hashmapArray.find(uuid)->doublesize[p1_i%10];
+// 			int b = hashmap.find(uuid)->v_int[a-100];
+// 			for(int i=0;i<size;i++){
+// 				re[i] = hashmapMultiArray.find(uuid)[p1_i%10].arr_double[b][i];
+// 			}
+// 		}else{
+// 			for(int i=0;i<size;i++){
+// 				re[i] = hashmapArray.find(uuid)->arr_double[p1_i%10][i];
+// 			}	
+// 		}
+// 	}else if(p1_i <10){
+// 		for(int i=0;i<size;i++){
+// 			re[i] = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_double[hashmap.find(uuid)->arrayIndex[p1_i]%10][i];
+// 		}
+// 	}
+// }
 
-
+// 原方案
 void encall_initArray(char* uuid,int index,int size,int isSens){
 	int realsize = 0;
 	//get real size
@@ -1314,166 +1287,147 @@ void encall_initArray(char* uuid,int index,int size,int isSens){
 	//printf("realsize=%d isSens=%d size=%d\n",realsize,isSens,size);
 	initArrayRow(hashmapArray.find(uuid), index, realsize);
 }
+
+// 初始化数组节点
 void encall_initNode(char* uuid,int type,int size){
-		
-	 //printf("\n\n\ninit node in enclave  size=%d type=%d\n\n\n",size,type);
-	 //printf("uuid=%s\n", uuid);
-	 ArrayNode2* node=hashmapArray2.find(uuid);
-	//hashmapArray2.find(uuid);
-	 if(node==NULL){
-	 	printf("null\n");
-	 	node=(ArrayNode2*)malloc(sizeof(ArrayNode2));
-	 }
-	 if(!hashmapArray2.insert(uuid,node)){
-	 	printf("insert fail\n");
-	 }
-	 
-	 if(type==7||type==13){
-	 	 for(int i=0;i<size;i++){
-	 	 	node->int_arrNodes[i]=(IntArrayNode*)malloc(sizeof(IntArrayNode));
-	 	 	for(int j=0;j<5;j++){
-	 	 		node->int_arrNodes[i]->index[j]=-1;
-	 	 		node->int_arrNodes[i]->dimensions[j]=-1;
-	 	 	}
-	 	 	node->int_arrNodes[i]->paramLoc=-1;
-	 	 	node->int_arrNodes[i]->sz=0;
-	 	 }
-	 	 node->int_sz=size;
-	 }
-	 if(node->int_arrNodes[0]==NULL){
-	 	printf("null\n");
-	 }else{
-	 	printf("not null\n");
-	 }
-	  if(type==10){
-	 	 for(int i=0;i<size;i++){
-	 	 	node->char_arrNodes[i]=(CharArrayNode*)malloc(sizeof(CharArrayNode));
-	 	 	for(int j=0;j<5;j++){
-	 	 		node->char_arrNodes[i]->index[j]=-1;
-	 	 		node->char_arrNodes[i]->dimensions[j]=-1;
-	 	 	}
-	 	 	node->char_arrNodes[i]->paramLoc=-1;
-	 	 	node->char_arrNodes[i]->sz=0;
-	 	 }
-	 	 node->char_sz=size;
-	 }
-	 //  if(type==8||type==14){
-	 // 	 for(int i=0;i<size;i++){
-	 // 	 	node->double_arrNodes[i]=(DoubleArrayNode*)malloc(sizeof(DoubleArrayNode));
-	 // 	 	for(int j=0;j<5;j++){
-	 // 	 		node->double_arrNodes[i]->index[j]=-1;
-	 // 	 		node->double_arrNodes[i]->dimensions[j]=-1;
-	 // 	 	}
-	 // 	 	node->double_arrNodes[i]->paramLoc=-1;
-	 // 	 	node->double_arrNodes[i]->sz=0;
-	 // 	 }
-	 // 	 node->int_sz=size;
-	 // }
-	 
-	
-	//  for(int i=0;i<size;i++){
-	// 	if(node->int_arrNodes[i]->index==NULL){
-	// 		printf("is null\n");
-	// 	}else{
-	// 		printf("not null\n");
-	// 	}
-	// }
+
+	printf("----------enter encall_initNode()----------\n");
+
+	ArrayNode2* node=hashmapArray2.find(uuid);
+	if(node==NULL){
+		printf("null\n");
+		node=(ArrayNode2*)malloc(sizeof(ArrayNode2));
+		if(!hashmapArray2.insert(uuid,node)){
+			printf("insert fail\n");
+		}
+	}
+	// int array
+	if(type==7||type==13){
+	 	for(int i=0;i<size;i++){
+	 		node->int_arrNodes[i]=(IntArrayNode*)malloc(sizeof(IntArrayNode));
+	 		for(int j=0;j<5;j++){
+	 			node->int_arrNodes[i]->index[j]=-1;
+	 			node->int_arrNodes[i]->dimensions[j]=-1;
+	 		}
+	 		node->int_arrNodes[i]->paramLoc=-1;
+	 		node->int_arrNodes[i]->sz=0;
+	 	}
+	 	node->int_sz=size;
+	}
+	if(node->int_arrNodes[0]==NULL){
+		printf("null\n");
+	}else{
+		printf("not null\n");
+	}
+
+	// char array
+	if(type==10){
+		for(int i=0;i<size;i++){
+			node->char_arrNodes[i]=(CharArrayNode*)malloc(sizeof(CharArrayNode));
+			for(int j=0;j<5;j++){
+		 		node->char_arrNodes[i]->index[j]=-1;
+		 		node->char_arrNodes[i]->dimensions[j]=-1;
+		 	}
+		 	node->char_arrNodes[i]->paramLoc=-1;
+		 	node->char_arrNodes[i]->sz=0;
+		}
+		node->char_sz=size;
+	}
+
+	// double array
+	if(type==8||type==14){
+		for(int i=0;i<size;i++){
+			node->double_arrNodes[i]=(DoubleArrayNode*)malloc(sizeof(DoubleArrayNode));
+			for(int j=0;j<5;j++){
+				node->double_arrNodes[i]->index[j]=-1;
+				node->double_arrNodes[i]->dimensions[j]=-1;
+			}
+			node->double_arrNodes[i]->paramLoc=-1;
+			node->double_arrNodes[i]->sz=0;
+		}
+		node->double_sz=size;
+	}
 	
 }
 
-void encall_switch_type_get_i(void* data,void* rei,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid,char* cuuid) {
+// 对应的是java中的GET语句，从enclave中取值，赋给某个变量
+void encall_switch_type_get_i(void* data,void* rei,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid, char* ouuid,char* cuuid) {
 	long *data1 = (long*)data;
-        long Line = *data1;
-	//int type=*(table+Line*5);
+    long Line = *data1;
+
 	int return_flag = -1;
-//printf("get Line=%d\n",Line);
 
 	switch (*(table+Line*8)) {
-		case 1:return_flag = print_int(Line, int_array,uuid,cuuid);break;
-		case 2:return_flag = print_double(Line, double_array,int_array,uuid,cuuid);break;
-		//case 3:return_flag = print_float(Line, float_array,uuid);break;
-		case 4:return_flag = print_char(Line, char_array,uuid);break;
-		case 5:return_flag = print_long(Line, long_array,int_array,uuid,cuuid);break;
-		case 6:return_flag = print_byte(Line, byte_array,int_array,uuid);break;
+		case 1:return_flag = print_int(Line, int_array, uuid, ouuid, cuuid);break;
+		case 2:return_flag = print_double(Line, double_array, int_array, uuid, ouuid, cuuid);break;
+		//case 3:return_flag = print_float(Line, float_array, uuid, ouuid, cuuid);break;
+		case 4:return_flag = print_char(Line, char_array, uuid, ouuid, cuuid);break;
+		case 5:return_flag = print_long(Line, long_array, int_array, uuid, ouuid, cuuid);break;
+		case 6:return_flag = print_byte(Line, byte_array, int_array, uuid, ouuid, cuuid);break;
 		//case 7:return_flag = print_array_i(Line, int_array,int_tail,uuid);break;
 		//case 8:return_flag = print_array_d(Line, double_array,double_tail,uuid);break;
 		default:return_flag = -5;
 	}
-       int *re = (int*)rei;
-       *re = return_flag;
+    int *re = (int*)rei;
+    *re = return_flag;
 }
 
-void encall_switch_type_branch(void* data,void* rei,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid,char* cuuid) {
+// 处理
+void encall_switch_type_branch(void* data,void* rei,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid, char* ouuid, char* cuuid) {
 
 	long *data1 = (long*)data;
-        long Line = *data1;
+    long Line = *data1;
 	int return_flag = -1;
-	//printf("bracnch coming and line=%d  type=%d\n  ",Line,*(table+Line*8));
-
-
-	// printf("[Error] Line=%ld\n",Line);
-	// printf("[Error] type=%d\n",*(table+Line*8));
-	// printf("[Error] p1=%d\n",*(table+Line*8+1));
-	// printf("[Error] p1_i=%d\n",*(table+Line*8+2));
-	// printf("[Error] p2=%d\n",*(table+Line*8+3));
-	// printf("[Error] p2_i=%d\n",*(table+Line*8+4));
-	// printf("[Error] op=%d\n",*(table+Line*8+5));
-	// printf("[Error] pa=%d\n",*(table+Line*8+6));
-	// printf("[Error] pa_i=%d\n",*(table+Line*8+7));
-	// printf("[Error] uuid=%s\n",uuid);
 
 
 	switch (*(table+Line*8)) {
-		case 1:return_flag = print_int(Line, int_array,uuid,cuuid);break;
-		case 2:return_flag = print_double(Line, double_array,int_array,uuid,cuuid);break;
-		case 3:return_flag = print_float(Line, float_array,uuid);break;
-		case 4:return_flag = print_char(Line, char_array,uuid);break;
-		case 5:return_flag = print_long(Line, long_array,int_array,uuid,cuuid);break;
-		case 6:return_flag = print_byte(Line, byte_array,int_array,uuid);break;
+		case 1:return_flag = print_int(Line, int_array, uuid, ouuid, cuuid);break;
+		case 2:return_flag = print_double(Line, double_array, int_array, uuid, ouuid, cuuid);break;
+		case 3:return_flag = print_float(Line, float_array, uuid, ouuid, cuuid);break;
+		case 4:return_flag = print_char(Line, char_array, uuid, ouuid, cuuid);break;
+		case 5:return_flag = print_long(Line, long_array, int_array, uuid, ouuid, cuuid);break;
+		case 6:return_flag = print_byte(Line, byte_array, int_array, uuid, ouuid, cuuid);break;
 		//case 7:return_flag = print_array_i(Line, int_array,int_tail,uuid);break;
 		//case 8:return_flag = print_array_d(Line, double_array,double_tail,uuid);break;
-		default:
-			//printf("brach");
-			return_flag = -5;
+		default:return_flag = -5;
 	}
 
-       //printf("branch return:%d\n",return_flag);
        int *re = (int*)rei;
        *re = return_flag;
 }
 
-void encall_switch_type_update(void* data,void* rei,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid,char* cuuid) {
+void encall_switch_type_update(void* data,void* rei,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid, char* ouuid, char* cuuid) {
 	long *data1 = (long*)data;
-        long Line = *data1;
+    long Line = *data1;
 	int return_flag = -1;
 	
-	//printf("update coming and line=%d  type=%d\n  ",Line,*(table+Line*8));
-	
 	int numbers = mymap[Line];
-	//printf("numbers=%d\n",numbers);
-	//printf("uuid=%s\n",uuid);
 	
 	
 	int count = 0;
 	if(numbers==0){
 		switch (*(table+Line*8)) {
-			case 1:return_flag = print_int(Line, int_array,uuid,cuuid);break;
-			case 2:return_flag = print_double(Line, double_array,int_array,uuid,cuuid);break;
-			case 3:return_flag = print_float(Line, float_array,uuid);break;
-			case 4:return_flag = print_char(Line, char_array,uuid);break;
-			case 5:return_flag = print_long(Line, long_array,int_array,uuid,cuuid);break;
-			case 6:return_flag = print_byte(Line, byte_array,int_array,uuid);break;
+			// TypeIndex的值
+			case 1:return_flag = print_int(Line, int_array, uuid, ouuid, cuuid);break;
+			case 2:return_flag = print_double(Line, double_array, int_array, uuid, ouuid, cuuid);break;
+			case 3:return_flag = print_float(Line, float_array, uuid, ouuid, cuuid);break;
+			case 4:return_flag = print_char(Line, char_array, uuid, ouuid, cuuid);break;
+			case 5:return_flag = print_long(Line, long_array, int_array, uuid, ouuid, cuuid);break;
+			case 6:return_flag = print_byte(Line, byte_array, int_array, uuid, ouuid, cuuid);break;
 
-			case 7:return_flag = print_array_i(Line, int_array,int_tail,uuid,cuuid);break;
-			case 8:return_flag = print_array_d(Line, double_array,double_tail,uuid,cuuid);break;
-			case 10:return_flag = print_array_c(Line, char_array,char_tail,uuid,cuuid);break;
-			case 13:return_flag = print_array_i(Line, int_array,int_tail,uuid,cuuid);break;
-			case 14:return_flag = print_array_d(Line, double_array,double_tail,uuid,cuuid);break;
-				default:return_flag = -5;
+			case 7:return_flag = print_array_i(Line, int_array, int_tail, uuid, ouuid, cuuid);break;
+			case 8:return_flag = print_array_d(Line, double_array, double_tail, uuid, ouuid, cuuid);break;
+			// case 9: print_array_f
+			case 10:return_flag = print_array_c(Line, char_array, char_tail, uuid, ouuid, cuuid);break;
+			// case 11: print_array_l
+			// case 12: print_array_b
+			case 13:return_flag = print_array_i(Line, int_array, int_tail, uuid, ouuid, cuuid);break;
+			case 14:return_flag = print_array_d(Line, double_array, double_tail, uuid, ouuid, cuuid);break;
+			default:return_flag = -5;
 		}
 	
  	//int *re = (int*)rei;
-       // *re = return_flag;
+    // *re = return_flag;
 	}
 	while(count<numbers){
 		
@@ -1485,466 +1439,172 @@ void encall_switch_type_update(void* data,void* rei,int* int_array,int int_tail,
 		}
 
 		switch (*(table+Line*8)) {
-			case 1:return_flag = print_int(Line, int_array,uuid,cuuid);break;
-			case 2:return_flag = print_double(Line, double_array,int_array,uuid,cuuid);break;
-			case 3:return_flag = print_float(Line, float_array,uuid);break;
-			case 4:return_flag = print_char(Line, char_array,uuid);break;
-			case 5:return_flag = print_long(Line, long_array,int_array,uuid,cuuid);break;
-			case 6:return_flag = print_byte(Line, byte_array,int_array,uuid);break;
 
-			case 7:return_flag = print_array_i(Line, int_array,int_tail,uuid,cuuid);break;
-			case 8:return_flag = print_array_d(Line, double_array,double_tail,uuid,cuuid);break;
-			case 10:return_flag = print_array_c(Line, char_array,char_tail,uuid,cuuid);break;
-			case 13:return_flag = print_array_i(Line, int_array,int_tail,uuid,cuuid);break;
-			case 14:return_flag = print_array_d(Line, double_array,double_tail,uuid,cuuid);break;
-				default:return_flag = -5;
+			case 1:return_flag = print_int(Line, int_array, uuid, ouuid, cuuid);break;
+			case 2:return_flag = print_double(Line, double_array, int_array, uuid, ouuid, cuuid);break;
+			case 3:return_flag = print_float(Line, float_array, uuid, ouuid, cuuid);break;
+			case 4:return_flag = print_char(Line, char_array, uuid, ouuid, cuuid);break;
+			case 5:return_flag = print_long(Line, long_array, int_array, uuid, ouuid, cuuid);break;
+			case 6:return_flag = print_byte(Line, byte_array, int_array, uuid, ouuid, cuuid);break;
+
+			case 7:return_flag = print_array_i(Line, int_array, int_tail, uuid, ouuid, cuuid);break;
+			case 8:return_flag = print_array_d(Line, double_array, double_tail, uuid, ouuid, cuuid);break;
+			case 10:return_flag = print_array_c(Line, char_array, char_tail, uuid, ouuid, cuuid);break;
+			case 13:return_flag = print_array_i(Line, int_array, int_tail, uuid, ouuid, cuuid);break;
+			case 14:return_flag = print_array_d(Line, double_array, double_tail, uuid, ouuid, cuuid);break;
+			default:return_flag = -5;
 		}
 		
 
-	count++;
+		count++;
  	
 	}
 	int *re = (int*)rei;
-        *re = return_flag;
+    *re = return_flag;
 }
 
 
-double encall_switch_get_d(long Line, int* int_array, int lenint,double* double_array, int lendouble,float* float_array, int lenfloat,char* char_array, int lenchar,long* long_array, int lenlong,char* byte_array, int lenbyte,char* uuid) {
-	int type=*(table+Line*8);
-	double return_flag = -1;
-	switch (type) {
-		//case 1:return_flag = print_int(Line, int_array);break;
-		case 2:return_flag = print_double(Line, double_array,int_array,uuid,NULL);break;
-		//case 3:return_flag = print_float(Line, float_array);break;
-		//case 4:return_flag = print_char(Line, char_array);break;
-		//case 5:return_flag = print_long(Line, long_array);break;
-		//case 6:return_flag = print_byte(Line, byte_array);break;
-		default:return_flag = -5;
-		}
-	return return_flag;
-}
-/*
-float encall_switch_type_f(long Line, int* int_array, int lenint,double* double_array, int lendouble,float* float_array, int lenfloat,char* char_array, int lenchar,long* long_array, int lenlong,char* byte_array, int lenbyte) {
-	int type=*(table+Line*5);
-	if (type == 10) {
-		return 0;
-	}
-	float return_flag = -1;
-	switch (type) {
-		case 1:return_flag = print_int(Line, int_array);break;
-		case 2:return_flag = print_double(Line, double_array);break;
-		case 3:return_flag = print_float(Line, float_array);break;
-		case 4:return_flag = print_char(Line, char_array);break;
-		case 5:return_flag = print_long(Line, long_array);break;
-		case 6:return_flag = print_byte(Line, byte_array);break;
-		default:return_flag = -5;
-		}
-	return return_flag;
-}
-
-char encall_switch_type_c(long Line, int* int_array, int lenint,double* double_array, int lendouble,float* float_array, int lenfloat,char* char_array, int lenchar,long* long_array, int lenlong,char* byte_array, int lenbyte) {
-	int type=*(table+Line*5);
-	if (type == 10) {
-		return 0;
-	}
-	char return_flag = -1;
-	switch (type) {
-		case 1:return_flag = print_int(Line, int_array);break;
-		case 2:return_flag = print_double(Line, double_array);break;
-		case 3:return_flag = print_float(Line, float_array);break;
-		case 4:return_flag = print_char(Line, char_array);break;
-		case 5:return_flag = print_long(Line, long_array);break;
-		case 6:return_flag = print_byte(Line, byte_array);break;
-		default:return_flag = -5;
-		}
-	return return_flag;
-}
-*/
-long encall_switch_get_l(long Line, int* int_array, int lenint,double* double_array, int lendouble,float* float_array, int lenfloat,char* char_array, int lenchar,long* long_array, int lenlong,char* byte_array, int lenbyte,char* uuid) {
-//ocall_print_string("go in encall_switch_type_l\n");
-	int type=*(table+Line*8);
-	long return_flag = -1;
-	switch (type) {
-		//case 1:return_flag = print_int(Line, int_array);break;
-		//case 2:return_flag = print_double(Line, double_array);break;
-		//case 3:return_flag = print_float(Line, float_array);break;
-		//case 4:return_flag = print_char(Line, char_array);break;
-		case 5:return_flag = print_long(Line, long_array,int_array,uuid,NULL);break;
-		//case 6:return_flag = print_byte(Line, byte_array);break;
-		default:return_flag = -5;
-		}
-	return return_flag;
-}
-
-// char encall_switch_type_b(long Line, int* int_array, int lenint,double* double_array, int lendouble,float* float_array, int lenfloat,char* char_array, int lenchar,long* long_array, int lenlong,char* byte_array, int lenbyte,char* uuid) {
-// 	int type=*(table+Line*5);
-// 	if (type == 10) {
-// 		return 0;
-// 	}
-// 	char return_flag = -1;
+// double encall_switch_get_d(long Line, int* int_array, int lenint,double* double_array, int lendouble,float* float_array, int lenfloat,char* char_array, int lenchar,long* long_array, int lenlong,char* byte_array, int lenbyte,char* uuid) {
+// 	int type=*(table+Line*8);
+// 	double return_flag = -1;
 // 	switch (type) {
-// 		// case 1:return_flag = print_int(Line, int_array);break;
-// 		// case 2:return_flag = print_double(Line, double_array);break;
-// 		// case 3:return_flag = print_float(Line, float_array);break;
-// 		// case 4:return_flag = print_char(Line, char_array);break;
-// 		// case 5:return_flag = print_long(Line, long_array);break;
-// 		case 6:return_flag = print_byte(Line, byte_array,int_array,uuid);break;
+// 		//case 1:return_flag = print_int(Line, int_array);break;
+// 		case 2:return_flag = print_double(Line, double_array,int_array,uuid,NULL);break;
+// 		//case 3:return_flag = print_float(Line, float_array);break;
+// 		//case 4:return_flag = print_char(Line, char_array);break;
+// 		//case 5:return_flag = print_long(Line, long_array);break;
+// 		//case 6:return_flag = print_byte(Line, byte_array);break;
+// 		default:return_flag = -5;
+// 		}
+// 	return return_flag;
+// }
+
+// long encall_switch_get_l(long Line, int* int_array, int lenint,double* double_array, int lendouble,float* float_array, int lenfloat,char* char_array, int lenchar,long* long_array, int lenlong,char* byte_array, int lenbyte,char* uuid) {
+// 	int type=*(table+Line*8);
+// 	long return_flag = -1;
+// 	switch (type) {
+// 		//case 1:return_flag = print_int(Line, int_array);break;
+// 		//case 2:return_flag = print_double(Line, double_array);break;
+// 		//case 3:return_flag = print_float(Line, float_array);break;
+// 		//case 4:return_flag = print_char(Line, char_array);break;
+// 		case 5:return_flag = print_long(Line, long_array,int_array,uuid,NULL);break;
+// 		//case 6:return_flag = print_byte(Line, byte_array);break;
 // 		default:return_flag = -5;
 // 		}
 // 	return return_flag;
 // }
 
 //----------------------------------------------------------------------------------------------------------
-
-int print_int(long Line,int* int_array,char* uuid,char* cuuid)//---------------------------int
+// [hyr]0723 add parameters ouuid, cuuid
+int print_int(long Line, int* int_array, char* uuid, char* ouuid, char* cuuid)
 {
-//printf("----------------\n");
-//ocall_print_string("go in print_int\n");
-//printf("i Line=%ld\n",Line);		
-		Table_meta meta=get_table_meta(Line);
-/*if(Line == 29){
-printf("----------------\n");
-printf("Line=%ld\n",Line);
-printf("op1=%d\n",meta.p1);
-printf("op2=%d\n",meta.p2);
-printf("op=%d\n",meta.op);
-printf("para_name=%d\n",meta.para_name);
-printf("----------------\n");    
-}*/
-		int p1 = meta.p1;
-		int p1_i = meta.p1_i;
-		int p2 = meta.p2;
-		int p2_i = meta.p2_i;
-		int op = meta.op;
-		int para_name = meta.para_name;
-		int para_i = meta.para_i;	
-/*if(Line == 0 || Line == 1){
-	printf("p1=%d\n",p1);
-	printf("p1_i=%d\n",p1_i);
-	printf("p2=%d\n",p2);
-	printf("p2_i=%d\n",p2_i);
-	printf("op=%d\n",op);
-	printf("para_name=%d\n",para_name);
-	printf("para_i=%d\n",para_i);
-	printf("uuid=%s\n",uuid);
-}*/
-
-		int return_flag = -999;
-		int para1,para2;
-		
-
-
-/*if(para_i>=700 || p1_i>=700){
-	printf("[print_int]cuuid:%s Line=%ld\n",cuuid,Line);
-}*/
-		
-		//return statement replacce! 0509
-		if(p1==-2 && p1_i==-2 && p2==-2 && p2_i==-2 && op==-2){
-			//printf("this is a return statement Line=%ld\n",Line);
-			if(para_i != -1){
-				printf("I don't think this if will active 0509\n");
-			}else if(para_name>=100 && para_i == -1){ //only variables
-				//printf("calluuid:%s \n",hashmap.find(uuid)->calluuid);
-				hashmap.find(hashmap.find(uuid)->calluuid)->v_int[hashmap.find(uuid)->re[2]-100] = hashmap.find(uuid)->v_int[para_name-100];
-			}else if(para_name<0 && para_i == -1){ //constant
-				hashmap.find(hashmap.find(uuid)->calluuid)->v_int[hashmap.find(uuid)->re[2]-100] = hash_int[0-para_name];
-			}
-			//printf("20210720 1538 return_flag=%d\n",return_flag);
-			return 1000;
-			
-		}
-
-		/**
-			para1 
-		*/
-		if(p1_i != -1){   //array
-			//printf("20210720 come to 1545\n");
-			if (p1 < 0 && hash_index[0-p1] != 0){  //consants
-				if(p1_i>=70 && p1_i<=120){
-					para1 = hashmapArray.find(uuid)->arr_int[p1_i%10][hash_int[0-p1]];
-				}else if(p1_i < 10){
-					para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_int[hashmap.find(uuid)->arrayIndex[p1_i]%10][hash_int[0-p1]];
-				}else if(p1_i>=700 && p1_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid a!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_int[hash_int[0-p1]];
-				}else if(p1_i>=1300 && p1_i<=1800){ // multi array field, we need p2 as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid b!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_multi_int[hashmap.find(uuid)->v_int[p2-100]][hash_int[0-p1]];
-				}else{
-					//do nothing
-				}
-				printf("list 1562");
-				
-			}else if(p1<10 && p1>=0){ //list
-				//printf("list 1564");
-				if(p1_i>=70 && p1_i<=120){
-					para1 = hashmapArray.find(uuid)->arr_int[p1_i%10][int_array[p1]];
-				}else if(p1_i < 10){
-					para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_int[hashmap.find(uuid)->arrayIndex[p1_i]%10][int_array[p1]];
-				}else if(p1_i>=700 && p1_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid c!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_int[int_array[p1]];
-				}else if(p1_i>=1300 && p1_i<=1800){ // multi array field, we need p2 as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid d!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_multi_int[hashmap.find(uuid)->v_int[p2-100]][int_array[p1]];
-				}else{
-					//do nothing
-				}
-
-			}else if(p1 >=100 && p1<=699){ //encalve int~byte
-				//int value = hashmap.find(uuid)->v_int[p1-100];
-				//printf("1582value=%d\n",value);
-				//printf("call0 uuid=%s,index=%d\n",hashmap.find(uuid)->array[p1_i],hashmap.find(uuid)->arrayIndex[p1_i]);
-				if(p1_i>=70 && p1_i<=120){
-					para1 = hashmapArray.find(uuid)->arr_int[p1_i%10][hashmap.find(uuid)->v_int[p1-100]];
-				}else if(p1_i < 10){
-					para1 =hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_int[hashmap.find(uuid)->arrayIndex[p1_i]%10][hashmap.find(uuid)->v_int[p1-100]];
-				}else if(p1_i>=700 && p1_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid e!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_int[hashmap.find(uuid)->v_int[p1-100]];
-				}else if(p1_i>=1300 && p1_i<=1800){ // multi array field, we need p2 as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){
-						printf("[ERROR get cuuid f! cuuid:%s Line=%ld]\n",cuuid,Line);
-					}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_multi_int[hashmap.find(uuid)->v_int[p2-100]][hashmap.find(uuid)->v_int[p1-100]];
-				}else{
-					//do nothing
-				}
-			}else if(p1 == 10000){ //lengof method
-				//printf("this meyhod is lengthof p1:%d p1_i:%d\n",p1,p1_i);
-				if(p1_i>10){
-					if(hashmapArray.find(uuid)->intsize[p1_i%10]<0){
-						printf("[ERROR] I have not do this\n");
-					}
-					switch(p1_i/10){
-						case 7:para1 = hashmapArray.find(uuid)->intsize[p1_i%10];break;
-						case 8:para1 = hashmapArray.find(uuid)->doublesize[p1_i%10];break;
-						case 10:para1 = hashmapArray.find(uuid)->charsize[p1_i%10];break;
-						case 11:para1 = hashmapArray.find(uuid)->longsize[p1_i%10];break;
-					}
-				}else{
-					int index = hashmap.find(uuid)->arrayIndex[p1_i];
-					switch(index/10){
-						case 7:para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->intsize[index%10];break;
-						case 8:para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->doublesize[index%10];break;
-						case 10:para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->charsize[index%10];break;
-						case 11:para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->longsize[index%10];break;
-					}
-				}
-			
-			}else{
-				//this is a array, but index is null
-			}
-		}else{	// no an array ,but possiable it is public variables
-
-			if (p1 < 0 && hash_index[0-p1] != 0){  //consants
-
-				para1 = hash_int[0-p1];
-
-			}else if(p1<10 && p1>=0){ //list
-
-				para1 = int_array[p1];
-			}else if(p1>=20 && p1<=70){ // Public Variables , add on 0610/2020
-				if(hashmapPublicV.find(cuuid) != NULL){
-					para1 = hashmapPublicV.find(cuuid)[p1%10].v_i;
-				}else{//init
-					printf("[ERROR] print_int I don't think this will occur 6.10/2020\n");
-				}
-			}else{ //encalve
-				//printf("here uuid=%s\n",uuid);
-				switch(p1/100){    //maybe type cast
-					case 1:para1 = hashmap.find(uuid)->v_int[p1-100];break;
-					case 2:para1 = (int)hashmap.find(uuid)->v_double[p1-200];break;
-					case 4:para1 = (int)hashmap.find(uuid)->v_char[p1-400];break;
-					case 5:para1 = (int)hashmap.find(uuid)->v_long[p1-500];break;
-					case 6:para1 = (int)hashmap.find(uuid)->v_byte[p1-600];break;
-				}
-				
-				int ttpara1 = hashmap.find(uuid)->v_int[p1-100];   
-				//printf("1649 uuid =%s  ; para1=%d\n",uuid,hashmap.find(uuid)->v_int[meta.p1-10]);	
-			}
-		}
-//printf("i success op1=%d\n",para1);
-		/**
-			para2 
-		*/
-		if(p2_i != -1){   //array
-			if (p2 < 0 && hash_index[0-p2] != 0){  //consants
-				if(p2_i>10){
-					para2 = hashmapArray.find(uuid)->arr_int[p2_i%10][hash_int[0-p2]];
-				}else{
-					para2 = hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_int[hashmap.find(uuid)->arrayIndex[p2_i]%10][hash_int[0-p2]];
-				}
-			}else if(p2<10 && p2>=0){ //list
-
-				if(p2_i>10){
-					para2 = hashmapArray.find(uuid)->arr_int[p2_i%10][int_array[p2]];
-				}else{
-					para2 = hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_int[hashmap.find(uuid)->arrayIndex[p2_i]%10][int_array[p2]];
-				}
-
-			}else if(p2 >=100 && p2<=500){ //encalve int~long
-				//int value = hashmap.find(uuid)->v_int[p1-100];
-				//printf("value=%d\n",value);
-				//printf("call0 uuid=%s,index=%d\n",hashmap.find(uuid)->array[p1_i],hashmap.find(uuid)->arrayIndex[p1_i]);
-				if(p2_i>10){
-					para2 = hashmapArray.find(uuid)->arr_int[p2_i%10][hashmap.find(uuid)->v_int[p2-100]];
-				}else{
-					para2 =hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_int[hashmap.find(uuid)->arrayIndex[p2_i]%10][hashmap.find(uuid)->v_int[p2-100]];
-				}
-			}
-		}else{	// no an array
-
-			if (p2 < 0 && hash_index[0-p2] != 0){  //consants
-
-				para2 = hash_int[0-p2];
-
-			}else if(p2<10 && p2>=0){ //list
-
-				para2 = int_array[p2];
-			}else{ //encalve
 	
-				switch(p2/100){    //maybe type cast
-					case 1:para2 = hashmap.find(uuid)->v_int[p2-100];break;
-					case 2:para2 = (int)hashmap.find(uuid)->v_double[p2-200];break;
-					case 4:para2 = (int)hashmap.find(uuid)->v_char[p2-400];break;
-					case 5:para2 = (int)hashmap.find(uuid)->v_long[p2-500];break;
-					case 6:para2 = (int)hashmap.find(uuid)->v_byte[p2-600];break;
-				}
-				//printf("uuid =%s  ; para2=%d\n",uuid,hashmap.find(uuid)->v_int[meta.p2-10]);	
-			}
-		}
-/*if(Line == 0 || Line == 1){
-	printf("i success op1=%d\n",para1);
-	printf("i success op2=%d\n",para2);
-	printf("i op=%d\n",meta.op);
-}*/
-		switch (op) {
-			case -1:return_flag = para1;break;
-			case 1:return_flag = para1 + para2;break; //+
-			case 2:return_flag = para1 - para2;break; //-
-			case 3:return_flag = para1 * para2;break; //*
-			case 4:return_flag = para1 / para2;break; // /
-			case 5:return_flag = para1 % para2;break; // %
-			case 6:return_flag =( para1== para2?1:0);break;
-	 		case 7:return_flag =( para1!= para2?1:0);break;
-	  		case 8:return_flag =( para1> para2?1:0);break;
-	  		case 9:return_flag =( para1< para2?1:0);break;
-	  		case 10:return_flag =(para1>=para2?1:0);break;
-	  		case 11:return_flag =(para1<=para2?1:0);break;
-			case 12:return_flag = para1 & para2;break;
-			case 13:return_flag = para1 | para2;break;
-			case 14:return_flag = para1 ^ para2;break;
-			case 15:return_flag = para1 << para2;break;
-			case 16:return_flag = para1 >> para2;break;
-			case 17:return_flag = (unsigned int)para1 >> para2;break;
-			default:return_flag = -11;
-		}
+	Table_meta meta=get_table_meta(Line);
+
+	int p1 = meta.p1;
+	int p1_i = meta.p1_i;
+	int p2 = meta.p2;
+	int p2_i = meta.p2_i;
+	int op = meta.op;
+	int para_name = meta.para_name;
+	int para_i = meta.para_i;	
+
+	int return_flag = -999;
+	int para1, para2;
+	
+
+	// return statement replacce! 0509
+	// TODO the return value is (static)member variable?
+	if(p1==-2 && p1_i==-2 && p2==-2 && p2_i==-2 && op==-2){
+		//printf("this is a return statement Line=%ld\n",Line);
+		if(para_i != -1){
+			printf("I don't think this if will active 0509\n");
+		}else if(para_name>=100 && para_name <200 && para_i == -1){ //only variables
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_int[hashmap.find(uuid)->re[2]-100] = hashmap.find(uuid)->v_int[para_name-100];
+		}else if(para_name<0 && para_i == -1){ //constant(para_name<0 -> para_name=0-line){
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_int[hashmap.find(uuid)->re[2]-100] = hash_int[0-para_name];
+		}else if(para_name>=1000 && para_name <2000 && para_i == -1){ //[hyr]0817 added，是否有问题？如果caller函数中接收返回值的是成员变量呢？
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_int[hashmap.find(uuid)->re[2]-100] = hashmapMemberVariables.find(ouuid)->v_int[para_name-1000];
+		}// ...class部分待补充
+		return 1000;
+	}
+	
+	// hyr 0723 modified
+	if (p1 < 0 && hash_index[0-p1] != 0) { //consants
+		para1 = hash_int[0-p1];
+	} else if (p1 < 10 && p1 >=0) { //list(for what)
+		para1 = int_array[p1];
+	} else if (p1 >= 100 && p1 < 200) { // sensitive variables
+		para1 = hashmap.find(uuid)->v_int[p1 - 100];
+	} else if (p1 >= 1000 && p1 < 2000 && ouuid != NULL) { // sensitive member variables
+		para1 = hashmapMemberVariables.find(ouuid)->v_int[p1 - 1000];
+	} else if (p1 >= 10000 && p1 < 20000 && cuuid != NULL) { // sensitive static member variables
+		para1 = hashmapStaticMemberVariables.find(cuuid)->v_int[p1 - 10000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
+	
+	
+	if (p2 < 0 && hash_index[0-p2] != 0) { //consants
+		para2 = hash_int[0-p2];
+	} else if (p2 < 10 && p2 >=0) { //list(for what)
+		para2 = int_array[p2];
+	} else if (p2 >= 100 && p2 < 200) { // sensitive variables
+		para2 = hashmap.find(uuid)->v_int[p2 - 100];
+	} else if (p2 >= 1000 && p2 < 2000 && ouuid != NULL) { // sensitive member variables
+		para2 = hashmapMemberVariables.find(ouuid)->v_int[p2 - 1000];
+	} else if (p2 >= 10000 && p2 < 20000 && cuuid != NULL) { // sensitive static member variables
+		para2 = hashmapStaticMemberVariables.find(cuuid)->v_int[p2 - 10000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
 
 
-/*if(Line == 31L){
-	printf("i success return_flag=%d\n",return_flag);	
-}*/
+	switch (op) {
+		case -1:return_flag = para1;break;
+		case 1:return_flag = para1 + para2;break;
+		case 2:return_flag = para1 - para2;break;
+		case 3:return_flag = para1 * para2;break;
+		case 4:return_flag = para1 / para2;break;
+		case 5:return_flag = para1 % para2;break;
+		case 6:return_flag = (para1 == para2?1:0);break;
+ 		case 7:return_flag = (para1 != para2?1:0);break;
+  		case 8:return_flag = (para1 > para2?1:0);break;
+  		case 9:return_flag = (para1 < para2?1:0);break;
+  		case 10:return_flag = (para1 >= para2?1:0);break;
+  		case 11:return_flag = (para1 <= para2?1:0);break;
+		case 12:return_flag = para1 & para2;break;
+		case 13:return_flag = para1 | para2;break;
+		case 14:return_flag = para1 ^ para2;break;
+		case 15:return_flag = para1 << para2;break;
+		case 16:return_flag = para1 >> para2;break;
+		case 17:return_flag = (unsigned int)para1 >> para2;break;
+		default:return_flag = -11;
+	}
 
-//printf("i success return_flag=%d\n",return_flag);	
-		if(para_i != -1){ // update to array
-			//printf("i ==UPDATE to arrays==\n");
-			if (para_name < 0 && hash_index[0-para_name] != 0){ //constant
-				if(para_i>=70 && para_i<=120){
-					hashmapArray.find(uuid)->arr_int[para_i%10][hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}else if(para_i<10){
-					hashmapArray.find(hashmap.find(uuid)->array[para_i])->arr_int[hashmap.find(uuid)->arrayIndex[para_i]%10][hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}else if(para_i>=700 && para_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid g!]\n");}
-					hashmapPublicV.find(cuuid)[para_i%10].arr_int[hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;	
-				}else if(para_i>=1300 && para_i<=1800){ // multi array field, we need p2 as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid h!]\n");}
-					hashmapPublicV.find(cuuid)[para_i%10].arr_multi_int[hashmap.find(uuid)->v_int[p2_i-100]][hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;	
-				}else{
-					//do nothing
-				}
-			
-			}else if(para_name >=100 ){ //encalve index
-				if(para_i>=70 && para_i<=120){
-					hashmapArray.find(uuid)->arr_int[para_i%10][hashmap.find(uuid)->v_int[para_name-100]] = return_flag;
-					return_flag = 1000;
-				}else if(para_i<10){
-					hashmapArray.find(hashmap.find(uuid)->array[para_i])->arr_int[hashmap.find(uuid)->arrayIndex[para_i]%10][hashmap.find(uuid)->v_int[para_name-100]] = return_flag;
-					
-					return_flag = 1000;
-				}else if(para_i>=700 && para_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid i!]\n");}
-					hashmapPublicV.find(cuuid)[para_i%10].arr_int[hashmap.find(uuid)->v_int[para_name-100]] = return_flag;
-					return_flag = 1000;	
-				}else if(para_i>=1300 && para_i<=1800){ // multi array field, we need p2_i as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid j! cuuid:%s Line=%ld]\n",cuuid,Line);}
-					hashmapPublicV.find(cuuid)[para_i%10].arr_multi_int[hashmap.find(uuid)->v_int[p2_i-100]][hashmap.find(uuid)->v_int[para_name-100]] = return_flag;
-					/*if(Line==49){
-						printf("d[i][j]:%d\n",hashmapPublicV.find(cuuid)[para_i%10].arr_multi_int[hashmap.find(uuid)->v_int[p2_i-100]][hashmap.find(uuid)->v_int[para_name-100]]);
-					}*/
-					return_flag = 1000;	
-				}else{
-					//do nothing
-				}
+	if (para_name >= 100 && para_name < 200) { // int type variable, Typeindex(while int, its value equals 1) * 100 + position
+		hashmap.find(uuid)->v_int[para_name - 100] = return_flag;
+	} else if (para_name >= 1000 && para_name < 2000 && ouuid != NULL) { // int type member variable, Typeindex * 1000 + position
+		if (hashmapMemberVariables.find(ouuid) == NULL) {
+			// init
+			ONODE oNode = (ONODE)malloc(sizeof(ObjectNode));
+			if (!hashmapMemberVariables.insert(ouuid, oNode)) {
+				printf("[hyr] insert member variable fail!");
 			}
-		}else if(para_name>=20 && para_name<=70){ // Public Variables , add on 0610/2020
-				if(hashmapPublicV.find(cuuid) != NULL){
-					switch(para_name/10){    //maybe type cast
-						case 2:hashmapPublicV.find(cuuid)[para_name%10].v_i = return_flag;break;
-						case 3:hashmapPublicV.find(cuuid)[para_name%10].v_d = return_flag;break;
-						case 5:hashmapPublicV.find(cuuid)[para_name%10].v_c = return_flag;break;
-						case 6:hashmapPublicV.find(cuuid)[para_name%10].v_l = return_flag;break;
-						case 7:hashmapPublicV.find(cuuid)[para_name%10].v_b = return_flag;break;
-					}
-				}else{//init
-					PNODE p = (PNODE)malloc(10*sizeof(PublicVariableNode));
-					if(!hashmapPublicV.insert(cuuid,p)){
-						printf("insert fail!! %s\n",cuuid);
-					}
-					switch(para_name/10){    //maybe type cast
-						case 2:hashmapPublicV.find(cuuid)[para_name%10].v_i = return_flag;break;
-						case 3:hashmapPublicV.find(cuuid)[para_name%10].v_d = return_flag;break;
-						case 5:hashmapPublicV.find(cuuid)[para_name%10].v_c = return_flag;break;
-						case 6:hashmapPublicV.find(cuuid)[para_name%10].v_l = return_flag;break;
-						case 7:hashmapPublicV.find(cuuid)[para_name%10].v_b = return_flag;break;
-					}
-				}
-				return_flag = 1000;	
-		}else if(para_name>0 && para_i == -1){  // update to variables
-			switch(para_name/100){    //maybe type cast
-				case 1:hashmap.find(uuid)->v_int[para_name-100] = return_flag;break;
-				case 2:hashmap.find(uuid)->v_double[para_name-200] = (int)return_flag;break;
-				case 4:hashmap.find(uuid)->v_char[para_name-400] = (int)return_flag;break;
-				case 5:hashmap.find(uuid)->v_long[para_name-500] = (long)return_flag;break;
-				case 6:hashmap.find(uuid)->v_byte[para_name-600] = return_flag;break;
+		}
+		hashmapMemberVariables.find(ouuid)->v_int[para_name - 1000] = return_flag;
+	} else if (para_name >= 10000 && para_name < 20000 && cuuid != NULL) { // int type static memebr variable, *10000 + position
+		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
+			// init
+			ClNODE clNode = (ClNODE)malloc(sizeof(ClassNode));
+			if (!hashmapStaticMemberVariables.insert(cuuid, clNode)) {
+				printf("[hyr] insert member variable fail!");
 			}
-			/*if(Line == 61L){
-				printf("20201119 %d\n",hashmap.find(uuid)->v_int[para_name-100]);
-			}*/
-			return_flag = 1000;	
 		}
-		//printf("20210720 return_flag=%d\n",return_flag);
-		/*if(Line == 0 || Line == 1){
-			printf("i success return_flag=%d\n",return_flag);	
-		}*/
-/*	
-		if(return_flag==0){
-			printf("p1=%d\n",p1);
-			printf("p1_i=%d\n",p1_i);
-			printf("p2=%d\n",p2);
-			printf("p2_i=%d\n",p2_i);
-			printf("op=%d\n",op);
-			printf("para_name=%d\n",para_name);
-			printf("para_i=%d\n",para_i);
-			printf("uuid=%s\n",uuid);
-		}
-*/
-		
-		return return_flag;
+		hashmapStaticMemberVariables.find(cuuid)->v_int[para_name - 10000] = return_flag;
+	}
+	return_flag = 1000;
+	return return_flag;
 
 }
 int calIntArrayIndex(INODE node){
@@ -1982,7 +1642,7 @@ int calCharArrayIndex(CNODE node){
 }
 
 
-int print_array_d(long Line, double* double_array,int double_tail,char* uuid,char* cuuid){
+int print_array_d(long Line, double* double_array,int double_tail,char* uuid, char* ouuid, char* cuuid){
 
 
 	
@@ -2374,1040 +2034,539 @@ int print_array_d(long Line, double* double_array,int double_tail,char* uuid,cha
 
 	
 }
-double print_double(long Line, double* double_array,int* int_array,char* uuid,char* cuuid)//---------------------------double
+double print_double(long Line, double* double_array, int* int_array, char* uuid, char* ouuid, char* cuuid)//---------------------------double
 {
-		Table_meta meta=get_table_meta(Line);
-		double return_flag = -999;
-		double para1,para2;
+	Table_meta meta=get_table_meta(Line);
 
-		int p1 = meta.p1;
-		int p1_i = meta.p1_i;
-		int p2 = meta.p2;
-		int p2_i = meta.p2_i;
-		int op = meta.op;
-		int para_name = meta.para_name;
-		int para_i = meta.para_i;
-/*if(Line >=20 && Line<=26){
-	printf("Line=%ld\n",Line);
-	printf("p1=%d\n",p1);
-	printf("p1_i=%d\n",p1_i);
-	printf("p2=%d\n",p2);
-	printf("p2_i=%d\n",p2_i);
-	printf("op=%d\n",op);
-	printf("para_name=%d\n",para_name);
-	printf("para_i=%d\n",para_i);
-	printf("----------------\n");
-}*/
-/*if(para_i>=700 || p1_i>=700){
-	printf("[print_double]cuuid:%s Line=%ld\n",cuuid,Line);
-}*/
-		//return statement replacce! 0509
-		if(p1==-2 &&  p1_i==-2 && p2==-2 && p2_i==-2 && op==-2){
-			
-			if(para_i != -1){
-				printf("I don't think this if will active 0509\n");
-			}else if(para_name>0 && para_i == -1){ //only variables
-				hashmap.find(hashmap.find(uuid)->calluuid)->v_double[hashmap.find(uuid)->re[2]-100] = hashmap.find(uuid)->v_double[para_name-100];
-			}else if(para_name<0 && para_i == -1){ //constant
-				hashmap.find(hashmap.find(uuid)->calluuid)->v_double[hashmap.find(uuid)->re[2]-100] = hash_double[0-para_name];
-			}
-			return 1000;
+	int p1 = meta.p1;
+	int p1_i = meta.p1_i;
+	int p2 = meta.p2;
+	int p2_i = meta.p2_i;
+	int op = meta.op;
+	int para_name = meta.para_name;
+	int para_i = meta.para_i;
+
+	double return_flag = -999;
+	double para1, para2;
+
+	//return statement replacce! 0509
+	if(p1==-2 &&  p1_i==-2 && p2==-2 && p2_i==-2 && op==-2){
+		if(para_i != -1){
+			printf("I don't think this if will active 0509\n");
+		}else if(para_name>0 && para_i == -1){ //only variables
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_double[hashmap.find(uuid)->re[2]-200] = hashmap.find(uuid)->v_double[para_name-100];
+		}else if(para_name<0 && para_i == -1){ //constant
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_double[hashmap.find(uuid)->re[2]-200] = hash_double[0-para_name];
 		}
+		return 1000;
+	}
 
-		/**
-			para1 
-		*/
-		if(p1_i != -1){   //array
-			if (p1 < 0 && hash_index[0-p1] != 0){  //consants
-
-				if(p1_i>=70 && p1_i<=120){
-					para1 = hashmapArray.find(uuid)->arr_double[p1_i%10][hash_int[0-p1]];
-				}else if(p1_i < 10){
-					para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_double[hashmap.find(uuid)->arrayIndex[p1_i]%10][hash_int[0-p1]];
-				}else if(p1_i>=700 && p1_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid k!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_double[hash_int[0-p1]];
-				}else if(p1_i>=1300 && p1_i<=1800){ // multi array field, we need p2 as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid l!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_multi_double[hashmap.find(uuid)->v_int[p2-100]][hash_int[0-p1]];
-				}else{
-					//do nothing
-				}
-
-			}else if(p1<10 && p1>=0){ //list
-				if(p1_i>=70 && p1_i<=120){
-					para1 = hashmapArray.find(uuid)->arr_double[p1_i%10][int_array[p1]];
-				}else if(p1_i < 10){
-					para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_double[hashmap.find(uuid)->arrayIndex[p1_i]%10][int_array[p1]];
-				}else if(p1_i>=700 && p1_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid m!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_double[int_array[p1]];
-				}else if(p1_i>=1300 && p1_i<=1800){ // multi array field, we need p2 as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid n!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_multi_double[hashmap.find(uuid)->v_int[p2-100]][int_array[p1]];
-				}else{
-					//do nothing
-				}
-			}else if(p1 >=100 && p1<=500){ //encalve int~long
-				//printf("I think this if will ... 0508 d  p1=%d Line=%ld\n",p1,Line);
-				if(p1_i>=70 && p1_i<=120){
-					para1 = hashmapArray.find(uuid)->arr_double[p1_i%10][hashmap.find(uuid)->v_int[p1-100]];
-				}else if(p1_i < 10){
-					para1 =hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_double[hashmap.find(uuid)->arrayIndex[p1_i]%10][hashmap.find(uuid)->v_int[p1-100]];
-				}else if(p1_i>=700 && p1_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid o!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_double[hashmap.find(uuid)->v_int[p1-100]];
-				}else if(p1_i>=1300 && p1_i<=1800){ // multi array field, we need p2 as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid p!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_multi_double[hashmap.find(uuid)->v_int[p2-100]][hashmap.find(uuid)->v_int[p1-100]];
-				}else{
-					//do nothing
-				}
-			}else{
-				//this is a array, but index is null
-			}
-		}else{	// no an array
-
-			if (p1 < 0 && hash_index[0-p1] != 0){  //consants
-
-				para1 = hash_double[0-p1];
-
-			}else if(p1<10 && p1>=0){ //list
-
-				para1 = double_array[p1];
-			}else{ //encalve
-				switch(p1/100){    //maybe type cast
-					case 1:para1 = (double)hashmap.find(uuid)->v_int[p1-100];break;
-					case 2:para1 = hashmap.find(uuid)->v_double[p1-200];break;
-					case 4:para1 = (double)hashmap.find(uuid)->v_char[p1-400];break;
-					case 5:para1 = (double)hashmap.find(uuid)->v_long[p1-500];break;
-					case 6:para1 = (double)hashmap.find(uuid)->v_byte[p1-600];break;
-				}
-				//para1 = hashmap.find(uuid)->v_int[p1-100];   
-				//printf("uuid =%s  ; para1=%d\n",uuid,hashmap.find(uuid)->v_int[meta.p1-10]);	
-			}
-		}
-
-		/**
-			para2 
-		*/
-		if(p2_i != -1){   //array
-			if (p2 < 0 && hash_index[0-p2] != 0){  //consants
-
-				if(p2_i>10){
-					para2 = hashmapArray.find(uuid)->arr_double[p2_i%10][hash_int[0-p2]];
-				}else{
-					para2 = hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_double[hashmap.find(uuid)->arrayIndex[p2_i]%10][hash_int[0-p2]];
-				}
-
-			}else if(p2<10 && p2>=0){ //list
-				if(p2_i>10){
-					para2 = hashmapArray.find(uuid)->arr_double[p2_i%10][int_array[p2]];
-				}else{
-					para2 = hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_double[hashmap.find(uuid)->arrayIndex[p2_i]%10][int_array[p2]];  //may be no use
-				}
-				printf("I think this if will be no use!!!!!0508 d p2=%d\n",p2);
-			}else if(p2 >=100 && p2<=500){ //encalve int~long
-				//printf("I think this if will ... 0508 d  p1=%d Line=%ld\n",p1,Line);
-				if(p2_i>10){
-					if(hashmapArray.find(uuid)->doublesize[p2_i%10]<0){
-						int a = -hashmapArray.find(uuid)->doublesize[p2_i%10];
-						para2 = hashmapMultiArray.find(uuid)[p2_i%10].arr_double[hashmap.find(uuid)->v_int[a-100]][hashmap.find(uuid)->v_int[p2-100]];
-					}else{
-						para2 = hashmapArray.find(uuid)->arr_double[p2_i%10][hashmap.find(uuid)->v_int[p2-100]];                                      ////may be ......
-					}
-				}else{
-					para2 = hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_double[hashmap.find(uuid)->arrayIndex[p2_i]%10][hashmap.find(uuid)->v_int[p2-100]];
-				}
-				//printf("uuid =%s  ; para1=%d\n",uuid,hashmap.find(uuid)->v_int[meta.p1-10]);	
-			}else{
-				//this is a array, but index is null
-			}
-		}else{	// no an array
-
-			if (p2 < 0 && hash_index[0-p2] != 0){  //consants
-
-				para2 = hash_double[0-p2];
-
-			}else if(p2<10 && p2>=0){ //list
-
-				para2 = double_array[p2];
-			}else{ //encalve
+	// [hyr]0817 added
+	if (p1 < 0 && hash_index[0-p1] != 0) { //consants
+		para1 = hash_double[0-p1];
+	} else if (p1 < 10 && p1 >=0) { //list(for what)
+		para1 = double_array[p1];
+	} else if (p1 >= 200 && p1 < 300) { // sensitive variables
+		para1 = hashmap.find(uuid)->v_double[p1-200];
+	} else if (p1 >= 2000 && p1 < 3000 && ouuid != NULL) { // sensitive member variables
+		para1 = hashmapMemberVariables.find(ouuid)->v_double[p1 - 2000];
+	} else if (p1 >= 20000 && p1 < 30000 && cuuid != NULL) { // sensitive static member variables
+		para1 = hashmapStaticMemberVariables.find(cuuid)->v_double[p1 - 20000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
 	
-				switch(p2/100){    //maybe type cast
-					case 1:para2 = (double)hashmap.find(uuid)->v_int[p2-100];break;
-					case 2:para2 = hashmap.find(uuid)->v_double[p2-200];break;
-					case 4:para2 = (double)hashmap.find(uuid)->v_char[p2-400];break;
-					case 5:para2 = (double)hashmap.find(uuid)->v_long[p2-500];break;
-					case 6:para2 = (double)hashmap.find(uuid)->v_byte[p2-600];break;
-				}
-				//printf("uuid =%s  ; para2=%d\n",uuid,hashmap.find(uuid)->v_int[meta.p2-10]);	
-			}
-		}
-/*if(Line >=20 && Line<=26){
-	printf("d success op1=%lf\n",para1);
-	printf("d success op2=%lf\n",para2);
-	printf("d op=%d\n",meta.op);
-}*/
-		switch (op) {
-			case -1:return_flag = para1;break;
-			case 1:return_flag = para1 + para2;break; //+
-			case 2:return_flag = para1 - para2;break; //-
-			case 3:return_flag = para1 * para2;break; //*
-			case 4:return_flag = para1 / para2;break; // /
-			//case 5:return_flag = para1 % para2;break; // %
-			case 6:return_flag =( para1== para2?1:0);break;
-	 		case 7:return_flag =( para1!= para2?1:0);break;
-	  		case 8:return_flag =( para1> para2?1:0);break;
-	  		case 9:return_flag =( para1< para2?1:0);break;
-	  		case 10:return_flag =(para1>=para2?1:0);break;
-	  		case 11:return_flag =(para1<=para2?1:0);break;
-			//case 12:return_flag = para1 & para2;break;
-			default:return_flag = -11;
-		}
-//printf("d success return_flag=%lf\n",return_flag);	
-		if(para_i != -1){ // update to array
-			//printf("d ==UPDATE to arrays==\n");
-			if (para_name < 0 && hash_index[0-para_name] != 0){ //constant
-				if(para_i>=70 && para_i<=120){
-					hashmapArray.find(uuid)->arr_double[para_i%10][hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}else if(para_i<10){
-					hashmapArray.find(hashmap.find(uuid)->array[para_i])->arr_double[hashmap.find(uuid)->arrayIndex[para_i]%10][hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}else if(para_i>=700 && para_i<=1200){ //array field
-					hashmapPublicV.find(cuuid)[para_i%10].arr_double[hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}else if(para_i>=1300 && para_i<=1800){ // multi array field, we need p2_i as one of index
-					hashmapPublicV.find(cuuid)[para_i%10].arr_multi_double[hashmap.find(uuid)->v_int[p2_i-100]][hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}else{
-					//do nothing
-				}
-			
-			}else if(para_name >=100 ){ //encalve
-				if(para_i>=70 && para_i<=120){
-					hashmapArray.find(uuid)->arr_double[para_i%10][hashmap.find(uuid)->v_int[para_name-100]] = return_flag;
-					return_flag = 1000;
-				}else if(para_i<10){
-					hashmapArray.find(hashmap.find(uuid)->array[para_i])->arr_double[hashmap.find(uuid)->arrayIndex[para_i]%10][hashmap.find(uuid)->v_int[para_name-100]] = return_flag;
-					
-					return_flag = 1000;
-				}else if(para_i>=700 && para_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid q!]\n");}
-					hashmapPublicV.find(cuuid)[para_i%10].arr_double[hashmap.find(uuid)->v_int[para_name-100]] = return_flag;
-					/*if(Line==65){
-						printf("x[i]:%lf\n",hashmapPublicV.find(cuuid)[para_i%10].arr_double[hashmap.find(uuid)->v_int[para_name-100]]);
-					}*/
-					return_flag = 1000;
-				}else if(para_i>=1300 && para_i<=1800){ // multi array field, we need p2_i as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid r!]\n");}
-					hashmapPublicV.find(cuuid)[para_i%10].arr_multi_double[hashmap.find(uuid)->v_int[p2_i-100]][hashmap.find(uuid)->v_int[para_name-100]] = return_flag;
-					/*if(Line==43){
-						printf("q[i][j]:%lf\n",hashmapPublicV.find(cuuid)[para_i%10].arr_multi_double[hashmap.find(uuid)->v_int[p2_i-100]][hashmap.find(uuid)->v_int[para_name-100]]);
-					}*/
-					return_flag = 1000;
-				}else{
-					//do nothing
-				}
-			}
 	
-		}else if(para_name>0 && para_i == -1){  // update to variables
-			//printf("d ==UPDATE to variables==\n");
-			
-			switch(para_name/100){    //maybe type cast
-				case 1:hashmap.find(uuid)->v_int[para_name-100] = (double)return_flag;break;
-				case 2:hashmap.find(uuid)->v_double[para_name-200] = return_flag;break;
-				case 4:hashmap.find(uuid)->v_char[para_name-400] = (char)return_flag;break;
-				case 5:hashmap.find(uuid)->v_long[para_name-500] = (long)return_flag;break;
-				case 6:hashmap.find(uuid)->v_byte[para_name-600] = (return_flag<0)?-1:1;
-				       //printf("[Warning]I think only in Pi will counter this case!! 0603/2020\n");
-				       break;
+	if (p2 < 0 && hash_index[0-p2] != 0) { //consants
+		para2 = hash_double[0-p2];
+	} else if (p2 < 10 && p2 >=0) { //list(for what)
+		para2 = double_array[p2];
+	} else if (p2 >= 200 && p2 < 300) { // sensitive variables
+		para2 = hashmap.find(uuid)->v_double[p2 - 200];
+	} else if (p2 >= 2000 && p2 < 3000 && ouuid != NULL) { // sensitive member variables
+		para2 = hashmapMemberVariables.find(ouuid)->v_double[p2 - 2000];
+	} else if (p2 >= 20000 && p2 < 30000 && cuuid != NULL) { // sensitive static member variables
+		para2 = hashmapStaticMemberVariables.find(cuuid)->v_double[p2 - 20000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
+
+	switch (op) {
+		case -1:return_flag = para1;break;
+		case 1:return_flag = para1 + para2;break; //+
+		case 2:return_flag = para1 - para2;break; //-
+		case 3:return_flag = para1 * para2;break; //*
+		case 4:return_flag = para1 / para2;break; // /
+		//case 5:return_flag = para1 % para2;break; // %
+		case 6:return_flag = (para1==para2?1:0);break;
+ 		case 7:return_flag = (para1!=para2?1:0);break;
+  		case 8:return_flag = (para1>para2?1:0);break;
+  		case 9:return_flag = (para1<para2?1:0);break;
+  		case 10:return_flag = (para1>=para2?1:0);break;
+  		case 11:return_flag = (para1<=para2?1:0);break;
+		//case 12:return_flag = para1 & para2;break;
+		default:return_flag = -11;
+	}
+
+	if (para_name >= 200 && para_name < 300) { // double type variable
+		hashmap.find(uuid)->v_double[para_name - 200] = return_flag;
+	} else if (para_name >= 2000 && para_name < 3000 && ouuid != NULL) { // double type member variable
+		if (hashmapMemberVariables.find(ouuid) == NULL) {
+			// init
+			ONODE oNode = (ONODE)malloc(sizeof(ObjectNode));
+			if (!hashmapMemberVariables.insert(ouuid, oNode)) {
+				printf("[hyr] insert member variable fail!");
 			}
-			return_flag = 1000;	
 		}
-//printf("double p1=%lf\n",para1);
-//printf("double p2=%lf\n",para2);
-//printf("return_flag=%lf\n",return_flag); 
-//ocall_print_string("d success\n");
-		return return_flag;
-}
-
-
-float print_float(long Line, float* float_array,char* uuid)//---------------------------float
-{
-		Table_meta meta=get_table_meta(Line);
-		float return_flag = -999;
-		float para1,para2;
-		if (meta.p1 < 0){  //consants
-			para1 = hash_float[0-meta.p1];
-		}else if(meta.p1<10 && meta.p1>=0){ //list
-			para1 = float_array[meta.p1];
-		}else{ //encalve
-//			para1 = get_stacktop(s)->v_float[meta.p1 % 10];
+		hashmapMemberVariables.find(ouuid)->v_double[para_name - 2000] = return_flag;
+	} else if (para_name >= 20000 && para_name < 30000 && cuuid != NULL) { // double type static memebr variable
+		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
+			// init
+			ClNODE clNode = (ClNODE)malloc(sizeof(ClassNode));
+			if (!hashmapStaticMemberVariables.insert(cuuid, clNode)) {
+				printf("[hyr] insert member variable fail!");
+			}
 		}
+		hashmapStaticMemberVariables.find(cuuid)->v_double[para_name - 20000] = return_flag;
+	}
 		
-		if (meta.p2 < 0){  //consants
-			para2 = hash_float[0-meta.p2];
-		}else if(meta.p2<10 && meta.p2>=0){ //list
-			para2 = float_array[meta.p2];
-		}else{ //encalve
-//			para2 = get_stacktop(s)->v_float[meta.p2 % 10];
-		}
-		switch (meta.op) {
-			case -1:return_flag = para1;break;   //x=2; or x=y;
-			case 1:return_flag = para1 + para2;break; //+
-			case 2:return_flag = para1 - para2;break; //-
-			case 3:return_flag = para1 * para2;break; //*
-			case 4:return_flag = para1 / para2;break; // /
-			//case 5:return_flag = para1 % para2;break; // %
-			case 6:return_flag=( para1==para2?1:0);break;
-	 		case 7:return_flag=( para1!=para2?1:0);break;
-	  		case 8:return_flag=( para1>para2?1:0);break;
-	  		case 9:return_flag=( para1<para2?1:0);break;
-	  		case 10:return_flag=( para1>=para2?1:0);break;
-	  		case 11:return_flag=( para1<=para2?1:0);break;
-			default:return_flag = -11;
-		}
-		if (meta.para_name>0) { 
-//			get_stacktop(s)->v_float[meta.para_name % 10] = return_flag;
-			return_flag = 1000;
-		}
-ocall_print_string("f success\n");
-		return return_flag;
+		
+	return_flag = 1000;	
+	return return_flag;
 }
 
-int print_char(long Line, char* char_array,char* uuid)//---------------------------char
+
+float print_float(long Line, float* float_array, char* uuid, char* ouuid, char* cuuid)//---------------------------float
+{
+	Table_meta meta=get_table_meta(Line);
+
+	int p1 = meta.p1;
+	int p1_i = meta.p1_i;
+	int p2 = meta.p2;
+	int p2_i = meta.p2_i;
+	int op = meta.op;
+	int para_name = meta.para_name;
+	int para_i = meta.para_i;	
+
+	float return_flag = -999;
+	float para1, para2;
+	
+
+	// return statement replacce! 0509
+	// TODO the return value is (static)member variable?
+	if(p1==-2 && p1_i==-2 && p2==-2 && p2_i==-2 && op==-2){
+		//printf("this is a return statement Line=%ld\n",Line);
+		if(para_i != -1){
+			printf("I don't think this if will active 0509\n");
+		}else if(para_name>=100 && para_i == -1){ //only variables
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_float[hashmap.find(uuid)->re[2]-100] = hashmap.find(uuid)->v_float[para_name-100];
+		}else if(para_name<0 && para_i == -1){ //constant(para_name<0 -> para_name=0-line)
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_float[hashmap.find(uuid)->re[2]-100] = hash_float[0-para_name];
+		}
+		return 1000;
+		
+	}
+	
+	// [hyr]0817 added
+	if (p1 < 0 && hash_index[0-p1] != 0) { //consants
+		para1 = hash_float[0-p1];
+	} else if (p1 < 10 && p1 >=0) { //list(for what)
+		para1 = float_array[p1];
+	} else if (p1 >= 300 && p1 < 400) { // sensitive variables
+		para1 = hashmap.find(uuid)->v_float[p1 - 300];
+	} else if (p1 >= 3000 && p1 < 4000 && ouuid != NULL) { // sensitive member variables
+		para1 = hashmapMemberVariables.find(ouuid)->v_float[p1 - 3000];
+	} else if (p1 >= 30000 && p1 < 40000 && cuuid != NULL) { // sensitive static member variables
+		para1 = hashmapStaticMemberVariables.find(cuuid)->v_float[p1 - 30000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
+	
+	
+	if (p2 < 0 && hash_index[0-p2] != 0) { //consants
+		para2 = hash_float[0-p2];
+	} else if (p2 < 10 && p2 >=0) { //list(for what)
+		para2 = float_array[p2];
+	} else if (p2 >= 300 && p2 < 400) { // sensitive variables
+		para2 = hashmap.find(uuid)->v_float[p2 - 300];
+	} else if (p2 >= 3000 && p2 < 4000 && ouuid != NULL) { // sensitive member variables
+		para2 = hashmapMemberVariables.find(ouuid)->v_float[p2 - 3000];
+	} else if (p2 >= 30000 && p2 < 40000 && cuuid != NULL) { // sensitive static member variables
+		para2 = hashmapStaticMemberVariables.find(cuuid)->v_float[p2 - 30000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
+
+
+	switch (op) {
+		case -1:return_flag = para1;break;
+		case 1:return_flag = para1 + para2;break; //+
+		case 2:return_flag = para1 - para2;break; //-
+		case 3:return_flag = para1 * para2;break; //*
+		case 4:return_flag = para1 / para2;break; // /
+		//case 5:return_flag = para1 % para2;break; // %
+		case 6:return_flag = (para1==para2?1:0);break;
+ 		case 7:return_flag = (para1!=para2?1:0);break;
+  		case 8:return_flag = (para1>para2?1:0);break;
+  		case 9:return_flag = (para1<para2?1:0);break;
+  		case 10:return_flag = (para1>=para2?1:0);break;
+  		case 11:return_flag = (para1<=para2?1:0);break;
+		//case 12:return_flag = para1 & para2;break;
+		default:return_flag = -11;
+	}
+
+	if (para_name >= 300 && para_name < 400) { // float type variable
+		hashmap.find(uuid)->v_float[para_name - 300] = return_flag;
+	} else if (para_name >= 3000 && para_name < 4000 && ouuid != NULL) { // float type member variable
+		if (hashmapMemberVariables.find(ouuid) == NULL) {
+			// init
+			ONODE oNode = (ONODE)malloc(sizeof(ObjectNode));
+			if (!hashmapMemberVariables.insert(ouuid, oNode)) {
+				printf("[hyr] insert member variable fail!");
+			}
+		}
+		hashmapMemberVariables.find(ouuid)->v_float[para_name - 3000] = return_flag;
+	} else if (para_name >= 30000 && para_name < 40000 && cuuid != NULL) { // float type static memebr variable
+		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
+			// init
+			ClNODE clNode = (ClNODE)malloc(sizeof(ClassNode));
+			if (!hashmapStaticMemberVariables.insert(cuuid, clNode)) {
+				printf("[hyr] insert member variable fail!");
+			}
+		}
+		hashmapStaticMemberVariables.find(cuuid)->v_float[para_name - 30000] = return_flag;
+	}
+	return_flag = 1000;
+	return return_flag;
+
+}
+
+int print_char(long Line, char* char_array, char* uuid, char* ouuid, char* cuuid)//---------------------------char
 {		
-		Table_meta meta=get_table_meta(Line);
-		int return_flag = -999;
-		char para1,para2;
 
-		int p1 = meta.p1;
-		int p1_i = meta.p1_i;
-		int p2 = meta.p2;
-		int p2_i = meta.p2_i;
-		int op = meta.op;
-		int para_name = meta.para_name;
-		int para_i = meta.para_i;
+	Table_meta meta=get_table_meta(Line);
 
+	int p1 = meta.p1;
+	int p1_i = meta.p1_i;
+	int p2 = meta.p2;
+	int p2_i = meta.p2_i;
+	int op = meta.op;
+	int para_name = meta.para_name;
+	int para_i = meta.para_i;	
 
-
-		if(p1==-2 &&  p1_i==-2 && p2==-2 && p2_i==-2 && op==-2){
-			
-			if(para_i != -1){
-				printf("[print_char]I don't think this if will active 0509\n");
-			}else if(para_name>0 && para_i == -1){ //only variables
-				hashmap.find(hashmap.find(uuid)->calluuid)->v_char[hashmap.find(uuid)->re[2]-100] = hashmap.find(uuid)->v_char[para_name-100];
-			}else if(para_name<0 && para_i == -1){ //constant
-				hashmap.find(hashmap.find(uuid)->calluuid)->v_char[hashmap.find(uuid)->re[2]-100] = hash_int[0-para_name];
-			}
-			return 1000;
-		}
-
-		/**
-			para1 
-		*/
-		if(p1_i != -1){   //array
-			if (p1 < 0 && hash_index[0-p1] != 0){  //consants
-				printf("[print_char]I don't think this if will active 0605\n");
-				//para1 = (p1_i>10)?
-				//hashmapArray.find(uuid)->arr_char[p1_i%10][hash_int[0-p1]]:
-				//hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_char[hashmap.find(uuid)->arrayIndex[p1_i]%10][hash_int[0-p1]];
-
-			}else if(p1<10 && p1>=0){ //list
-				printf("[print_char]I don't think this if will active 0605\n");
-				//para1 = (p1_i>10)?
-				//hashmapArray.find(uuid)->arr_char[p1_i%10][int_array[p1]]:
-				//hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_char[hashmap.find(uuid)->arrayIndex[p1_i]%10][int_array[p1]];  //may be no use
-			}else if(p1 >=100 && p1<=500){ //encalve int~long
-				printf("[print_char]I don't think this if will active 0605\n");
-				//para1 = (p1_i>10)?
-				//hashmapArray.find(uuid)->arr_long[p1_i%10][hashmap.find(uuid)->v_int[p1-100]]:                                       ////may be ......
-				//hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_long[hashmap.find(uuid)->arrayIndex[p1_i]%10][hashmap.find(uuid)->v_int[p1-100]];
-				//printf("uuid =%s  ; para1=%d\n",uuid,hashmap.find(uuid)->v_int[meta.p1-10]);	
-			}else{
-				//this is a array, but index is null
-			}
-		}else{	// no an array
-
-			if (p1 < 0 && hash_index[0-p1] != 0){  //consants
-				
-				para1 = hash_int[0-p1];
-
-			}else if(p1<10 && p1>=0){ //list
-
-				para1 = char_array[p1];
-			}else{ //encalve
-				switch(p1/100){    //maybe type cast
-					case 1:para1 = (char)hashmap.find(uuid)->v_int[p1-100];break;
-					case 2:para1 = (char)hashmap.find(uuid)->v_double[p1-200];break;
-					case 4:para1 = hashmap.find(uuid)->v_char[p1-400];break;
-					case 5:para1 = (char)hashmap.find(uuid)->v_long[p1-500];break;
-					case 6:para1 = (char)hashmap.find(uuid)->v_byte[p1-600];break;
-				}
-				//para1 = hashmap.find(uuid)->v_int[p1-100];   
-				//printf("uuid =%s  ; para1=%d\n",uuid,hashmap.find(uuid)->v_int[meta.p1-10]);	
-			}
-		}
-
-		/**
-			para2 
-		*/
-		if(p2_i != -1){   //array
-			if (p2 < 0 && hash_index[0-p2] != 0){  //consants
-				printf("[print_char]I don't think this if will active 0605\n");
-				//para2 = (p2_i>10)?
-				//hashmapArray.find(uuid)->arr_long[p2_i%10][hash_int[0-p2]]:
-				//hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_long[hashmap.find(uuid)->arrayIndex[p2_i]%10][hash_int[0-p2]];
-
-			}else if(p2<10 &&p2>=0){ //list
-				printf("[print_char]I don't think this if will active 0605\n");
-				//para2 = (p2_i>10)?
-				//hashmapArray.find(uuid)->arr_long[p2_i%10][int_array[p2]]:
-				//hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_long[hashmap.find(uuid)->arrayIndex[p2_i]%10][int_array[p2]];
-			}else if(p2 >=100 ){ //encalve
-				printf("[print_char]I don't think this if will active 0605\n");
-				//para2 = (p2_i>10)?
-				//hashmapArray.find(uuid)->arr_long[p2_i%10][hashmap.find(uuid)->v_int[p2-100]]:
-				//hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_long[hashmap.find(uuid)->arrayIndex[p2_i]%10][hashmap.find(uuid)->v_int[p2-100]];
-				//printf("uuid =%s  ; para2=%d\n",uuid,hashmap.find(uuid)->v_int[meta.p2-10]);	
-			}else{
-				//this is a array, but index is null
-			}
-		}else{	// no an array
-
-			if (p2 < 0 && hash_index[0-p2] != 0){  //consants
-
-				para2 = hash_int[0-p2];
-
-			}else if(p2<10 && p2>=0){ //list
-
-				para2 = char_array[p2];
-			}else{ //encalve
+	int return_flag = -999;
+	char para1, para2;
 	
-				switch(p2/100){    //maybe type cast
-					case 1:para2 = (char)hashmap.find(uuid)->v_int[p2-100];break;
-					case 2:para2 = (char)hashmap.find(uuid)->v_double[p2-200];break;
-					case 4:para2 = hashmap.find(uuid)->v_char[p2-400];break;
-					case 5:para2 = (char)hashmap.find(uuid)->v_long[p2-500];break;
-					case 6:para2 = (char)hashmap.find(uuid)->v_byte[p2-600];break;
-				}
-				//printf("uuid =%s  ; para2=%d\n",uuid,hashmap.find(uuid)->v_int[meta.p2-10]);	
-			}
+
+	// return statement replacce! 0509
+	// TODO the return value is (static)member variable?
+	if(p1==-2 && p1_i==-2 && p2==-2 && p2_i==-2 && op==-2){
+		//printf("this is a return statement Line=%ld\n",Line);
+		if(para_i != -1){
+			printf("[print_char]I don't think this if will active 0509\n");
+		}else if(para_name>0 && para_i == -1){ //only variables
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_char[hashmap.find(uuid)->re[2]-100] = hashmap.find(uuid)->v_char[para_name-100];
+		}else if(para_name<0 && para_i == -1){ //constant
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_char[hashmap.find(uuid)->re[2]-100] = hash_char[0-para_name];
 		}
-
-/*if(Line == 47L){
-	printf("l success op1=%ld\n",para1);
-	printf("l success op2=%ld\n",para2);
-	printf("l op=%d\n",meta.op);
-}*/
-
-
-		switch (op) {
-			case -1:return_flag = para1;break;
-			case 1:return_flag = para1 + para2;break; //+
-			case 2:return_flag = para1 - para2;break; //-
-			case 3:return_flag = para1 * para2;break; //*
-			case 4:return_flag = para1 / para2;break; // /
-			case 5:return_flag = para1 % para2;break; // %
-			case 6:return_flag =( para1== para2?1:0);break;
-	 		case 7:return_flag =( para1!= para2?1:0);break;
-	  		case 8:return_flag =( para1> para2?1:0);break;
-	  		case 9:return_flag =( para1< para2?1:0);break;
-	  		case 10:return_flag =(para1>=para2?1:0);break;
-	  		case 11:return_flag =(para1<=para2?1:0);break;
-			//case 12:return_flag = para1 & para2;break;
-			default:return_flag = -11;
-		}
-
-		if(para_i != -1){ // update to array
-			printf("[print_char]I don't think this if will active 0605\n");
-			/*if (para_name < 0 && hash_index[0-para_name] != 0){ //constant
-				if(para_i>10){
-					hashmapArray.find(uuid)->arr_long[para_i%10][hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}else{
-					hashmapArray.find(hashmap.find(uuid)->array[para_i])->arr_long[hashmap.find(uuid)->arrayIndex[para_i]%10][hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}
-			
-			}else if(para_name >=100 ){ //encalve
-				if(para_i>10){
-					hashmapArray.find(uuid)->arr_long[para_i%10][hashmap.find(uuid)->v_int[p1-100]] = return_flag;
-					return_flag = 1000;
-				}else{
-					hashmapArray.find(hashmap.find(uuid)->array[para_i])->arr_long[hashmap.find(uuid)->arrayIndex[para_i]%10][hashmap.find(uuid)->v_int[p1-100]] = return_flag;
-					return_flag = 1000;
-				}
-			}
-			*/
+		return 1000;
+		
+	}
 	
-		}else if(para_name>0 && para_i == -1){  // update to variables
-			//printf("d ==UPDATE to variables==\n");
-			
-			switch(para_name/100){    //maybe type cast
-				case 1:hashmap.find(uuid)->v_int[para_name-100] = (char)return_flag;break;
-				case 2:hashmap.find(uuid)->v_double[para_name-200] = (char)return_flag;break;
-				case 4:hashmap.find(uuid)->v_char[para_name-400] = return_flag;break;
-				case 5:hashmap.find(uuid)->v_long[para_name-500] = (char)return_flag;break;
-				case 6:hashmap.find(uuid)->v_byte[para_name-600] = (char)return_flag;break;
+	// [hyr]0817 added
+	if (p1 < 0 && hash_index[0-p1] != 0) { //consants
+		para1 = hash_char[0-p1];
+	} else if (p1 < 10 && p1 >=0) { //list(for what)
+		para1 = char_array[p1];
+	} else if (p1 >= 400 && p1 < 500) { // sensitive variables
+		para1 = hashmap.find(uuid)->v_char[p1 - 400];
+	} else if (p1 >= 4000 && p1 < 5000 && ouuid != NULL) { // sensitive member variables
+		para1 = hashmapMemberVariables.find(ouuid)->v_char[p1 - 4000];
+	} else if (p1 >= 40000 && p1 < 50000 && cuuid != NULL) { // sensitive static member variables
+		para1 = hashmapStaticMemberVariables.find(cuuid)->v_char[p1 - 40000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
+	
+	
+	if (p2 < 0 && hash_index[0-p2] != 0) { //consants
+		para2 = hash_char[0-p2];
+	} else if (p2 < 10 && p2 >=0) { //list(for what)
+		para2 = char_array[p2];
+	} else if (p2 >= 400 && p2 < 500) { // sensitive variables
+		para2 = hashmap.find(uuid)->v_char[p2 - 400];
+	} else if (p2 >= 4000 && p2 < 5000 && ouuid != NULL) { // sensitive member variables
+		para2 = hashmapMemberVariables.find(ouuid)->v_char[p2 - 4000];
+	} else if (p2 >= 40000 && p2 < 50000 && cuuid != NULL) { // sensitive static member variables
+		para2 = hashmapStaticMemberVariables.find(cuuid)->v_char[p2 - 40000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
+
+
+	switch (op) {
+		case -1:return_flag = para1;break;
+		case 1:return_flag = para1 + para2;break; //+
+		case 2:return_flag = para1 - para2;break; //-
+		case 3:return_flag = para1 * para2;break; //*
+		case 4:return_flag = para1 / para2;break; // /
+		//case 5:return_flag = para1 % para2;break; // %
+		case 6:return_flag = (para1==para2?1:0);break;
+ 		case 7:return_flag = (para1!=para2?1:0);break;
+  		case 8:return_flag = (para1>para2?1:0);break;
+  		case 9:return_flag = (para1<para2?1:0);break;
+  		case 10:return_flag = (para1>=para2?1:0);break;
+  		case 11:return_flag = (para1<=para2?1:0);break;
+		//case 12:return_flag = para1 & para2;break;
+		default:return_flag = -11;
+	}
+
+	if (para_name >= 400 && para_name < 500) { // float type variable
+		hashmap.find(uuid)->v_char[para_name - 400] = return_flag;
+	} else if (para_name >= 4000 && para_name < 5000 && ouuid != NULL) { // float type member variable
+		if (hashmapMemberVariables.find(ouuid) == NULL) {
+			// init
+			ONODE oNode = (ONODE)malloc(sizeof(ObjectNode));
+			if (!hashmapMemberVariables.insert(ouuid, oNode)) {
+				printf("[hyr] insert member variable fail!");
 			}
-			return_flag = 1000;	
 		}
-		return return_flag;
+		hashmapMemberVariables.find(ouuid)->v_char[para_name - 4000] = return_flag;
+	} else if (para_name >= 40000 && para_name < 50000 && cuuid != NULL) { // float type static memebr variable
+		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
+			// init
+			ClNODE clNode = (ClNODE)malloc(sizeof(ClassNode));
+			if (!hashmapStaticMemberVariables.insert(cuuid, clNode)) {
+				printf("[hyr] insert member variable fail!");
+			}
+		}
+		hashmapStaticMemberVariables.find(cuuid)->v_char[para_name - 40000] = return_flag;
+	}
+	return_flag = 1000;
+	return return_flag;
 }
 
-long print_long(long Line,long* long_array,int* int_array,char* uuid,char* cuuid)//---------------------------int
+long print_long(long Line,long* long_array,int* int_array,char* uuid,char* ouuid,char* cuuid)
 {
-//printf("----------------\n");
-//ocall_print_string("go in print_int\n");
-//printf("i Line=%ld\n",Line);		
-		Table_meta meta=get_table_meta(Line);
-/*if(Line == 29){
-printf("----------------\n");
-printf("Line=%ld\n",Line);
-printf("op1=%d\n",meta.p1);
-printf("op2=%d\n",meta.p2);
-printf("op=%d\n",meta.op);
-printf("para_name=%d\n",meta.para_name);
-printf("----------------\n");    
-}*/
-		int p1 = meta.p1;
-		int p1_i = meta.p1_i;
-		int p2 = meta.p2;
-		int p2_i = meta.p2_i;
-		int op = meta.op;
-		int para_name = meta.para_name;
-		int para_i = meta.para_i;	
-/*if(Line == 0 || Line == 1){
-	printf("p1=%d\n",p1);
-	printf("p1_i=%d\n",p1_i);
-	printf("p2=%d\n",p2);
-	printf("p2_i=%d\n",p2_i);
-	printf("op=%d\n",op);
-	printf("para_name=%d\n",para_name);
-	printf("para_i=%d\n",para_i);
-	printf("uuid=%s\n",uuid);
-}*/
 
-		long return_flag = -999;
-		long para1,para2;
-		
+	Table_meta meta=get_table_meta(Line);
+
+	int p1 = meta.p1;
+	int p1_i = meta.p1_i;
+	int p2 = meta.p2;
+	int p2_i = meta.p2_i;
+	int op = meta.op;
+	int para_name = meta.para_name;
+	int para_i = meta.para_i;	
 
 
-/*if(para_i>=700 || p1_i>=700){
-	printf("[print_int]cuuid:%s Line=%ld\n",cuuid,Line);
-}*/
-		
-		//return statement replacce! 0509
-		if(p1==-2 && p1_i==-2 && p2==-2 && p2_i==-2 && op==-2){
-			//printf("this is a return statement Line=%ld\n",Line);
-			if(para_i != -1){
-				printf("I don't think this if will active 0509\n");
-			}else if(para_name>=100 && para_i == -1){ //only variables
-				//printf("calluuid:%s \n",hashmap.find(uuid)->calluuid);
-				hashmap.find(hashmap.find(uuid)->calluuid)->v_long[hashmap.find(uuid)->re[2]-100] = hashmap.find(uuid)->v_long[para_name-100];
-			}else if(para_name<0 && para_i == -1){ //constant
-				hashmap.find(hashmap.find(uuid)->calluuid)->v_long[hashmap.find(uuid)->re[2]-100] = hash_long[0-para_name];
-			}
-			//printf("20210720 1538 return_flag=%d\n",return_flag);
-			return 1000;
-			
-		}
-
-		/**
-			para1 
-		*/
-		if(p1_i != -1){   //array
-			//printf("20210720 come to 1545\n");
-			if (p1 < 0 && hash_index[0-p1] != 0){  //consants
-				if(p1_i>=70 && p1_i<=120){
-					para1 = hashmapArray.find(uuid)->arr_long[p1_i%10][hash_long[0-p1]];
-				}else if(p1_i < 10){
-					para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_long[hashmap.find(uuid)->arrayIndex[p1_i]%10][hash_long[0-p1]];
-				}else if(p1_i>=700 && p1_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid a!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_long[hash_long[0-p1]];
-				}else if(p1_i>=1300 && p1_i<=1800){ // multi array field, we need p2 as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid b!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_multi_long[hashmap.find(uuid)->v_long[p2-100]][hash_long[0-p1]];
-				}else{
-					//do nothing
-				}
-				printf("list 1562");
-				
-			}else if(p1<10 && p1>=0){ //list
-				//printf("list 1564");
-				if(p1_i>=70 && p1_i<=120){
-					para1 = hashmapArray.find(uuid)->arr_long[p1_i%10][int_array[p1]];
-				}else if(p1_i < 10){
-					para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_long[hashmap.find(uuid)->arrayIndex[p1_i]%10][int_array[p1]];
-				}else if(p1_i>=700 && p1_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid c!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_long[int_array[p1]];
-				}else if(p1_i>=1300 && p1_i<=1800){ // multi array field, we need p2 as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid d!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_multi_long[hashmap.find(uuid)->v_long[p2-100]][int_array[p1]];
-				}else{
-					//do nothing
-				}
-
-			}else if(p1 >=100 && p1<=699){ //encalve int~byte
-				//int value = hashmap.find(uuid)->v_long[p1-100];
-				//printf("1582value=%d\n",value);
-				//printf("call0 uuid=%s,index=%d\n",hashmap.find(uuid)->array[p1_i],hashmap.find(uuid)->arrayIndex[p1_i]);
-				if(p1_i>=70 && p1_i<=120){
-					para1 = hashmapArray.find(uuid)->arr_long[p1_i%10][hashmap.find(uuid)->v_long[p1-100]];
-				}else if(p1_i < 10){
-					para1 =hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_long[hashmap.find(uuid)->arrayIndex[p1_i]%10][hashmap.find(uuid)->v_long[p1-100]];
-				}else if(p1_i>=700 && p1_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid e!]\n");}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_long[hashmap.find(uuid)->v_long[p1-100]];
-				}else if(p1_i>=1300 && p1_i<=1800){ // multi array field, we need p2 as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){
-						printf("[ERROR get cuuid f! cuuid:%s Line=%ld]\n",cuuid,Line);
-					}
-					para1 = hashmapPublicV.find(cuuid)[p1_i%10].arr_multi_long[hashmap.find(uuid)->v_long[p2-100]][hashmap.find(uuid)->v_long[p1-100]];
-				}else{
-					//do nothing
-				}
-			}else if(p1 == 10000){ //lengof method
-				//printf("this meyhod is lengthof p1:%d p1_i:%d\n",p1,p1_i);
-				if(p1_i>10){
-					if(hashmapArray.find(uuid)->longsize[p1_i%10]<0){
-						printf("[ERROR] I have not do this\n");
-					}
-					switch(p1_i/10){
-						case 7:para1 = hashmapArray.find(uuid)->intsize[p1_i%10];break;
-						case 8:para1 = hashmapArray.find(uuid)->doublesize[p1_i%10];break;
-						case 10:para1 = hashmapArray.find(uuid)->charsize[p1_i%10];break;
-						case 11:para1 = hashmapArray.find(uuid)->longsize[p1_i%10];break;
-					}
-				}else{
-					int index = hashmap.find(uuid)->arrayIndex[p1_i];
-					switch(index/10){
-						case 7:para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->intsize[index%10];break;
-						case 8:para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->doublesize[index%10];break;
-						case 10:para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->charsize[index%10];break;
-						case 11:para1 = hashmapArray.find(hashmap.find(uuid)->array[p1_i])->longsize[index%10];break;
-					}
-				}
-			
-			}else{
-				//this is a array, but index is null
-			}
-		}else{	// no an array ,but possiable it is public variables
-
-			if (p1 < 0 && hash_index[0-p1] != 0){  //consants
-
-				para1 = hash_long[0-p1];
-
-			}else if(p1<10 && p1>=0){ //list
-
-				para1 = int_array[p1];
-			}else if(p1>=20 && p1<=70){ // Public Variables , add on 0610/2020
-				if(hashmapPublicV.find(cuuid) != NULL){
-					para1 = hashmapPublicV.find(cuuid)[p1%10].v_i;
-				}else{//init
-					printf("[ERROR] print_int I don't think this will occur 6.10/2020\n");
-				}
-			}else{ //encalve
-				//printf("here uuid=%s\n",uuid);
-				switch(p1/100){    //maybe type cast
-					case 1:para1 = hashmap.find(uuid)->v_int[p1-100];break;
-					case 2:para1 = (long)hashmap.find(uuid)->v_double[p1-200];break;
-					case 4:para1 = (long)hashmap.find(uuid)->v_char[p1-400];break;
-					case 5:para1 = (long)hashmap.find(uuid)->v_long[p1-500];break;
-					case 6:para1 = (long)hashmap.find(uuid)->v_byte[p1-600];break;
-				}
-				
-				int ttpara1 = hashmap.find(uuid)->v_long[p1-100];   
-				//printf("1649 uuid =%s  ; para1=%d\n",uuid,hashmap.find(uuid)->v_long[meta.p1-10]);	
-			}
-		}
-//printf("i success op1=%d\n",para1);
-		/**
-			para2 
-		*/
-		if(p2_i != -1){   //array
-			if (p2 < 0 && hash_index[0-p2] != 0){  //consants
-				if(p2_i>10){
-					para2 = hashmapArray.find(uuid)->arr_long[p2_i%10][hash_long[0-p2]];
-				}else{
-					para2 = hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_long[hashmap.find(uuid)->arrayIndex[p2_i]%10][hash_long[0-p2]];
-				}
-			}else if(p2<10 && p2>=0){ //list
-
-				if(p2_i>10){
-					para2 = hashmapArray.find(uuid)->arr_long[p2_i%10][int_array[p2]];
-				}else{
-					para2 = hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_long[hashmap.find(uuid)->arrayIndex[p2_i]%10][int_array[p2]];
-				}
-
-			}else if(p2 >=100 && p2<=500){ //encalve int~long
-				//int value = hashmap.find(uuid)->v_long[p1-100];
-				//printf("value=%d\n",value);
-				//printf("call0 uuid=%s,index=%d\n",hashmap.find(uuid)->array[p1_i],hashmap.find(uuid)->arrayIndex[p1_i]);
-				if(p2_i>10){
-					para2 = hashmapArray.find(uuid)->arr_long[p2_i%10][hashmap.find(uuid)->v_long[p2-100]];
-				}else{
-					para2 =hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_long[hashmap.find(uuid)->arrayIndex[p2_i]%10][hashmap.find(uuid)->v_long[p2-100]];
-				}
-			}
-		}else{	// no an array
-
-			if (p2 < 0 && hash_index[0-p2] != 0){  //consants
-
-				para2 = hash_long[0-p2];
-
-			}else if(p2<10 && p2>=0){ //list
-
-				para2 = int_array[p2];
-			}else{ //encalve
+	long return_flag = -999;
+	long para1, para2;
 	
-				switch(p2/100){    //maybe type cast
-					case 1:para2 = hashmap.find(uuid)->v_int[p2-100];break;
-					case 2:para2 = (long)hashmap.find(uuid)->v_double[p2-200];break;
-					case 4:para2 = (long)hashmap.find(uuid)->v_char[p2-400];break;
-					case 5:para2 = (long)hashmap.find(uuid)->v_long[p2-500];break;
-					case 6:para2 = (long)hashmap.find(uuid)->v_byte[p2-600];break;
-				}
-				//printf("uuid =%s  ; para2=%d\n",uuid,hashmap.find(uuid)->v_long[meta.p2-10]);	
-			}
+	
+	//return statement replacce! 0509
+	if(p1==-2 && p1_i==-2 && p2==-2 && p2_i==-2 && op==-2){
+		//printf("this is a return statement Line=%ld\n",Line);
+		if(para_i != -1){
+			printf("I don't think this if will active 0509\n");
+		}else if(para_name>=100 && para_i == -1){ //only variables
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_long[hashmap.find(uuid)->re[2]-100] = hashmap.find(uuid)->v_long[para_name-100];
+		}else if(para_name<0 && para_i == -1){ //constant
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_long[hashmap.find(uuid)->re[2]-100] = hash_long[0-para_name];
 		}
-/*if(Line == 0 || Line == 1){
-	printf("i success op1=%d\n",para1);
-	printf("i success op2=%d\n",para2);
-	printf("i op=%d\n",meta.op);
-}*/
-		switch (op) {
-			case -1:return_flag = para1;break;
-			case 1:return_flag = para1 + para2;break; //+
-			case 2:return_flag = para1 - para2;break; //-
-			case 3:return_flag = para1 * para2;break; //*
-			case 4:return_flag = para1 / para2;break; // /
-			case 5:return_flag = para1 % para2;break; // %
-			case 6:return_flag =( para1== para2?1:0);break;
-	 		case 7:return_flag =( para1!= para2?1:0);break;
-	  		case 8:return_flag =( para1> para2?1:0);break;
-	  		case 9:return_flag =( para1< para2?1:0);break;
-	  		case 10:return_flag =(para1>=para2?1:0);break;
-	  		case 11:return_flag =(para1<=para2?1:0);break;
-			case 12:return_flag = para1 & para2;break;
-			case 13:return_flag = para1 | para2;break;
-			case 14:return_flag = para1 ^ para2;break;
-			case 15:return_flag = para1 << para2;break;
-			case 16:return_flag = para1 >> para2;break;
-			case 17:return_flag = (unsigned long)para1 >> para2;break;
-			default:return_flag = -11;
-		}
+		return 1000;
+	}
+
+	// [hyr]0817 added
+	if (p1 < 0 && hash_index[0-p1] != 0) { //consants
+		para1 = hash_long[0-p1];
+	} else if (p1 < 10 && p1 >=0) { //list(for what)
+		para1 = long_array[p1];
+	} else if (p1 >= 500 && p1 < 600) { // sensitive variables
+		para1 = hashmap.find(uuid)->v_long[p1 - 500];
+	} else if (p1 >= 5000 && p1 < 6000 && ouuid != NULL) { // sensitive member variables
+		para1 = hashmapMemberVariables.find(ouuid)->v_long[p1 - 5000];
+	} else if (p1 >= 50000 && p1 < 60000 && cuuid != NULL) { // sensitive static member variables
+		para1 = hashmapStaticMemberVariables.find(cuuid)->v_long[p1 - 50000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
+	
+	
+	if (p2 < 0 && hash_index[0-p2] != 0) { //consants
+		para2 = hash_long[0-p2];
+	} else if (p2 < 10 && p2 >=0) { //list(for what)
+		para2 = long_array[p2];
+	} else if (p2 >= 500 && p2 < 600) { // sensitive variables
+		para2 = hashmap.find(uuid)->v_long[p2 - 500];
+	} else if (p2 >= 5000 && p2 < 6000 && ouuid != NULL) { // sensitive member variables
+		para2 = hashmapMemberVariables.find(ouuid)->v_long[p2 - 5000];
+	} else if (p2 >= 50000 && p2 < 60000 && cuuid != NULL) { // sensitive static member variables
+		para2 = hashmapStaticMemberVariables.find(cuuid)->v_long[p2 - 50000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
 
 
-/*if(Line == 31L){
-	printf("i success return_flag=%d\n",return_flag);	
-}*/
+	switch (op) {
+		case -1:return_flag = para1;break;
+		case 1:return_flag = para1 + para2;break; //+
+		case 2:return_flag = para1 - para2;break; //-
+		case 3:return_flag = para1 * para2;break; //*
+		case 4:return_flag = para1 / para2;break; // /
+		case 5:return_flag = para1 % para2;break; // %
+		case 6:return_flag = (para1==para2?1:0);break;
+ 		case 7:return_flag = (para1!=para2?1:0);break;
+  		case 8:return_flag = (para1>para2?1:0);break;
+  		case 9:return_flag = (para1<para2?1:0);break;
+  		case 10:return_flag = (para1>=para2?1:0);break;
+  		case 11:return_flag = (para1<=para2?1:0);break;
+		case 12:return_flag = para1 & para2;break;
+		case 13:return_flag = para1 | para2;break;
+		case 14:return_flag = para1 ^ para2;break;
+		case 15:return_flag = para1 << para2;break;
+		case 16:return_flag = para1 >> para2;break;
+		case 17:return_flag = (unsigned long)para1 >> para2;break;
+		default:return_flag = -11;
+	}
 
-//printf("i success return_flag=%d\n",return_flag);	
-		if(para_i != -1){ // update to array
-			//printf("i ==UPDATE to arrays==\n");
-			if (para_name < 0 && hash_index[0-para_name] != 0){ //constant
-				if(para_i>=70 && para_i<=120){
-					hashmapArray.find(uuid)->arr_long[para_i%10][hash_long[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}else if(para_i<10){
-					hashmapArray.find(hashmap.find(uuid)->array[para_i])->arr_long[hashmap.find(uuid)->arrayIndex[para_i]%10][hash_long[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}else if(para_i>=700 && para_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid g!]\n");}
-					hashmapPublicV.find(cuuid)[para_i%10].arr_long[hash_long[0-para_name]] = return_flag;
-					return_flag = 1000;	
-				}else if(para_i>=1300 && para_i<=1800){ // multi array field, we need p2 as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid h!]\n");}
-					hashmapPublicV.find(cuuid)[para_i%10].arr_multi_long[hashmap.find(uuid)->v_long[p2_i-100]][hash_long[0-para_name]] = return_flag;
-					return_flag = 1000;	
-				}else{
-					//do nothing
-				}
-			
-			}else if(para_name >=100 ){ //encalve index
-				if(para_i>=70 && para_i<=120){
-					hashmapArray.find(uuid)->arr_long[para_i%10][hashmap.find(uuid)->v_long[para_name-100]] = return_flag;
-					return_flag = 1000;
-				}else if(para_i<10){
-					hashmapArray.find(hashmap.find(uuid)->array[para_i])->arr_long[hashmap.find(uuid)->arrayIndex[para_i]%10][hashmap.find(uuid)->v_long[para_name-100]] = return_flag;
-					
-					return_flag = 1000;
-				}else if(para_i>=700 && para_i<=1200){ //array field
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid i!]\n");}
-					hashmapPublicV.find(cuuid)[para_i%10].arr_long[hashmap.find(uuid)->v_long[para_name-100]] = return_flag;
-					return_flag = 1000;	
-				}else if(para_i>=1300 && para_i<=1800){ // multi array field, we need p2_i as one of index
-					if(hashmapPublicV.find(cuuid)==NULL){printf("[ERROR get cuuid j! cuuid:%s Line=%ld]\n",cuuid,Line);}
-					hashmapPublicV.find(cuuid)[para_i%10].arr_multi_long[hashmap.find(uuid)->v_long[p2_i-100]][hashmap.find(uuid)->v_long[para_name-100]] = return_flag;
-					/*if(Line==49){
-						printf("d[i][j]:%d\n",hashmapPublicV.find(cuuid)[para_i%10].arr_multi_long[hashmap.find(uuid)->v_long[p2_i-100]][hashmap.find(uuid)->v_long[para_name-100]]);
-					}*/
-					return_flag = 1000;	
-				}else{
-					//do nothing
-				}
+	if (para_name >= 500 && para_name < 600) { // float type variable
+		hashmap.find(uuid)->v_long[para_name - 500] = return_flag;
+	} else if (para_name >= 5000 && para_name < 6000 && ouuid != NULL) { // float type member variable
+		if (hashmapMemberVariables.find(ouuid) == NULL) {
+			// init
+			ONODE oNode = (ONODE)malloc(sizeof(ObjectNode));
+			if (!hashmapMemberVariables.insert(ouuid, oNode)) {
+				printf("[hyr] insert member variable fail!");
 			}
-		}else if(para_name>=20 && para_name<=70){ // Public Variables , add on 0610/2020
-				if(hashmapPublicV.find(cuuid) != NULL){
-					switch(para_name/10){    //maybe type cast
-						case 2:hashmapPublicV.find(cuuid)[para_name%10].v_i = return_flag;break;
-						case 3:hashmapPublicV.find(cuuid)[para_name%10].v_d = return_flag;break;
-						case 5:hashmapPublicV.find(cuuid)[para_name%10].v_c = return_flag;break;
-						case 6:hashmapPublicV.find(cuuid)[para_name%10].v_l = return_flag;break;
-						case 7:hashmapPublicV.find(cuuid)[para_name%10].v_b = return_flag;break;
-					}
-				}else{//init
-					PNODE p = (PNODE)malloc(10*sizeof(PublicVariableNode));
-					if(!hashmapPublicV.insert(cuuid,p)){
-						printf("insert fail!! %s\n",cuuid);
-					}
-					switch(para_name/10){    //maybe type cast
-						case 2:hashmapPublicV.find(cuuid)[para_name%10].v_i = return_flag;break;
-						case 3:hashmapPublicV.find(cuuid)[para_name%10].v_d = return_flag;break;
-						case 5:hashmapPublicV.find(cuuid)[para_name%10].v_c = return_flag;break;
-						case 6:hashmapPublicV.find(cuuid)[para_name%10].v_l = return_flag;break;
-						case 7:hashmapPublicV.find(cuuid)[para_name%10].v_b = return_flag;break;
-					}
-				}
-				return_flag = 1000;	
-		}else if(para_name>0 && para_i == -1){  // update to variables
-			switch(para_name/100){    //maybe type cast
-				case 1:hashmap.find(uuid)->v_long[para_name-100] = (int)return_flag;break;
-				case 2:hashmap.find(uuid)->v_double[para_name-200] = (double)return_flag;break;
-				case 4:hashmap.find(uuid)->v_char[para_name-400] = (char)return_flag;break;
-				case 5:hashmap.find(uuid)->v_long[para_name-500] = return_flag;break;
-				case 6:hashmap.find(uuid)->v_byte[para_name-600] = (int)return_flag;break;
+		}
+		hashmapMemberVariables.find(ouuid)->v_long[para_name - 5000] = return_flag;
+	} else if (para_name >= 50000 && para_name < 60000 && cuuid != NULL) { // float type static memebr variable
+		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
+			// init
+			ClNODE clNode = (ClNODE)malloc(sizeof(ClassNode));
+			if (!hashmapStaticMemberVariables.insert(cuuid, clNode)) {
+				printf("[hyr] insert member variable fail!");
 			}
-			/*if(Line == 61L){
-				printf("20201119 %d\n",hashmap.find(uuid)->v_long[para_name-100]);
-			}*/
-			return_flag = 1000;	
 		}
-		//printf("20210720 return_flag=%d\n",return_flag);
-		/*if(Line == 0 || Line == 1){
-			printf("i success return_flag=%d\n",return_flag);	
-		}*/
-/*	
-		if(return_flag==0){
-			printf("p1=%d\n",p1);
-			printf("p1_i=%d\n",p1_i);
-			printf("p2=%d\n",p2);
-			printf("p2_i=%d\n",p2_i);
-			printf("op=%d\n",op);
-			printf("para_name=%d\n",para_name);
-			printf("para_i=%d\n",para_i);
-			printf("uuid=%s\n",uuid);
-		}
-*/
-		
-		return return_flag;
+		hashmapStaticMemberVariables.find(cuuid)->v_long[para_name - 50000] = return_flag;
+	}
+	return_flag = 1000;
+	return return_flag;
 
 }
 
-int print_byte(long Line, char* byte_array,int* int_array,char* uuid)
+int print_byte(long Line, char* byte_array,int* int_array,char* uuid,char* ouuid,char* cuuid)
 {
-	    printf("byte\n");
-		Table_meta meta=get_table_meta(Line);
-		int p1 = meta.p1;
-		int p1_i = meta.p1_i;
-		int p2 = meta.p2;
-		int p2_i = meta.p2_i;
-		int op = meta.op;
-		int para_name = meta.para_name;
-		int para_i = meta.para_i;
 
-		
-		int return_flag = -999;
-		int para1,para2;
-/*
-printf("----------------\n");
-printf("b Line=%ld\n",Line);
-printf("b type=%d\n",meta.type);
-printf("b op1=%d\n",meta.p1);
-printf("b op2=%d\n",meta.p2);
-printf("b op=%d\n",meta.op);
-printf("b para_name=%d\n",meta.para_name);
-printf("----------------\n");
-*/
+	Table_meta meta=get_table_meta(Line);
 
+	int p1 = meta.p1;
+	int p1_i = meta.p1_i;
+	int p2 = meta.p2;
+	int p2_i = meta.p2_i;
+	int op = meta.op;
+	int para_name = meta.para_name;
+	int para_i = meta.para_i;
 
-		
-		//return statement replacce! 0509
-		if(p1==-2 && p1_i==-2 && p2==-2 && p2_i==-2 && op==-2){
-			//printf("this is a return statement Line=%ld\n",Line);
-			if(para_i != -1){
-				printf("I don't think this if will active 0509 byte\n");
-			}else if(para_name>=600 && para_i == -1){ //only variables
-				//printf("calluuid:%s \n",hashmap.find(uuid)->calluuid);
-				hashmap.find(hashmap.find(uuid)->calluuid)->v_byte[hashmap.find(uuid)->re[2]-100] = hashmap.find(uuid)->v_int[para_name-100];
-			}else if(para_name<0 && para_i == -1){ //constant
-				hashmap.find(hashmap.find(uuid)->calluuid)->v_byte[hashmap.find(uuid)->re[2]-100] = hash_int[0-para_name];
-			}
-			return 1000;
-		}
-
-		/**
-			para1 
-		*/
-		if(p1_i != -1){   //array
-			if (p1 < 0 && hash_index[0-p1] != 0){  //consants
-
-				para1 = (p1_i>10)?
-				hashmapArray.find(uuid)->arr_byte[p1_i%10][hash_int[0-p1]]:
-				hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_byte[hashmap.find(uuid)->arrayIndex[p1_i]%10][hash_int[0-p1]];
-
-			}else if(p1<10 && p1>=0){ //list
-
-				para1 = (p1_i>10)?
-				hashmapArray.find(uuid)->arr_byte[p1_i%10][int_array[p1]]:
-				hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_byte[hashmap.find(uuid)->arrayIndex[p1_i]%10][int_array[p1]];
-
-			}else if(p1 >=600 && p1<=700){ //encalve byte
-				
-				para1 = (p1_i>10)?
-				hashmapArray.find(uuid)->arr_byte[p1_i%10][hashmap.find(uuid)->v_int[p1-100]]:
-				hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_byte[hashmap.find(uuid)->arrayIndex[p1_i]%10][hashmap.find(uuid)->v_int[p1-100]];
-				
-			}
-		}else{	// no an array
-
-			if (p1 < 0 && hash_index[0-p1] != 0){  //consants
-
-				para1 = hash_int[0-p1];
-
-			}else if(p1<10 && p1>=0){ //list
-
-				para1 = byte_array[p1];
-			}else{ //encalve
-				//printf("here uuid=%s\n",uuid);
-				//printf("hashmap.find(uuid)->v_byte[p1-600] %d\n",hashmap.find(uuid)->v_byte[p1-600]);
-				switch(p1/100){    //maybe type cast
-					case 1:para1 = hashmap.find(uuid)->v_int[p1-100];break;
-					case 2:para1 = (int)hashmap.find(uuid)->v_double[p1-200];break;
-					case 4:para1 = (int)hashmap.find(uuid)->v_char[p1-400];break;
-					case 5:para1 = (int)hashmap.find(uuid)->v_long[p1-500];break;
-					case 6:para1 = hashmap.find(uuid)->v_byte[p1-600];break;
-				}
-				//para1 = hashmap.find(uuid)->v_int[p1-100];   
-				//printf("uuid =%s  ; para1=%d\n",uuid,hashmap.find(uuid)->v_byte[p1-600]);	
-			}
-		}
-		/**
-			para2 
-		*/
-		if(p2_i != -1){   //array
-			if (p2 < 0 && hash_index[0-p2] != 0){  //consants
-
-				para2 = (p2_i>10)?
-				hashmapArray.find(uuid)->arr_byte[p2_i%10][hash_int[0-p2]]:
-				hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_byte[hashmap.find(uuid)->arrayIndex[p2_i]%10][hash_int[0-p2]];
-
-			}else if(p2<10 &&p2>=0){ //list
-
-				para2 = (p2_i>10)?
-				hashmapArray.find(uuid)->arr_byte[p2_i%10][byte_array[p2]]:
-				hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_byte[hashmap.find(uuid)->arrayIndex[p2_i]%10][int_array[p2]];
-
-			}else if(p2 >=100 ){ //encalve
 	
-				para2 = (p2_i>10)?
-				hashmapArray.find(uuid)->arr_byte[p2_i%10][hashmap.find(uuid)->v_int[p2-100]]:
-				hashmapArray.find(hashmap.find(uuid)->array[p2_i])->arr_byte[hashmap.find(uuid)->arrayIndex[p2_i]%10][hashmap.find(uuid)->v_int[p2-100]];
-			}
-		}else{	// no an array
+	int return_flag = -999;
+	int para1, para2;
 
-			if (p2 < 0 && hash_index[0-p2] != 0){  //consants
+	//return statement replacce! 0509
+	if(p1==-2 && p1_i==-2 && p2==-2 && p2_i==-2 && op==-2){
+		//printf("this is a return statement Line=%ld\n",Line);
+		if(para_i != -1){
+			printf("I don't think this if will active 0509 byte\n");
+		}else if(para_name>=600 && para_i == -1){ //only variables
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_byte[hashmap.find(uuid)->re[2]-100] = hashmap.find(uuid)->v_byte[para_name-100];
+		}else if(para_name<0 && para_i == -1){ //constant
+			hashmap.find(hashmap.find(uuid)->calluuid)->v_byte[hashmap.find(uuid)->re[2]-100] = hash_byte[0-para_name];
+		}
+		return 1000;
+	}
 
-				para2 = hash_int[0-p2];
-
-			}else if(p2<10 && p2>=0){ //list
-
-				para2 = byte_array[p2];
-			}else{ //encalve
+	// [hyr]0817 added
+	if (p1 < 0 && hash_index[0-p1] != 0) { //consants
+		para1 = hash_byte[0-p1];
+	} else if (p1 < 10 && p1 >=0) { //list(for what)
+		para1 = byte_array[p1];
+	} else if (p1 >= 600 && p1 < 700) { // sensitive variables
+		para1 = hashmap.find(uuid)->v_byte[p1 - 600];
+	} else if (p1 >= 6000 && p1 < 7000 && ouuid != NULL) { // sensitive member variables
+		para1 = hashmapMemberVariables.find(ouuid)->v_byte[p1 - 6000];
+	} else if (p1 >= 60000 && p1 < 70000 && cuuid != NULL) { // sensitive static member variables
+		para1 = hashmapStaticMemberVariables.find(cuuid)->v_byte[p1 - 60000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
 	
-				switch(p2/100){    //maybe type cast
-					case 1:para2 = hashmap.find(uuid)->v_int[p2-100];break;
-					case 2:para2 = (int)hashmap.find(uuid)->v_double[p2-200];break;
-					case 4:para2 = (int)hashmap.find(uuid)->v_char[p2-400];break;
-					case 5:para2 = (int)hashmap.find(uuid)->v_long[p2-500];break;
-					case 6:para2 = (int)hashmap.find(uuid)->v_byte[p2-600];break;
-				}
-				//printf("uuid =%s  ; para2=%d\n",uuid,hashmap.find(uuid)->v_int[meta.p2-10]);	
-			}
-		}
-
-		switch (op) {
-			case -1:return_flag = para1;break;
-			case 1:return_flag = para1 + para2;break; //+
-			case 2:return_flag = para1 - para2;break; //-
-			case 3:return_flag = para1 * para2;break; //*
-			case 4:return_flag = para1 / para2;break; // /
-			case 5:return_flag = para1 % para2;break; // %
-			case 6:return_flag =( para1== para2?1:0);break;
-	 		case 7:return_flag =( para1!= para2?1:0);break;
-	  		case 8:return_flag =( para1> para2?1:0);break;
-	  		case 9:return_flag =( para1< para2?1:0);break;
-	  		case 10:return_flag =(para1>=para2?1:0);break;
-	  		case 11:return_flag =(para1<=para2?1:0);break;
-			case 12:return_flag = para1 & para2;break;
-			default:return_flag = -11;
-		}
 	
-		if(para_i != -1){ // update to array
-			//printf("i ==UPDATE to arrays==\n");
-			if (para_name < 0 && hash_index[0-para_name] != 0){ //constant
-				if(para_i>10){
-					hashmapArray.find(uuid)->arr_byte[para_i%10][hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}else{
-					hashmapArray.find(hashmap.find(uuid)->array[para_i])->arr_byte[hashmap.find(uuid)->arrayIndex[para_i]%10][hash_int[0-para_name]] = return_flag;
-					return_flag = 1000;
-				}
-			
-			}else if(para_name >=100 ){ //encalve
-				if(para_i>10){
-					hashmapArray.find(uuid)->arr_byte[para_i%10][hashmap.find(uuid)->v_int[para_name-100]] = return_flag;
-					return_flag = 1000;
-				}else{
-					hashmapArray.find(hashmap.find(uuid)->array[para_i])->arr_byte[hashmap.find(uuid)->arrayIndex[para_i]%10][hashmap.find(uuid)->v_int[para_name-100]] = return_flag;
-					
-					return_flag = 1000;
-				}
+	if (p2 < 0 && hash_index[0-p2] != 0) { //consants
+		para2 = hash_byte[0-p2];
+	} else if (p2 < 10 && p2 >=0) { //list(for what)
+		para2 = byte_array[p2];
+	} else if (p2 >= 600 && p2 < 700) { // sensitive variables
+		para2 = hashmap.find(uuid)->v_byte[p2 - 600];
+	} else if (p2 >= 6000 && p2 < 7000 && ouuid != NULL) { // sensitive member variables
+		para2 = hashmapMemberVariables.find(ouuid)->v_byte[p2 - 6000];
+	} else if (p2 >= 60000 && p2 < 70000 && cuuid != NULL) { // sensitive static member variables
+		para2 = hashmapStaticMemberVariables.find(cuuid)->v_byte[p2 - 60000];
+	} else {
+		printf("[hyr]error, unkonwn type!");
+	}
+
+
+	switch (op) {
+		case -1:return_flag = para1;break;
+		case 1:return_flag = para1 + para2;break; //+
+		case 2:return_flag = para1 - para2;break; //-
+		case 3:return_flag = para1 * para2;break; //*
+		case 4:return_flag = para1 / para2;break; // /
+		//case 5:return_flag = para1 % para2;break; // %
+		case 6:return_flag = (para1==para2?1:0);break;
+ 		case 7:return_flag = (para1!=para2?1:0);break;
+  		case 8:return_flag = (para1>para2?1:0);break;
+  		case 9:return_flag = (para1<para2?1:0);break;
+  		case 10:return_flag = (para1>=para2?1:0);break;
+  		case 11:return_flag = (para1<=para2?1:0);break;
+		//case 12:return_flag = para1 & para2;break;
+		default:return_flag = -11;
+	}
+
+	if (para_name >= 600 && para_name < 700) { // float type variable
+		hashmap.find(uuid)->v_byte[para_name - 600] = return_flag;
+	} else if (para_name >= 6000 && para_name < 7000 && ouuid != NULL) { // float type member variable
+		if (hashmapMemberVariables.find(ouuid) == NULL) {
+			// init
+			ONODE oNode = (ONODE)malloc(sizeof(ObjectNode));
+			if (!hashmapMemberVariables.insert(ouuid, oNode)) {
+				printf("[hyr] insert member variable fail!");
 			}
-		}else if(para_name>0 && para_i == -1){  // update to variables
-			//printf("b ==UPDATE to variables==\n");
-			//hashmap.find(uuid)->v_byte[para_name-600] = return_flag;
-			switch(para_name/100){    //maybe type cast
-				case 1:hashmap.find(uuid)->v_int[para_name-100] = return_flag;break;
-				case 2:hashmap.find(uuid)->v_double[para_name-200] = (double)return_flag;break;
-				case 4:hashmap.find(uuid)->v_char[para_name-400] = (char)return_flag;break;
-				case 5:hashmap.find(uuid)->v_long[para_name-500] = (int)return_flag;break;
-				case 6:hashmap.find(uuid)->v_byte[para_name-600] = return_flag;break;
-			}
-			
-			return_flag = 1000;	
 		}
-		printf("return_flag=%d\n",return_flag);
-		return return_flag;
+		hashmapMemberVariables.find(ouuid)->v_byte[para_name - 6000] = return_flag;
+	} else if (para_name >= 60000 && para_name < 70000 && cuuid != NULL) { // float type static memebr variable
+		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
+			// init
+			ClNODE clNode = (ClNODE)malloc(sizeof(ClassNode));
+			if (!hashmapStaticMemberVariables.insert(cuuid, clNode)) {
+				printf("[hyr] insert member variable fail!");
+			}
+		}
+		hashmapStaticMemberVariables.find(cuuid)->v_byte[para_name - 60000] = return_flag;
+	}
+	return_flag = 1000;
+	return return_flag;
+
 }
 
 
+int print_array_i(long Line, int* int_array, int int_tail, char* uuid, char* ouuid, char* cuuid){
 
-int print_array_i(long Line, int* int_array,int int_tail,char* uuid,char* cuuid){
+	// printf("uuid=%s\n", uuid);
+	// printf("ouuid=%s\n", ouuid);
+	// printf("cuuid=%s\n", cuuid);
 
-
-	
-	//printf("==============================1===========================Line=%ld====\n",Line);
-	//printf("enter  int print_array_i(long Line, int* int_array,int int_tail,char* uuid,char* cuuid)\n");
-	
-	// printf("uuid=%s\n",uuid);
-	// printf("cuuid=%s\n",cuuid);
 	Table_meta meta=get_table_meta(Line);
 	int type=meta.type;
 	int p1 = meta.p1;
@@ -3416,482 +2575,493 @@ int print_array_i(long Line, int* int_array,int int_tail,char* uuid,char* cuuid)
 	int p2_i = meta.p2_i;
 	int op = meta.op;
 	int para_name = meta.para_name;
-	int para_i = meta.para_i;	
+	int para_i = meta.para_i;
+
 	//printf("line=%ld p1=%d  p1_i=%d  p2=%d  p2_i=%d op=%d  para_name=%d  para_i=%d\n",Line,p1,p1_i,p2,p2_i,op,para_name,para_i);
-		char *tmpuuid=(char*)malloc(33*sizeof(char));
-		memcpy(tmpuuid,uuid,32);
-		//printf("uuid=%s,  tmpuuid=%s\n", uuid,tmpuuid);
-		if(p1==-2&&p1_i==-2&&p2==-2&&p2_i==-2&&op==-2){
-				printf("return array\n");
-				//printf("uuid=%s, calluuid=%s, re[2]=%d\n",uuid,hashmap.find(uuid)->calluuid,hashmap.find(uuid)->re[2]);
-				INODE node1=hashmapArray2.find(hashmap.find(uuid)->calluuid)->int_arrNodes[hashmap.find(uuid)->re[2]%10];
-				INODE node2=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
-				node2=hashmapArray2.find(uuid)->int_arrNodes[node2->oriLocation%10];
-				if(node1->location==0){
-					node1->location=hashmap.find(uuid)->re[2]%10;
-					node1->oriLocation=hashmap.find(uuid)->re[2]%10;
-					node1->data=(int*)malloc(sizeof(int)*node2->sz);
-					node1->d=node2->d;
-					for(int i=0;i<3;i++){
-						node1->dimensions[i]=node2->dimensions[i];
-					}
-					for(int i=0;i<node2->sz;i++){
-					node1->data[i]=node2->data[i];
-				}
-					return 1000;
-				}
-				// printf("node1->loc=%d, node1->oriloc=%d\n",node1->location,node1->oriLocation);
-				//printf("1\n");
-				node1=hashmapArray2.find(hashmap.find(uuid)->calluuid)->int_arrNodes[node1->oriLocation%10];
-				//printf("2\n");
-			
-
-				//printf("sz1=%d\n", node1->sz);
-				//printf("sz2=%d\n", node2->sz);
-				for(int i=0;i<node2->sz;i++){
-					node1->data[i]=node2->data[i];
-				}
-				// for(int i=0;i<node2->sz;i++){
-				// 	printf("arr[%d]=%d\n",i,node2->data[i]);
-				// }
-				// for(int i=0;i<node1->sz;i++){
-				// 	printf("arr[%d]=%d\n",i,node1->data[i]);
-				// }
-
-		}else if(p2==0){
-			printf("type=7 p2=0\n");
-
-			bool flag=true;
-			int dim[3]={0};//dim[0] dim[1] dim[2] represent array's 1st 2nd 3th dimension 
-			if(p1<0&&hash_index[0-p1]!=0){
-				dim[0]=hash_int[0-p1];
-				printf("1 dimension constant: %d  int_%d\n", p1,hash_int[0-p1]);
-
-			}else if(p1>=100&&p1<700){
-				dim[0]=hashmap.find(uuid)->v_int[p1-100];
-				printf("1 dimension variable:%d %d\n",p1, hashmap.find(uuid)->v_int[p1-100]);
-				
-			}else{
-				flag=false;
-			}
-			if(flag&&p1_i<0&&hash_index[0-p1_i]!=0){
-				dim[1]=hash_int[0-p1_i];
-				//printf("2 dimension constant: %d  int_%d\n", p1_i,hash_int[0-p1_i]);
-			}else if(flag&&p1_i>=100&&p1_i<700){
-				dim[1]=hashmap.find(uuid)->v_int[p1_i-100];
-				//printf("2 dimension variable:%d %d\n",p1_i, hashmap.find(uuid)->v_int[p1_i-100]);
-			}else{
-				flag=false;
-			}
-			if(flag&&p2_i<0&&hash_index[0-p2_i]!=0){
-				dim[2]=hash_int[0-p2_i];
-				//printf("3 dimension constant: %d  int_%d\n", p2_i,hash_int[0-p2_i]);
-			}else if(flag&&p2_i>=100&&p2_i<700){
-				dim[2]=hashmap.find(uuid)->v_int[p2_i-100];
-				//printf("3 dimension variable:%d %d\n",p2_i, hashmap.find(uuid)->v_int[p2_i-100]);
-			}else{
-				flag=false;
-			}
-			for(int i=0;i<3;i++){
-				printf("dim[%d]=%d\n", i,dim[i]);
-			}
-			int d=0;// how many dimensions
-			int sz=1;//array size
-			for(int i=0;i<3;i++){
-				if(dim[i]!=0){
-					d++;
-					sz*=dim[i];
-				}
-			}
-			printf("uuid=%s  size=%d\n",uuid,sz);
-			//printf("123\n");
-			INODE node=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
-			printf("456\n");
-			if(node==NULL){
-				printf("null\n");
-			}
-			node->d=d;//update d
-			for(int i=0;i<d;i++){
-				node->dimensions[i]=dim[i];//update dimensions
-			}
-			node->paramLoc=-1;
-			node->data=(int*)malloc(sz*sizeof(int));//malllo space for data 
-			node->sz=sz;
-
-			return 1000;
-
-		}else if(p2==1){
-			printf("type=7 p2=1\n");
-			int oriLoc=p1_i;
-			printf("uuid: %s\n", uuid);
-			if(hashmapArray2.find(uuid)!=NULL){
-				printf("NOT null\n");
-			}
-			printf("para_i: %d\n", para_i);
-			INODE node=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
-			if(node==NULL){
-				printf("null\n");
-			}
-			node->oriLocation=oriLoc;
-			printf("123\n");
-		
-		}else if(p2==2){
-
-			
-			//ocall_print_string("type=7 p2=2\n");
-			int loc=-1;
-			int k=-1;
-			if(para_i==-1){//int a=arr[0] left is variable
-				//printf("int a=arr[0] before uuid: %s\n", uuid);
-				INODE node1=hashmapArray2.find(uuid)->int_arrNodes[p1_i%10];
-				// for(int i=0;i<3;i++){
-				// 	printf("node->index[%d]=%d\n", i,node1->index[i]);
-				// }
-				// for(int i=0;i<3;i++){
-				// 	printf("node->dimensions[%d]=%d\n", i,node1->dimensions[i]);
-				// }
-				int idx=calIntArrayIndex(node1);
-				//printf("idx=%d\n", idx);
-				if(node1->paramLoc!=-1){//is formular array param
-					//printf("isformular array param %d\n",node1->paramLoc);
-					for(k=0;k<10;k++){
-						if(k==node1->paramLoc){
-							loc=hashmap.find(uuid)->arrayIndex[k];
-							memcpy(tmpuuid,hashmap.find(uuid)->array[k],32);
-							break;
-						}
-					}
-				}
-				
-
-				if(loc!=-1){
-					
-					node1=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[loc%10];
-					//printf("5\n");
-					
-				}
-				//printf("uuid=%s,  tmpuuid=%s\n", uuid,tmpuuid);
-				
-				
-				int index=-1;//array index
-				if(p1<0&&hash_index[0-p1]!=0){
-					index=hash_int[0-p1];
-				}else if(p1>=100&&p1<700){
-					index=hashmap.find(uuid)->v_int[p1-100];
-				}
-				//printf("index=%d\n", index);
-				idx+=index;//
-				INODE node2=NULL;
-				if(k!=-1){
-					node2=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[node1->oriLocation%10];
-				}else{
-					node2=hashmapArray2.find(uuid)->int_arrNodes[node1->oriLocation%10];
-				}
-				
-				//printf("a=data[%d]\n",node2->data[idx]);
-				//printf("\n\n");
-				hashmap.find(uuid)->v_int[para_name-100]=node2->data[idx];//int a=arr[1][2][3]
-				//printf("\n");
-			}else{//arr[0]=3
-				int loc=-1;
-				int k=-1;
-				
-				INODE node1=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
+	char *tmpuuid=(char*)malloc(33*sizeof(char));
+	memcpy(tmpuuid,uuid,32);
+	if(p1==-2&&p1_i==-2&&p2==-2&&p2_i==-2&&op==-2){
+			printf("return array\n");
+			//printf("uuid=%s, calluuid=%s, re[2]=%d\n",uuid,hashmap.find(uuid)->calluuid,hashmap.find(uuid)->re[2]);
+			INODE node1=hashmapArray2.find(hashmap.find(uuid)->calluuid)->int_arrNodes[hashmap.find(uuid)->re[2]%10];
+			INODE node2=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
+			node2=hashmapArray2.find(uuid)->int_arrNodes[node2->oriLocation%10];
+			if(node1->location==0){
+				node1->location=hashmap.find(uuid)->re[2]%10;
+				node1->oriLocation=hashmap.find(uuid)->re[2]%10;
+				node1->data=(int*)malloc(sizeof(int)*node2->sz);
+				node1->d=node2->d;
 				for(int i=0;i<3;i++){
-					//printf("node->index[%d]=%d\n", i,node1->index[i]);
-					//printf("node->dimensions[%d]=%d\n", i,node1->dimensions[i]);
+					node1->dimensions[i]=node2->dimensions[i];
 				}
-				int idx=calIntArrayIndex(node1);
-				//printf("idx=%d\n", idx);
-				if(node1->paramLoc!=-1){//is formular array param
-					//printf("isformular array param %d\n",node1->paramLoc);
-					for(k=0;k<10;k++){
-						if(k==node1->paramLoc){
-							loc=hashmap.find(uuid)->arrayIndex[k];
-							memcpy(tmpuuid,hashmap.find(uuid)->array[k],32);
-							break;
-						}
-					}
-				}
-				//printf("uuid=%s,  tmpuuid=%s\n", uuid,hashmap.find(uuid)->array[k]);
-				if(loc!=-1){
-					node1=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[loc%10];
-					
-				}
-				
-				
-				int index=-1;//arr[index]=num
-				int num=-1;
-				if(para_name<0&&hash_index[0-para_name]!=0){
-					index=hash_int[0-para_name];
-				}else if(para_name>=100&&para_name<700){
-					index=hashmap.find(uuid)->v_int[para_name-100];
-				}
-				if(p1<0&&hash_index[0-p1]!=0){
-					num=hash_int[0-p1];
-				}else if(p1>=100&&p1<700){
-					num=hashmap.find(uuid)->v_int[p1-100];
-				}
-				//("2\n");
-				idx+=index;
-				INODE node2=NULL;
-				if(k!=-1){
-					//printf("k!=-1\n");
-					node2=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[node1->oriLocation%10];
-				}else{
-					//printf("k==-1\n");
-					node2=hashmapArray2.find(uuid)->int_arrNodes[node1->oriLocation%10];
-				}
-				//printf("idx=%d\n",idx);
-				// if(node2->data==NULL){
-				// 	printf("NULL\n");
-				// }
-				node2->data[idx]=num;
-				//printf("uuid=%s, calluuid=%s\n", uuid,tmpuuid);
-			     //printf("data[%d]=%d\n", idx,num);
-				//printf("data[%d]=%d",idx,num);
-				//printf("\n\n");
-
+				for(int i=0;i<node2->sz;i++){
+				node1->data[i]=node2->data[i];
 			}
+				return 1000;
+			}
+			node1=hashmapArray2.find(hashmap.find(uuid)->calluuid)->int_arrNodes[node1->oriLocation%10];
+
+			for(int i=0;i<node2->sz;i++){
+				node1->data[i]=node2->data[i];
+			}
+
+
+	}else if(p2==0){
+		printf("type=7 p2=0\n");
+
+		bool flag=true;
+		int dim[3]={0};//dim[0] dim[1] dim[2] represent array's 1st 2nd 3th dimension 
+		if(p1<0&&hash_index[0-p1]!=0){
+			dim[0]=hash_int[0-p1];
+			printf("1 dimension constant: %d  int_%d\n", p1,hash_int[0-p1]);
+
+		}else if(p1>=100&&p1<700){
+			dim[0]=hashmap.find(uuid)->v_int[p1-100];
+			printf("1 dimension variable:%d %d\n",p1, hashmap.find(uuid)->v_int[p1-100]);
+			
+		}else{
+			flag=false;
+		}
+		if(flag&&p1_i<0&&hash_index[0-p1_i]!=0){
+			dim[1]=hash_int[0-p1_i];
+			//printf("2 dimension constant: %d  int_%d\n", p1_i,hash_int[0-p1_i]);
+		}else if(flag&&p1_i>=100&&p1_i<700){
+			dim[1]=hashmap.find(uuid)->v_int[p1_i-100];
+			//printf("2 dimension variable:%d %d\n",p1_i, hashmap.find(uuid)->v_int[p1_i-100]);
+		}else{
+			flag=false;
+		}
+		if(flag&&p2_i<0&&hash_index[0-p2_i]!=0){
+			dim[2]=hash_int[0-p2_i];
+			//printf("3 dimension constant: %d  int_%d\n", p2_i,hash_int[0-p2_i]);
+		}else if(flag&&p2_i>=100&&p2_i<700){
+			dim[2]=hashmap.find(uuid)->v_int[p2_i-100];
+			//printf("3 dimension variable:%d %d\n",p2_i, hashmap.find(uuid)->v_int[p2_i-100]);
+		}else{
+			flag=false;
+		}
+		for(int i=0;i<3;i++){
+			printf("dim[%d]=%d\n", i,dim[i]);
+		}
+		int d=0;// how many dimensions
+		int sz=1;//array size
+		for(int i=0;i<3;i++){
+			if(dim[i]!=0){
+				d++;
+				sz*=dim[i];
+			}
+		}
+		printf("uuid=%s  size=%d\n",uuid,sz);
+		//printf("123\n");
+		INODE node=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
+		printf("456\n");
+		if(node==NULL){
+			printf("null\n");
+		}
+		node->d=d;//update d
+		for(int i=0;i<d;i++){
+			node->dimensions[i]=dim[i];//update dimensions
+		}
+		node->paramLoc=-1;
+		node->data=(int*)malloc(sz*sizeof(int));//malllo space for data 
+		node->sz=sz;
+
+		return 1000;
+
+	}else if(p2==1){
+		printf("type=7 p2=1\n");
+		int oriLoc=p1_i;
+		printf("uuid: %s\n", uuid);
+		if(hashmapArray2.find(uuid)!=NULL){
+			printf("NOT null\n");
+		}
+		printf("para_i: %d\n", para_i);
+		INODE node=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
+		if(node==NULL){
+			printf("null\n");
+		}
+		node->oriLocation=oriLoc;
+		printf("123\n");
+	
+	}else if(p2==2){
+
 		
-		}else if(p2==3){//arr2=arr1 arr2=arr1[0]
-			//printf("type=7 p2=3\n");
-			 
-			 int loc=-1;
-			 int k=-1;
-			 
+		//ocall_print_string("type=7 p2=2\n");
+		int loc=-1;
+		int k=-1;
+		if(para_i==-1){//int a=arr[0] left is variable
+			//printf("int a=arr[0] before uuid: %s\n", uuid);
 			INODE node1=hashmapArray2.find(uuid)->int_arrNodes[p1_i%10];
 			// for(int i=0;i<3;i++){
-			// 	printf("node->index[%d]=%d\n",i,node1->index[i]);
+			// 	printf("node->index[%d]=%d\n", i,node1->index[i]);
 			// }
-			// if(node1->paramLoc!=-1){//is formular array param
-			// 		printf("isformular array param %d\n",node1->paramLoc);
-			// 		for(k=0;k<10;k++){
-			// 			if(k==node1->paramLoc){
-			// 				loc=hashmap.find(uuid)->arrayIndex[k];
-			// 				memcpy(tmpuuid,hashmap.find(uuid)->array[k],32);
-			// 				break;
-			// 			}
-			// 		}
-			// 	}
-			// if(loc!=-1)
-			// 		node1=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[loc%10];
-			INODE node2=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
-			node2->d=node1->d;//update d
-			for(int i=0;i<5;i++){
-				node2->dimensions[i]=node1->dimensions[i];//update dimesions
-				node2->index[i]=node1->index[i];//update index
-			}
-			node2->oriLocation=node1->oriLocation;//update oriLocation
-			for(int i=0;i<3;i++){
-				///printf("node->index[%d]=%d\n",i,node1->index[i]);
-			}
-			//printf("uuid=%s, calluuid=%s\n", uuid,tmpuuid);
-			//printf("node1: \n");
-			//printNode(node1);
-			//printf("node2: \n");
-			//printNode(node2);
-		
-			
-		}else if(p2==4){// append index
-			//printf("type=7 p2=4\n");
-
-			 int loc=-1;
-			 int i=-1;
-			 int k=-1;
-			if(p1<0&&hash_index[0-p1]!=0){
-				i=hash_int[0-p1];
-			}else if(p1>=100&&p1<700){
-				i==hashmap.find(uuid)->v_int[p1-100];
-			}
-			//printf("p1=%d i=%d\n",p1,i);
-			INODE node=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
-
-			SNODE snode=hashmap.find(uuid);
-			//printf("1\n");
-			node->paramLoc=p1_i;
-			if(p1==0&&p1_i==0){
+			// for(int i=0;i<3;i++){
+			// 	printf("node->dimensions[%d]=%d\n", i,node1->dimensions[i]);
+			// }
+			int idx=calIntArrayIndex(node1);
+			//printf("idx=%d\n", idx);
+			if(node1->paramLoc!=-1){//is formular array param
+				//printf("isformular array param %d\n",node1->paramLoc);
 				for(k=0;k<10;k++){
-					if(k==node->paramLoc){
-						loc=snode->arrayIndex[k];
+					if(k==node1->paramLoc){
+						loc=hashmap.find(uuid)->arrayIndex[k];
 						memcpy(tmpuuid,hashmap.find(uuid)->array[k],32);
 						break;
 					}
 				}
-				//printf("uuid=%s, tmpuuid=%s\n", uuid,tmpuuid);
+			}
+			
+
+			if(loc!=-1){
 				
-				if(snode==NULL){
-					//printf("hashmap.find(uuid)==NULL\n");
-				}else{
-					//printf("hashmap.find(uuid)!=NULL\n");
-				}
-				if(hashmapArray2.find(snode->array[k])==NULL){
-					//printf("hashmapArray2.find(snode->array[k])==NULL\n");
-				}else{
-					//printf("hashmapArray2.find(snode->array[k])!=NULL\n");
-				}
-				if(hashmapArray2.find(snode->array[k])!=NULL){
-					INODE node2=hashmapArray2.find(snode->array[k])->int_arrNodes[loc%10];
-					//printf("123\n");
-					node->d=node2->d;//update d
-					for(int i=0;i<5;i++){
-					node->dimensions[i]=node2->dimensions[i];//update dimesions
-					node->index[i]=node2->index[i];//update index
-				}
-				node->oriLocation=node2->oriLocation;//update oriLocation
-				}
+				node1=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[loc%10];
+				//printf("5\n");
 				
 			}
-			int j=0;
+			//printf("uuid=%s,  tmpuuid=%s\n", uuid,tmpuuid);
+			
+			
+			int index=-1;//array index
+			if(p1<0&&hash_index[0-p1]!=0){
+				index=hash_int[0-p1];
+			}else if(p1>=100&&p1<700){
+				index=hashmap.find(uuid)->v_int[p1-100];
+			}
+			//printf("index=%d\n", index);
+			idx+=index;//
+			INODE node2=NULL;
+			if(k!=-1){
+				node2=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[node1->oriLocation%10];
+			}else{
+				node2=hashmapArray2.find(uuid)->int_arrNodes[node1->oriLocation%10];
+			}
+			
+			//printf("a=data[%d]\n",node2->data[idx]);
+			//printf("\n\n");
+			hashmap.find(uuid)->v_int[para_name-100]=node2->data[idx];//int a=arr[1][2][3]
+			//printf("\n");
+		}else{//arr[0]=3
+			int loc=-1;
+			int k=-1;
+			
+			INODE node1=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
 			for(int i=0;i<3;i++){
-				//printf("node->index[%d]=%d\n",i,node->index[i]);
+				//printf("node->index[%d]=%d\n", i,node1->index[i]);
+				//printf("node->dimensions[%d]=%d\n", i,node1->dimensions[i]);
 			}
-			while(node->index[j]!=-1){
-				j++;
+			int idx=calIntArrayIndex(node1);
+			//printf("idx=%d\n", idx);
+			if(node1->paramLoc!=-1){//is formular array param
+				//printf("isformular array param %d\n",node1->paramLoc);
+				for(k=0;k<10;k++){
+					if(k==node1->paramLoc){
+						loc=hashmap.find(uuid)->arrayIndex[k];
+						memcpy(tmpuuid,hashmap.find(uuid)->array[k],32);
+						break;
+					}
+				}
+			}
+			//printf("uuid=%s,  tmpuuid=%s\n", uuid,hashmap.find(uuid)->array[k]);
+			if(loc!=-1){
+				node1=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[loc%10];
 				
 			}
 			
-			node->index[j]=i;
-			for(int i=0;i<3;i++){
-				//printf("node->index[%d]=%d\n",i,node->index[i]);
+			
+			int index=-1;//arr[index]=num
+			int num=-1;
+			if(para_name<0&&hash_index[0-para_name]!=0){
+				index=hash_int[0-para_name];
+			}else if(para_name>=100&&para_name<700){
+				index=hashmap.find(uuid)->v_int[para_name-100];
 			}
-			
-			
+			if(p1<0&&hash_index[0-p1]!=0){
+				num=hash_int[0-p1];
+			}else if(p1>=100&&p1<700){
+				num=hashmap.find(uuid)->v_int[p1-100];
+			}
+			//("2\n");
+			idx+=index;
+			INODE node2=NULL;
+			if(k!=-1){
+				//printf("k!=-1\n");
+				node2=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[node1->oriLocation%10];
+			}else{
+				//printf("k==-1\n");
+				node2=hashmapArray2.find(uuid)->int_arrNodes[node1->oriLocation%10];
+			}
+			//printf("idx=%d\n",idx);
+			// if(node2->data==NULL){
+			// 	printf("NULL\n");
+			// }
+			node2->data[idx]=num;
+			//printf("uuid=%s, calluuid=%s\n", uuid,tmpuuid);
+		     //printf("data[%d]=%d\n", idx,num);
+			//printf("data[%d]=%d",idx,num);
+			//printf("\n\n");
 
-			
+		}
+	
+	}else if(p2==3){//arr2=arr1 arr2=arr1[0]
+		//printf("type=7 p2=3\n");
+		 
+		 int loc=-1;
+		 int k=-1;
+		 
+		INODE node1=hashmapArray2.find(uuid)->int_arrNodes[p1_i%10];
+		// for(int i=0;i<3;i++){
+		// 	printf("node->index[%d]=%d\n",i,node1->index[i]);
+		// }
+		// if(node1->paramLoc!=-1){//is formular array param
+		// 		printf("isformular array param %d\n",node1->paramLoc);
+		// 		for(k=0;k<10;k++){
+		// 			if(k==node1->paramLoc){
+		// 				loc=hashmap.find(uuid)->arrayIndex[k];
+		// 				memcpy(tmpuuid,hashmap.find(uuid)->array[k],32);
+		// 				break;
+		// 			}
+		// 		}
+		// 	}
+		// if(loc!=-1)
+		// 		node1=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[loc%10];
+		INODE node2=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
+		node2->d=node1->d;//update d
+		for(int i=0;i<5;i++){
+			node2->dimensions[i]=node1->dimensions[i];//update dimesions
+			node2->index[i]=node1->index[i];//update index
+		}
+		node2->oriLocation=node1->oriLocation;//update oriLocation
+		for(int i=0;i<3;i++){
+			///printf("node->index[%d]=%d\n",i,node1->index[i]);
+		}
+		//printf("uuid=%s, calluuid=%s\n", uuid,tmpuuid);
+		//printf("node1: \n");
+		//printNode(node1);
+		//printf("node2: \n");
+		//printNode(node2);
+	
 		
+	}else if(p2==4){// append index
+		//printf("type=7 p2=4\n");
 
+		 int loc=-1;
+		 int i=-1;
+		 int k=-1;
+		if(p1<0&&hash_index[0-p1]!=0){
+			i=hash_int[0-p1];
+		}else if(p1>=100&&p1<700){
+			i==hashmap.find(uuid)->v_int[p1-100];
+		}
+		//printf("p1=%d i=%d\n",p1,i);
+		INODE node=hashmapArray2.find(uuid)->int_arrNodes[para_i%10];
+
+		SNODE snode=hashmap.find(uuid);
+		//printf("1\n");
+		node->paramLoc=p1_i;
+		if(p1==0&&p1_i==0){
+			for(k=0;k<10;k++){
+				if(k==node->paramLoc){
+					loc=snode->arrayIndex[k];
+					memcpy(tmpuuid,hashmap.find(uuid)->array[k],32);
+					break;
+				}
+			}
+			//printf("uuid=%s, tmpuuid=%s\n", uuid,tmpuuid);
 			
-		}else if(p2==5){//get array length
-			    //printf("type=7,p2=5\n");
-				INODE node1=hashmapArray2.find(uuid)->int_arrNodes[p1_i%10];
-				if(node1==NULL){
-					printf("null\n");
-				}
-			    int d=0;
-			    while(node1->index[d]!=-1){
-			    	printf("indxex[i]=%d\n", node1->index[d]);
-			    	d++;
-			    }
-			    int loc=-1;
-			    int k=-1;
-			 	if(node1->paramLoc!=-1){//is formular array param
-					//printf("isformular array param %d\n",node1->paramLoc);
-					for(k=0;k<10;k++){
-						if(k==node1->paramLoc){
-							loc=hashmap.find(uuid)->arrayIndex[k];
-							memcpy(tmpuuid,hashmap.find(uuid)->array[k],32);
-							break;
-						}
-					}
-				}
-				//printf("uuid=%s, tmpuuid=%s\n", uuid,tmpuuid);
-				if(loc!=-1){
-					node1=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[loc%10];
-				}
-			    //printf("d=%d dimensions[d]=%d\n", d,node1->dimensions[d]);
-			    hashmap.find(uuid)->v_int[para_name-100]=node1->dimensions[d];
-
-				
-		}
-		else if(p2==-1){
-			//ocall_print_string("p2=-1\n");
+			if(snode==NULL){
+				//printf("hashmap.find(uuid)==NULL\n");
+			}else{
+				//printf("hashmap.find(uuid)!=NULL\n");
+			}
+			if(hashmapArray2.find(snode->array[k])==NULL){
+				//printf("hashmapArray2.find(snode->array[k])==NULL\n");
+			}else{
+				//printf("hashmapArray2.find(snode->array[k])!=NULL\n");
+			}
+			if(hashmapArray2.find(snode->array[k])!=NULL){
+				INODE node2=hashmapArray2.find(snode->array[k])->int_arrNodes[loc%10];
+				//printf("123\n");
+				node->d=node2->d;//update d
+				for(int i=0;i<5;i++){
+				node->dimensions[i]=node2->dimensions[i];//update dimesions
+				node->index[i]=node2->index[i];//update index
+			}
+			node->oriLocation=node2->oriLocation;//update oriLocation
+			}
 			
 		}
-		free(tmpuuid);
-//		printf("leave  int print_array_i(long Line, int* int_array,int int_tail,char* uuid,char* cuuid)\n\na");
-		return 1000;
-		
-
-
-	if(para_i >=700 && para_i<=1200){  //field array
-		if(hashmapPublicV.find(cuuid) == NULL){
-			printf("[print_array_i] This is first create Cuuid=%s\n",cuuid);
-			PNODE p = (PNODE)malloc(10*sizeof(PublicVariableNode));
-			if(!hashmapPublicV.insert(cuuid,p)){
-				printf("insert fail!! %s\n",cuuid);
-			}
-		}	
-		if(p1_i <=10){
-			for(int i=0;i<int_tail;i++){
-				hashmapPublicV.find(cuuid)[para_i%10].arr_int[i] = int_array[i];
-			}
-			hashmapPublicV.find(cuuid)[para_i%10].intsize = int_tail;
-		}else{
-			printf("[print_array_i] I don't deal with this case I. 0601/2020\n");
+		int j=0;
+		for(int i=0;i<3;i++){
+			//printf("node->index[%d]=%d\n",i,node->index[i]);
 		}
-	}else if(para_i>=1300 && para_i<=1800){ //field multi array
-		if(hashmapPublicV.find(cuuid) == NULL){
-			printf("[print_array_i] This is first create Cuuid multi. cuuid=%s\n",cuuid);
-			PNODE p = (PNODE)malloc(10*sizeof(PublicVariableNode));
-			if(!hashmapPublicV.insert(cuuid,p)){
-				printf("insert fail!! %s\n",cuuid);
-			}
-		}
-		if(para_name != -1){
-			if(para_name >=100 && para_name<=200){ //this is index
-				if(p1_i <= 10){
-
-				}else if(p1_i >=70 && p1_i<=120){ //from ArrayNode
-					int size = hashmapArray.find(uuid)->intsize[p1_i%10];
-					for(int i=0;i<size;i++){
-					hashmapPublicV.find(cuuid)[para_i%10].arr_multi_int[hashmap.find(uuid)->v_int[para_name-100]][i] = hashmapArray.find(uuid)->arr_int[p1_i%10][i];
-					}
-					hashmapPublicV.find(cuuid)[para_i%10].intmultisize[hashmap.find(uuid)->v_int[para_name-100]] = size;
-				}
-			}else {
-				printf("[print_array_i] I don't deal with this case III. 0601/2020\n");
-			}
-		}else{
-			//do nothing
-		}
+		while(node->index[j]!=-1){
+			j++;
 			
-	}else if(para_i >= 70 && para_i<=120){//70 80
-		if(p1_i > 10){
-			//memcpy(hashmapArray.find(uuid)->arr_int[para_i%10],hashmapArray.find(uuid)->arr_int[p1_i%10],hashmapArray.find(uuid)->intsize[p1_i%10]);
-			for(int i=0;i<hashmapArray.find(uuid)->intsize[p1_i%10];i++){
-				hashmapArray.find(uuid)->arr_int[para_i%10][i] = hashmapArray.find(uuid)->arr_int[p1_i%10][i];
-			}		
-		}else{
-			if(p1 == -1){ //array
-				if(hashmapArray.find(uuid)->arr_int[para_i%10] == NULL){
-					encall_initArray(uuid,para_i,int_tail,0);
-					for(int i=0;i<int_tail;i++){
-						hashmapArray.find(uuid)->arr_int[para_i%10][i] = int_array[i];
-					}
-				
-				}else{
-					//memcpy(hashmapArray.find(uuid)->arr_int[para_i%10],int_array,int_tail);
-					for(int i=0;i<int_tail;i++){
-						//printf("B int_array[%d]=%d\n",i,int_array[i]);
-						hashmapArray.find(uuid)->arr_int[para_i%10][i] = int_array[i];
-					}
-				}
-			}else if(p1>=100){ //multiarray 
-					for(int i=0;i<int_tail;i++){
-						hashmapMultiArray.find(uuid)[para_i%10].arr_int[hashmap.find(uuid)->v_int[p1-100]][i] = int_array[i];
-					}
-					hashmapMultiArray.find(uuid)[para_i%10].intsize[hashmap.find(uuid)->v_int[p1-100]] = int_tail;
-					hashmapArray.find(uuid)->intsize[para_i%10] = -p1; //flag
-			}else if(p1<0){
-				printf("[ERROR] print_array_i  int_number type\n");
-			}
 		}
 		
-	}else{
-		if(p1_i > 10){
-			memcpy(hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_int[hashmap.find(uuid)->arrayIndex[p1_i]%10],hashmapArray.find(uuid)->arr_int[p1_i%10],hashmapArray.find(uuid)->intsize[p1_i%10]);
-		}else{
-			memcpy(hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_int[hashmap.find(uuid)->arrayIndex[p1_i]%10],int_array,int_tail);
+		node->index[j]=i;
+		for(int i=0;i<3;i++){
+			//printf("node->index[%d]=%d\n",i,node->index[i]);
 		}
+		
+		
+	}else if(p2==5){//get array length
+		    //printf("type=7,p2=5\n");
+			INODE node1=hashmapArray2.find(uuid)->int_arrNodes[p1_i%10];
+			if(node1==NULL){
+				printf("null\n");
+			}
+		    int d=0;
+		    while(node1->index[d]!=-1){
+		    	printf("indxex[i]=%d\n", node1->index[d]);
+		    	d++;
+		    }
+		    int loc=-1;
+		    int k=-1;
+		 	if(node1->paramLoc!=-1){//is formular array param
+				//printf("isformular array param %d\n",node1->paramLoc);
+				for(k=0;k<10;k++){
+					if(k==node1->paramLoc){
+						loc=hashmap.find(uuid)->arrayIndex[k];
+						memcpy(tmpuuid,hashmap.find(uuid)->array[k],32);
+						break;
+					}
+				}
+			}
+			//printf("uuid=%s, tmpuuid=%s\n", uuid,tmpuuid);
+			if(loc!=-1){
+				node1=hashmapArray2.find(hashmap.find(uuid)->array[k])->int_arrNodes[loc%10];
+			}
+		    //printf("d=%d dimensions[d]=%d\n", d,node1->dimensions[d]);
+		    hashmap.find(uuid)->v_int[para_name-100]=node1->dimensions[d];
+
+			
 	}
+	else if(p2==-1){
+		//ocall_print_string("p2=-1\n");
+		
+	}
+	free(tmpuuid);
+	// return 1000;
+	printf("[hyr]handle array, member/static member array!!");	
+	// 这里还没有处理就直接return了，并没有处理成员变量的情况
+	if (para_i >=700 && para_i<=1800 && ouuid != NULL) {	   // init member array
+		printf("ouuid = %s", ouuid);
+		if (hashmapMemberArray.find(ouuid) == NULL) {
+			ANODE2 aNode = (ANODE2) malloc (sizeof(ArrayNode2));
+			if (!hashmapMemberArray.insert(ouuid, aNode)) {
+				printf("[hyr]insert member array fail!");
+			}
+		}
+		for (int i = 0; i < int_tail; i++) {
+			hashmapMemberArray.find(ouuid)->int_arrNodes[para_i%10]->data[i] = int_array[i];	
+		}
+		hashmapMemberArray.find(ouuid)->int_arrNodes[para_i%10]->sz = int_tail; 
+	} else if (para_i >=7000 && para_i<=18000 && cuuid != NULL) {	// init static member array
+		printf("cuuid = %s", cuuid);
+		if (hashmapStaticMemberArray.find(cuuid) == NULL) {
+			ANODE2 aNode = (ANODE2) malloc (sizeof(ArrayNode2));
+			if (!hashmapStaticMemberArray.insert(cuuid, aNode)) {
+				printf("[hyr]insert static member array fail!");
+			}
+		}
+		for (int i = 0; i < int_tail; i++) {
+			hashmapStaticMemberArray.find(cuuid)->int_arrNodes[para_i%10]->data[i] = int_array[i];	
+		}
+		hashmapStaticMemberArray.find(cuuid)->int_arrNodes[para_i%10]->sz = int_tail; 
+	}
+
+
+
+	// 原方案
+	// if(para_i >=700 && para_i<=1200){  //field array
+	// 	if(hashmapPublicV.find(cuuid) == NULL){
+	// 		printf("[print_array_i] This is first create Cuuid=%s\n",cuuid);
+	// 		PNODE p = (PNODE)malloc(10*sizeof(PublicVariableNode));
+	// 		if(!hashmapPublicV.insert(cuuid,p)){
+	// 			printf("insert fail!! %s\n",cuuid);
+	// 		}
+	// 	}	
+	// 	if(p1_i <=10){
+	// 		for(int i=0;i<int_tail;i++){
+	// 			hashmapPublicV.find(cuuid)[para_i%10].arr_int[i] = int_array[i];
+	// 		}
+	// 		hashmapPublicV.find(cuuid)[para_i%10].intsize = int_tail;
+	// 	}else{
+	// 		printf("[print_array_i] I don't deal with this case I. 0601/2020\n");
+	// 	}
+	// }else if(para_i>=1300 && para_i<=1800){ //field multi array
+	// 	if(hashmapPublicV.find(cuuid) == NULL){
+	// 		printf("[print_array_i] This is first create Cuuid multi. cuuid=%s\n",cuuid);
+	// 		PNODE p = (PNODE)malloc(10*sizeof(PublicVariableNode));
+	// 		if(!hashmapPublicV.insert(cuuid,p)){
+	// 			printf("insert fail!! %s\n",cuuid);
+	// 		}
+	// 	}
+	// 	if(para_name != -1){
+	// 		if(para_name >=100 && para_name<=200){ //this is index
+	// 			if(p1_i <= 10){
+
+	// 			}else if(p1_i >=70 && p1_i<=120){ //from ArrayNode
+	// 				int size = hashmapArray.find(uuid)->intsize[p1_i%10];
+	// 				for(int i=0;i<size;i++){
+	// 				hashmapPublicV.find(cuuid)[para_i%10].arr_multi_int[hashmap.find(uuid)->v_int[para_name-100]][i] = hashmapArray.find(uuid)->arr_int[p1_i%10][i];
+	// 				}
+	// 				hashmapPublicV.find(cuuid)[para_i%10].intmultisize[hashmap.find(uuid)->v_int[para_name-100]] = size;
+	// 			}
+	// 		}else {
+	// 			printf("[print_array_i] I don't deal with this case III. 0601/2020\n");
+	// 		}
+	// 	}else{
+	// 		//do nothing
+	// 	}
+			
+	// }else if(para_i >= 70 && para_i<=120){//70 80
+	// 	if(p1_i > 10){
+	// 		//memcpy(hashmapArray.find(uuid)->arr_int[para_i%10],hashmapArray.find(uuid)->arr_int[p1_i%10],hashmapArray.find(uuid)->intsize[p1_i%10]);
+	// 		for(int i=0;i<hashmapArray.find(uuid)->intsize[p1_i%10];i++){
+	// 			hashmapArray.find(uuid)->arr_int[para_i%10][i] = hashmapArray.find(uuid)->arr_int[p1_i%10][i];
+	// 		}		
+	// 	}else{
+	// 		if(p1 == -1){ //array
+	// 			if(hashmapArray.find(uuid)->arr_int[para_i%10] == NULL){
+	// 				encall_initArray(uuid,para_i,int_tail,0);
+	// 				for(int i=0;i<int_tail;i++){
+	// 					hashmapArray.find(uuid)->arr_int[para_i%10][i] = int_array[i];
+	// 				}
+				
+	// 			}else{
+	// 				//memcpy(hashmapArray.find(uuid)->arr_int[para_i%10],int_array,int_tail);
+	// 				for(int i=0;i<int_tail;i++){
+	// 					//printf("B int_array[%d]=%d\n",i,int_array[i]);
+	// 					hashmapArray.find(uuid)->arr_int[para_i%10][i] = int_array[i];
+	// 				}
+	// 			}
+	// 		}else if(p1>=100){ //multiarray 
+	// 				for(int i=0;i<int_tail;i++){
+	// 					hashmapMultiArray.find(uuid)[para_i%10].arr_int[hashmap.find(uuid)->v_int[p1-100]][i] = int_array[i];
+	// 				}
+	// 				hashmapMultiArray.find(uuid)[para_i%10].intsize[hashmap.find(uuid)->v_int[p1-100]] = int_tail;
+	// 				hashmapArray.find(uuid)->intsize[para_i%10] = -p1; //flag
+	// 		}else if(p1<0){
+	// 			printf("[ERROR] print_array_i  int_number type\n");
+	// 		}
+	// 	}
+		
+	// }else{
+	// 	if(p1_i > 10){
+	// 		memcpy(hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_int[hashmap.find(uuid)->arrayIndex[p1_i]%10],hashmapArray.find(uuid)->arr_int[p1_i%10],hashmapArray.find(uuid)->intsize[p1_i%10]);
+	// 	}else{
+	// 		memcpy(hashmapArray.find(hashmap.find(uuid)->array[p1_i])->arr_int[hashmap.find(uuid)->arrayIndex[p1_i]%10],int_array,int_tail);
+	// 	}
+	// }
 	return 1000;
 }
 
 
 
 
-int print_array_c(long Line, char* char_array,int char_tail,char* uuid,char* cuuid){
+int print_array_c(long Line, char* char_array, int char_tail, char* uuid, char* ouuid, char* cuuid){
 
 
 	

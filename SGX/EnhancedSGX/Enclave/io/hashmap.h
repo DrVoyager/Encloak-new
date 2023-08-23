@@ -129,14 +129,11 @@ Value& HashMap<Key, Value, HashFunc, EqualKey>::find(const Key& key)
 		HashNode<Key, Value> * node = table[index];
 		while (node)
 		{
-			//cout << "node->_key = " << node->_key << endl;
+			
 			if (node->_key == key)
 				return node->_value;
 			node = node->next;
 		}
-
-
-		//cout << "key is not find!" << endl;
 		return ValueNULL;
 	}
 }

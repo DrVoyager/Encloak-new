@@ -60,6 +60,7 @@ typedef struct {
     int 	    byteTail;
 
     char*           uuid;
+    char*           ouuid;
     char*           cuuid;
 
     uint16_t        callID;
@@ -72,7 +73,7 @@ typedef struct {
 typedef struct 
 {
     uint16_t numEntries;
-    void (**callbacks)(void*,void*,int*,int,double*,int,float*,int,char*,int,long*,int,char*,int,char*,char*);
+    void (**callbacks)(void*,void*,int*,int,double*,int,float*,int,char*,int,long*,int,char*,int,char*,char*,char*);
     void (**callback)(void*,char*,char*);
     void (**callbac)(void*,void*,int*,double*,float*,char*,long*,char*,char*);
 } HotCallTable;
@@ -94,6 +95,7 @@ static void HotCall_init( HotCall* hotCall )
     hotCall->longArray          = NULL;
     hotCall->byteArray          = NULL;
     hotCall->uuid               = NULL;
+    hotCall->ouuid               = NULL;
     hotCall->cuuid               = NULL;
 
     hotCall->intTail            = 0;
@@ -114,7 +116,7 @@ static inline void _mm_pause(void) __attribute__((always_inline));
 
 
 
-static inline int HotCall_requestCall( HotCall* hotCall, uint16_t callID, void *data,int *intArray,int intTail,double *doubleArray,int doubleTail,float *floatArray,int floatTail,char *charArray,int charTail,long *longArray,int longTail,char *byteArray,int byteTail,char *uuid,char* cuuid,void *rei)
+static inline int HotCall_requestCall( HotCall* hotCall, uint16_t callID, void *data,int *intArray,int intTail,double *doubleArray,int doubleTail,float *floatArray,int floatTail,char *charArray,int charTail,long *longArray,int longTail,char *byteArray,int byteTail,char *uuid,char* ouuid,char* cuuid,void *rei)
 {
     int i = 0;
     const uint32_t MAX_RETRIES = 10;
@@ -145,6 +147,7 @@ static inline int HotCall_requestCall( HotCall* hotCall, uint16_t callID, void *
    	    hotCall->byteTail       = byteTail;
 
 	    hotCall->uuid   = uuid;
+	    hotCall->ouuid   = ouuid;
             hotCall->cuuid   = cuuid;
     	    hotCall->rei   = rei;
 
@@ -214,18 +217,18 @@ static inline void HotCall_waitForCall( HotCall *hotCall, HotCallTable* callTabl
                 //printf( "Calling callback %d\n", callID );
 
                 if(callID == 0){//branch
-                	callTable->callbacks[ callID ]( hotCall->data,hotCall->rei,hotCall->intArray,hotCall->intTail,hotCall->doubleArray,hotCall->doubleTail,hotCall->floatArray,hotCall->floatTail,hotCall->charArray,hotCall->charTail,hotCall->longArray,hotCall->longTail,hotCall->byteArray,hotCall->byteTail,hotCall->uuid,hotCall->cuuid);
+                	callTable->callbacks[ callID ]( hotCall->data,hotCall->rei,hotCall->intArray,hotCall->intTail,hotCall->doubleArray,hotCall->doubleTail,hotCall->floatArray,hotCall->floatTail,hotCall->charArray,hotCall->charTail,hotCall->longArray,hotCall->longTail,hotCall->byteArray,hotCall->byteTail,hotCall->uuid,hotCall->ouuid,hotCall->cuuid);
 	   	}
 		if(callID == 1 || callID == 2){
 			callTable->callback[ callID ]( hotCall->data,hotCall->uuid,hotCall->charArray);
 		}
 		
 		if(callID == 3){  //update
-			callTable->callbacks[ callID ]( hotCall->data,hotCall->rei,hotCall->intArray,hotCall->intTail,hotCall->doubleArray,hotCall->doubleTail,hotCall->floatArray,hotCall->floatTail,hotCall->charArray,hotCall->charTail,hotCall->longArray,hotCall->longTail,hotCall->byteArray,hotCall->byteTail,hotCall->uuid,hotCall->cuuid);
+			callTable->callbacks[ callID ]( hotCall->data,hotCall->rei,hotCall->intArray,hotCall->intTail,hotCall->doubleArray,hotCall->doubleTail,hotCall->floatArray,hotCall->floatTail,hotCall->charArray,hotCall->charTail,hotCall->longArray,hotCall->longTail,hotCall->byteArray,hotCall->byteTail,hotCall->uuid,hotCall->ouuid,hotCall->cuuid);
 		}
 
 		if(callID == 4){  //get
-			callTable->callbacks[ callID ]( hotCall->data,hotCall->rei,hotCall->intArray,hotCall->intTail,hotCall->doubleArray,hotCall->doubleTail,hotCall->floatArray,hotCall->floatTail,hotCall->charArray,hotCall->charTail,hotCall->longArray,hotCall->longTail,hotCall->byteArray,hotCall->byteTail,hotCall->uuid,hotCall->cuuid);
+			callTable->callbacks[ callID ]( hotCall->data,hotCall->rei,hotCall->intArray,hotCall->intTail,hotCall->doubleArray,hotCall->doubleTail,hotCall->floatArray,hotCall->floatTail,hotCall->charArray,hotCall->charTail,hotCall->longArray,hotCall->longTail,hotCall->byteArray,hotCall->byteTail,hotCall->uuid,hotCall->ouuid,hotCall->cuuid);
 		}
 
 

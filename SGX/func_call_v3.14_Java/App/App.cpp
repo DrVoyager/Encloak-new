@@ -60,21 +60,8 @@ int SGX_CDECL main(int argc, char *argv[])
 
 	int r=0;
 	using namespace std;
-	// int len_in=strlen(input);
-	// ecall_ctr_encrypt(global_eid,&r,input,key_t,&ret[0]);
-	
 	FILE *fp;
 	FILE *fp2;
-/*
-	if((fp=fopen(output,"ab+"))==NULL){
-		printf("2 f open error");
-		exit(0);	
-	}
-	if((fp2=fopen(filepath,"rb"))==NULL){
-		printf("3 f open error");
-		exit(0);	
-	}
-*/
 	ifstream fin(filepath,ios::in|ios::binary);
 	ofstream fout(output,ios::trunc|ios::out|ios::binary);
 	
@@ -129,39 +116,17 @@ int SGX_CDECL main(int argc, char *argv[])
 		memset(us,0,MAX);
 	}
 
-//--------encrypt
-//	ecall_ctr_encrypt(global_eid,&r,(const char*)us,key_t,&out[0]);
-//	printf("\nencryption response:%d\n",r);
-//	for(int i=0;i<k;i++){
-//	//write
-//		fout<<out[i];
-//		printf("%02x",out[i]);
-//	}
-
-
 	fout.close();
-	//ifstream reout(output,ios::in|ios::binary);
 	int reout=open(output,O_RDONLY);
 //------------read out
 	long l=0;
 	unsigned char sss[MAX];
 	memset(sss,0,MAX);
-	//while(!reout.eof()){
 	long loop2=1;
 	while(1){
 		char c;
 		loop2++;
 		if(loop2%1000==0){
-/*
-		sgx_destroy_enclave(global_eid);
-		if(initialize_enclave() < 0){
-		printf("Enter a character before exit ...\n");
-		getchar();
-		return -1; 
-		}*/
-		//sleep(0);
-		}
-		//reout.get(c);
 		if(read(reout,&c,1)==0){
 			break;
 		}
@@ -194,23 +159,12 @@ int SGX_CDECL main(int argc, char *argv[])
 	}
 
 
-//--------------
-/*
-	unsigned char ppp[MAX];
-	memset(ppp,0,MAX);
-	printf("\ndecryption response:%d\n",r);
-	ecall_ctr_decrypt(global_eid,&r,sss,key_t,ppp,k);
-	for(int i=0;i<k;i++){
-		printf("%02x",ppp[i]);
-	}
-*/
-
 	printf("destroy\n");
 	char *ss="ss";
 	r=999;
-	//encall_test(global_eid,&r,output);
 	printf("loop=%ld\n",loop);
 	sgx_destroy_enclave(global_eid);
 	return 0;
+}
 }
 
