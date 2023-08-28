@@ -7,7 +7,7 @@ Refer to **soot-code/readme.md** to specify a sensitive variable.
     $ ./origin-run.sh  
 
 ## transform origin class files to new ones with SGX
-    $ ./replace-transforme.sh  
+    $ ./replace-transform.sh  
 
 ## encrypt SGXindex  
     $ ./encrypt_SXGindex.sh  

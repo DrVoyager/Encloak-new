@@ -4,15 +4,12 @@
 typedef struct ms_encall_test_t {
 	int ms_retval;
 	char* ms_a;
-	size_t ms_a_len;
 } ms_encall_test_t;
 
 typedef struct ms_ecall_ctr_encrypt_t {
 	int ms_retval;
 	char* ms_sql;
-	size_t ms_sql_len;
 	char* ms_sgx_ctr_key;
-	size_t ms_sgx_ctr_key_len;
 	uint8_t* ms_p_dst;
 } ms_ecall_ctr_encrypt_t;
 
@@ -20,7 +17,6 @@ typedef struct ms_ecall_ctr_decrypt_t {
 	int ms_retval;
 	uint8_t* ms_sql;
 	char* ms_sgx_ctr_key;
-	size_t ms_sgx_ctr_key_len;
 	uint8_t* ms_p_dst;
 	int ms_len;
 } ms_ecall_ctr_decrypt_t;
@@ -501,8 +497,7 @@ sgx_status_t encall_test(sgx_enclave_id_t eid, int* retval, char* a)
 {
 	sgx_status_t status;
 	ms_encall_test_t ms;
-	ms.ms_a = (char*)a;
-	ms.ms_a_len = a ? strlen(a) + 1 : 0;
+	ms.ms_a = a;
 	status = sgx_ecall(eid, 0, &ocall_table_Enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
 	return status;
@@ -513,9 +508,7 @@ sgx_status_t ecall_ctr_encrypt(sgx_enclave_id_t eid, int* retval, const char* sq
 	sgx_status_t status;
 	ms_ecall_ctr_encrypt_t ms;
 	ms.ms_sql = (char*)sql;
-	ms.ms_sql_len = sql ? strlen(sql) + 1 : 0;
 	ms.ms_sgx_ctr_key = (char*)sgx_ctr_key;
-	ms.ms_sgx_ctr_key_len = sgx_ctr_key ? strlen(sgx_ctr_key) + 1 : 0;
 	ms.ms_p_dst = p_dst;
 	status = sgx_ecall(eid, 1, &ocall_table_Enclave, &ms);
 	if (status == SGX_SUCCESS && retval) *retval = ms.ms_retval;
@@ -528,7 +521,6 @@ sgx_status_t ecall_ctr_decrypt(sgx_enclave_id_t eid, int* retval, uint8_t* sql, 
 	ms_ecall_ctr_decrypt_t ms;
 	ms.ms_sql = sql;
 	ms.ms_sgx_ctr_key = (char*)sgx_ctr_key;
-	ms.ms_sgx_ctr_key_len = sgx_ctr_key ? strlen(sgx_ctr_key) + 1 : 0;
 	ms.ms_p_dst = p_dst;
 	ms.ms_len = len;
 	status = sgx_ecall(eid, 2, &ocall_table_Enclave, &ms);

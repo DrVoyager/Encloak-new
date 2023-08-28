@@ -16,6 +16,7 @@
 extern "C" {
 #endif
 
+
 int encall_test(char* a);
 int ecall_ctr_encrypt(const char* sql, const char* sgx_ctr_key, uint8_t* p_dst);
 int ecall_ctr_decrypt(uint8_t* sql, const char* sgx_ctr_key, uint8_t* p_dst, int len);

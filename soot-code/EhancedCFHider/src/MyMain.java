@@ -140,6 +140,9 @@ public class MyMain {
 //			   String taintClassName = "cfhider.PiEstimator";
 //			   String taintMethodName = "estimate";
 //			   
+			   String taintClassName = "cfhider.PiEstimator$HaltonSequence";
+			   String taintMethodName = "nextPoint";
+			   String taintSourceName = "$r2";
 			   
 			   //pagerank pegasus.PagerankInitVector$MapStage1  map  $z0
 			   //wordcount cfhider.WordCount$TokenizerMapper map $z0
@@ -159,9 +162,9 @@ public class MyMain {
 //			   String taintMethodName = "main";
 //			   String taintSourceName = "r3";
 			   
-			   String taintClassName = "test.test";
-			   String taintMethodName = "t";
-			   String taintSourceName = "$i0";
+//			   String taintClassName = "test.test";
+//			   String taintMethodName = "t";
+//			   String taintSourceName = "$i0";
 			   
 //			   String taintClassName = "test.Test2";
 //			   String taintMethodName = "main";
