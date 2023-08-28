@@ -1,6 +1,6 @@
 #export LD_LIBRARY_PATH=/opt/intel/sgxsdk/lib64
 SGX_SDK ?= /opt/intel/sgxsdk
-SGX_MODE ?= HW
+SGX_MODE ?= SIM
 SGX_ARCH ?= x64
 #SGX_DEBUG ?= 1
 SGX_PRERELEASE ?= 1

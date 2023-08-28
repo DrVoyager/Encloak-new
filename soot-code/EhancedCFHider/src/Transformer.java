@@ -1099,29 +1099,10 @@ public class Transformer {
 		Stmt newInvokeStmt = Jimple.v().newInvokeStmt(
 				Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
 						Arrays.asList()));
-		// 0527new solution for merging update function
-		// units.insertBefore(newInvokeStmt, currProStmt);
-		/*
-		 * toCall =
-		 * Scene.v().getMethod("<invoker.sgx_invoker: void setCounter(long)>");
-		 * newInvokeStmt = Jimple.v().newInvokeStmt(
-		 * Jimple.v().newVirtualInvokeExpr (sgxObjLocal, toCall.makeRef(),
-		 * Arrays.asList(LongConstant.v(counter)))); G.v().out.println(
-		 * "start insert before currStmt: ++++++++++++++++++++++++++ "
-		 * +currProStmt+"++++++++++++++++++++++"); //0527new solution for
-		 * merging update function units.insertBefore(newInvokeStmt,
-		 * currProStmt);
-		 */
-		toCall = Scene
-				.v()
-				.getMethod(
-						"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+		toCall = Scene.v().getMethod("<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
 		newInvokeStmt = Jimple.v().newInvokeStmt(
-				Jimple.v().newVirtualInvokeExpr(
-						sgxObjLocal,
-						toCall.makeRef(),
-						Arrays.asList(getUUIDLocal, IntConstant.v(0),
-								LongConstant.v(counter))));
+				Jimple.v().newVirtualInvokeExpr(sgxObjLocal,toCall.makeRef(),
+						Arrays.asList(getUUIDLocal, IntConstant.v(0),LongConstant.v(counter))));
 		units.insertBefore(newInvokeStmt, currProStmt);
 
 		Value value = ((ReturnStmt) currProStmt).getOp();
@@ -1137,21 +1118,39 @@ public class Transformer {
 			indexwriter("-2");// re
 			indexwriter(identityArray.get(value)); // r
 		} else if (condVals.contains(value)) { // xhy: remove( && TypeIndex(value) <= 12)
-			G.v().out.println("return sensitive array");
 			indexwriter(Integer.toString(pos));// type
 			indexwriter("-2");// left
 			indexwriter("-2");// l
 			indexwriter("-2");// right
 			indexwriter("-2");// r
 			indexwriter("-2");// op
-			if (pos <= 6) {
+
+			// [hyr]0817 modified
+			if (pos <= 6) { // variables
+				G.v().out.println("[hyr]return sensitive variable");
 				int pos_index = typeToList(pos).indexOf(value);
+				// sensitive variable, * 100
 				int index = pos * 100 + pos_index;
+				if(value instanceof InstanceFieldRef){	// sensitive member variable, * 1000
+					index = pos * 1000 + pos_index;
+					G.v().out.println("[hyr]member variable");
+				} else if(value instanceof StaticFieldRef){	// sensitive static member variable, * 10000
+					index = pos * 10000 + pos_index;
+					G.v().out.println("[hyr]static member variable");
+				}
 				indexwriter(String.valueOf(index));// re
 				indexwriter("-1");// r
-			} else {
+			} else { //array
+				G.v().out.println("[hyr]return sensitive array");
 				int pos_index = typeToList(pos).indexOf(value);
 				int index = pos * 10 + pos_index;
+				if(value instanceof InstanceFieldRef){	// sensitive member array, * 100
+					index = pos * 100 + pos_index;
+					G.v().out.println("[hyr]member array");
+				} else if(value instanceof StaticFieldRef){	// sensitive static member array, * 1000
+					index = pos * 1000 + pos_index;
+					G.v().out.println("[hyr]static member array");
+				}
 				indexwriter("-1");// re
 				indexwriter(String.valueOf(index));// r
 			}
@@ -1163,9 +1162,10 @@ public class Transformer {
 			indexwriter("-2");// right
 			indexwriter("-2");// r
 			indexwriter("-2");// op
-			indexwriter(value.getType().toString() + "_" + value);// re
-			indexwriter("-2");// r
+			indexwriter(value.getType().toString() + "_" + value);// re, e.g. int_0
+			indexwriter("-1");// r
 		}
+		// TODO 不需要删除当前语句么？
 		// units.remove(currProStmt);
 		counter++;
 	}
@@ -3069,79 +3069,90 @@ public class Transformer {
 					indexwriter("" + leftValue);
 
 					return null;
-				} else {	// 这里的逻辑还没有改
+				} else {
 					// this field is 1-6 type field
+					// ----------original----------
+					// if (identityArray.containsKey(leftOpValue)) {
+					// 	return_index = identityArray.get(leftOpValue); // maybe
+					// 													// "call+number"
+					// } else {
+					// 	val_type = TypeIndex(leftOpValue);// int or float
+					// 	pos_index = typeToList(val_type).indexOf(leftOpValue);
+					// 	return_index = Integer.toString(val_type * 100
+					// 			+ pos_index);
+					// }
 
-					if (identityArray.containsKey(leftOpValue)) {
-						return_index = identityArray.get(leftOpValue); // maybe
-																		// "call+number"
-					} else {
-						val_type = TypeIndex(leftOpValue);// int or float
-						pos_index = typeToList(val_type).indexOf(leftOpValue);
-						return_index = Integer.toString(val_type * 100
-								+ pos_index);
-					}
+					// G.v().out.println("indexWriter 2: "
+					// 		+ Integer.toString(TypeIndex(leftOpValue)));
 
-					G.v().out.println("indexWriter 2: "
-							+ Integer.toString(TypeIndex(leftOpValue)));
+					// if (!flag) {
+					// 	indexwriter(Integer.toString(TypeIndex(leftOpValue)));
+					// } else {
+					// 	indexwriter(Integer.toString(7));
+					// }
+					// indexwriter(Integer.toString(symbol));// tuple-1
+					// indexwriter(left_flag_index);// tuple-1
+					// indexwriter(right_index);// tuple-2
+					// indexwriter(right_flag_index);// tuple-2
+					// indexwriter("-1");
+					// indexwriter(return_index);
+					// indexwriter(return_flag_index);
 
-					if (!flag) {
-						indexwriter(Integer.toString(TypeIndex(leftOpValue)));
-					} else {
-						indexwriter(Integer.toString(7));
-					}
-					indexwriter(Integer.toString(symbol));// tuple-1
-					indexwriter(left_flag_index);// tuple-1
-					indexwriter(right_index);// tuple-2
-					indexwriter(right_flag_index);// tuple-2
-					indexwriter("-1");
-					indexwriter(return_index);
-					indexwriter(return_flag_index);
+					// SootMethod toCall1 = Scene.v().getMethod(
+					// 		"<invoker.sgx_invoker: void clear()>");
+					// Stmt newInvokeStmt1 = Jimple.v().newInvokeStmt(
+					// 		Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
+					// 				toCall1.makeRef(), Arrays.asList()));
+		
+					// toCall1 = Scene
+					// 		.v()
+					// 		.getMethod(
+					// 				"<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
+					// newInvokeStmt1 = Jimple.v().newInvokeStmt(
+					// 		Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
+					// 				toCall1.makeRef(), Arrays.asList(tmpOuuid)));
+					// units.insertBefore(newInvokeStmt1, currProStmt);
+					// toCall1 = Scene
+					// 		.v()
+					// 		.getMethod(
+					// 				"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+					// newInvokeStmt1 = Jimple.v().newInvokeStmt(
+					// 		Jimple.v().newVirtualInvokeExpr(
+					// 				sgxObjLocal,
+					// 				toCall1.makeRef(),
+					// 				Arrays.asList(getUUIDLocal,
+					// 						IntConstant.v(1),
+					// 						LongConstant.v(counter)))); // IntConstant.v(returnTypeIndex)));
+					// units.insertBefore(newInvokeStmt1, currProStmt);
+					// units.remove(currProStmt);
+					// counter++;
+					// --------------------
 
-					SootMethod toCall1 = Scene.v().getMethod(
-							"<invoker.sgx_invoker: void clear()>");
-					Stmt newInvokeStmt1 = Jimple.v().newInvokeStmt(
-							Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
-									toCall1.makeRef(), Arrays.asList()));
-					// 0527new solution for merging update function
-					// units.insertBefore(newInvokeStmt, currProStmt);
-					/*
-					 * toCall = Scene.v().getMethod(
-					 * "<invoker.sgx_invoker: void setCounter(long)>");
-					 * newInvokeStmt = Jimple.v().newInvokeStmt(
-					 * Jimple.v().newVirtualInvokeExpr (sgxObjLocal,
-					 * toCall.makeRef(),
-					 * Arrays.asList(LongConstant.v(counter)))); //0527new
-					 * solution for merging update function
-					 * units.insertBefore(newInvokeStmt, currProStmt);
-					 */
-					toCall1 = Scene
-							.v()
-							.getMethod(
-									"<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
-					newInvokeStmt1 = Jimple.v().newInvokeStmt(
-							Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
-									toCall1.makeRef(), Arrays.asList(tmpOuuid)));
-					units.insertBefore(newInvokeStmt1, currProStmt);
-					toCall1 = Scene
-							.v()
-							.getMethod(
-									"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
-					newInvokeStmt1 = Jimple.v().newInvokeStmt(
-							Jimple.v().newVirtualInvokeExpr(
-									sgxObjLocal,
-									toCall1.makeRef(),
-									Arrays.asList(getUUIDLocal,
-											IntConstant.v(1),
-											LongConstant.v(counter)))); // IntConstant.v(returnTypeIndex)));
-					units.insertBefore(newInvokeStmt1, currProStmt);
-					units.remove(currProStmt);
-					counter++;
+
+					// 0813 hyr
+					int currStmtType = TypeIndex(leftOpValue);
+					int rightOpIndex = typeToList(currStmtType).indexOf(rightOp);
+					int leftOpIndex = typeToList(currStmtType).indexOf(leftOpValue);
+					int rightValue = currStmtType * 1000 + rightOpIndex;	// member variable, *1000
+					int leftValue = currStmtType * 100 + leftOpIndex;	  // variable, *100
+					G.v().out.println("[hyr]currStmtType: " + currStmtType);
+					G.v().out.println("[hyr]rightOpIndex: " + rightOpIndex + "; [hyr]rightValue: " + rightValue);
+					G.v().out.println("[hyr]leftOpIndex: " + leftOpIndex + "; [hyr]leftValue: " + leftValue);
+					indexwriter("" + currStmtType);
+					indexwriter("" + (-1));
+					indexwriter("" + rightValue);
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + leftValue);
+
 					return null;
 				}
 
 			} else { // this field is not sensitive
 				G.v().out.println("this field is not sensitive !");
+				// for what?
 				Local tmpGetField = Jimple.v().newLocal(
 						"tmpGetField" + Long.toString(counter),
 						rightOp.getType());// leftOpValue
@@ -3237,72 +3248,81 @@ public class Transformer {
 					indexwriter("" + (-1));
 					indexwriter("" + leftValue);
 					return null;
-				} else {	// 这里还没有改
+				} else {
 					// this field is 1-6 type static field
-					if (identityArray.containsKey(leftOpValue)) {
-						return_index = identityArray.get(leftOpValue); // maybe "call+number"
-					} else {
-						val_type = TypeIndex(leftOpValue);// int or float
-						pos_index = typeToList(val_type).indexOf(leftOpValue);
-						return_index = Integer.toString(val_type * 100
-								+ pos_index);
-					}
+					// if (identityArray.containsKey(leftOpValue)) {
+					// 	return_index = identityArray.get(leftOpValue); // maybe "call+number"
+					// } else {
+					// 	val_type = TypeIndex(leftOpValue);// int or float
+					// 	pos_index = typeToList(val_type).indexOf(leftOpValue);
+					// 	return_index = Integer.toString(val_type * 100
+					// 			+ pos_index);
+					// }
 
-					G.v().out.println("indexWriter 2: "
-							+ Integer.toString(TypeIndex(leftOpValue)));
+					// G.v().out.println("indexWriter 2: "
+					// 		+ Integer.toString(TypeIndex(leftOpValue)));
 
-					if (!flag) {
-						indexwriter(Integer.toString(TypeIndex(leftOpValue)));
-					} else {
-						indexwriter(Integer.toString(7));
-					}
-					indexwriter(Integer.toString(symbol));// tuple-1
-					indexwriter(left_flag_index);// tuple-1
-					indexwriter(right_index);// tuple-2
-					indexwriter(right_flag_index);// tuple-2
-					indexwriter("-1");
-					indexwriter(return_index);
-					indexwriter(return_flag_index);
+					// if (!flag) {
+					// 	indexwriter(Integer.toString(TypeIndex(leftOpValue)));
+					// } else {
+					// 	indexwriter(Integer.toString(7));
+					// }
+					// indexwriter(Integer.toString(symbol));// tuple-1
+					// indexwriter(left_flag_index);// tuple-1
+					// indexwriter(right_index);// tuple-2
+					// indexwriter(right_flag_index);// tuple-2
+					// indexwriter("-1");
+					// indexwriter(return_index);
+					// indexwriter(return_flag_index);
 
-					SootMethod toCall1 = Scene.v().getMethod(
-							"<invoker.sgx_invoker: void clear()>");
-					Stmt newInvokeStmt1 = Jimple.v().newInvokeStmt(
-							Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
-									toCall1.makeRef(), Arrays.asList()));
-					// 0527new solution for merging update function
-					// units.insertBefore(newInvokeStmt, currProStmt);
-					/*
-					 * toCall = Scene.v().getMethod(
-					 * "<invoker.sgx_invoker: void setCounter(long)>");
-					 * newInvokeStmt = Jimple.v().newInvokeStmt(
-					 * Jimple.v().newVirtualInvokeExpr (sgxObjLocal,
-					 * toCall.makeRef(),
-					 * Arrays.asList(LongConstant.v(counter)))); //0527new
-					 * solution for merging update function
-					 * units.insertBefore(newInvokeStmt, currProStmt);
-					 */
-					toCall1 = Scene
-							.v()
-							.getMethod(
-									"<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
-					newInvokeStmt1 = Jimple.v().newInvokeStmt(
-							Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
-									toCall1.makeRef(), Arrays.asList(tmpCuuid)));
-					units.insertBefore(newInvokeStmt1, currProStmt);
-					toCall1 = Scene
-							.v()
-							.getMethod(
-									"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
-					newInvokeStmt1 = Jimple.v().newInvokeStmt(
-							Jimple.v().newVirtualInvokeExpr(
-									sgxObjLocal,
-									toCall1.makeRef(),
-									Arrays.asList(getUUIDLocal,
-											IntConstant.v(1),
-											LongConstant.v(counter)))); // IntConstant.v(returnTypeIndex)));
-					units.insertBefore(newInvokeStmt1, currProStmt);
-					units.remove(currProStmt);
-					counter++;
+					// SootMethod toCall1 = Scene.v().getMethod(
+					// 		"<invoker.sgx_invoker: void clear()>");
+					// Stmt newInvokeStmt1 = Jimple.v().newInvokeStmt(
+					// 		Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
+					// 				toCall1.makeRef(), Arrays.asList()));
+					
+					// toCall1 = Scene
+					// 		.v()
+					// 		.getMethod(
+					// 				"<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
+					// newInvokeStmt1 = Jimple.v().newInvokeStmt(
+					// 		Jimple.v().newVirtualInvokeExpr(sgxObjLocal,
+					// 				toCall1.makeRef(), Arrays.asList(tmpCuuid)));
+					// units.insertBefore(newInvokeStmt1, currProStmt);
+					// toCall1 = Scene
+					// 		.v()
+					// 		.getMethod(
+					// 				"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+					// newInvokeStmt1 = Jimple.v().newInvokeStmt(
+					// 		Jimple.v().newVirtualInvokeExpr(
+					// 				sgxObjLocal,
+					// 				toCall1.makeRef(),
+					// 				Arrays.asList(getUUIDLocal,
+					// 						IntConstant.v(1),
+					// 						LongConstant.v(counter)))); // IntConstant.v(returnTypeIndex)));
+					// units.insertBefore(newInvokeStmt1, currProStmt);
+					// units.remove(currProStmt);
+					// counter++;
+
+					// 0813 hyr
+					int currStmtType = TypeIndex(leftOpValue);
+					int rightOpIndex = typeToList(currStmtType).indexOf(rightOp);
+					int leftOpIndex = typeToList(currStmtType).indexOf(leftOpValue);
+					int rightValue = currStmtType * 10000 + rightOpIndex;	// static member variable, *10000
+					int leftValue = currStmtType * 100 + leftOpIndex;	  // variable, *100
+					G.v().out.println("[hyr]currStmtType: " + currStmtType);
+					G.v().out.println("[hyr]rightOpIndex: " + rightOpIndex + "; [hyr]rightValue: " + rightValue);
+					G.v().out.println("[hyr]leftOpIndex: " + leftOpIndex + "; [hyr]leftValue: " + leftValue);
+					indexwriter("" + currStmtType);
+					indexwriter("" + (-1));
+					indexwriter("" + rightValue);
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + (-1));
+					indexwriter("" + leftValue);
+
+
 					return null;
 				}
 

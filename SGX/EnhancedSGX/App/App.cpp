@@ -340,16 +340,20 @@ JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitInt
 	strncpy(uuid,uuidBuf,32);
 	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
 
-	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
-	char ouuid[33] = {0};
-	strncpy(uuid,ouuidBuf,32);
-	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
-
-
-	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
-	char cuuid[33] = {0};
-	strncpy(cuuid,cuuidBuf,32);
-	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	char* ouuid = NULL;
+	char* cuuid = NULL;
+	if(ouuidstring != NULL) {
+		const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+		char ouuid[33] = {0};
+		strncpy(ouuid,ouuidBuf,32);
+		env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+	}
+	if(cuuidstring != NULL) {
+		const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+		char cuuid[33] = {0};
+		strncpy(cuuid,cuuidBuf,32);
+		env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	}
   
 	sgx_status_t ret=encall_switch_type_get_i(global_eid,&counter,&re_get,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid);
 	// HotCall_requestCall( &hotEcall,requestedCallID4, &counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid,&re_get);
@@ -396,16 +400,20 @@ JNIEXPORT jdouble JNICALL Java_invoker_sgx_1invoker_commitDouble
 	strncpy(uuid,uuidBuf,32);
 	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
 
-	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
-	char ouuid[33] = {0};
-	strncpy(uuid,ouuidBuf,32);
-	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
-
-
-	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
-	char cuuid[33] = {0};
-	strncpy(cuuid,cuuidBuf,32);
-	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	char* ouuid = NULL;
+	char* cuuid = NULL;
+	if(ouuidstring != NULL) {
+		const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+		char ouuid[33] = {0};
+		strncpy(ouuid,ouuidBuf,32);
+		env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+	}
+	if(cuuidstring != NULL) {
+		const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+		char cuuid[33] = {0};
+		strncpy(cuuid,cuuidBuf,32);
+		env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	}
 	
 	double red=0.0;
 	
@@ -456,16 +464,20 @@ JNIEXPORT jfloat JNICALL Java_invoker_sgx_1invoker_commitFloat
 	strncpy(uuid,uuidBuf,32);
 	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
 
-	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
-	char ouuid[33] = {0};
-	strncpy(uuid,ouuidBuf,32);
-	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
-
-
-	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
-	char cuuid[33] = {0};
-	strncpy(cuuid,cuuidBuf,32);
-	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	char* ouuid = NULL;
+	char* cuuid = NULL;
+	if(ouuidstring != NULL) {
+		const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+		char ouuid[33] = {0};
+		strncpy(ouuid,ouuidBuf,32);
+		env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+	}
+	if(cuuidstring != NULL) {
+		const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+		char cuuid[33] = {0};
+		strncpy(cuuid,cuuidBuf,32);
+		env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	}
 	
 	float ref=0.0;
 	
@@ -516,16 +528,20 @@ JNIEXPORT jlong JNICALL Java_invoker_sgx_1invoker_commitLong
 	strncpy(uuid,uuidBuf,32);
 	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
 
-	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
-	char ouuid[33] = {0};
-	strncpy(uuid,ouuidBuf,32);
-	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
-
-
-	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
-	char cuuid[33] = {0};
-	strncpy(cuuid,cuuidBuf,32);
-	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	char* ouuid = NULL;
+	char* cuuid = NULL;
+	if(ouuidstring != NULL) {
+		const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+		char ouuid[33] = {0};
+		strncpy(ouuid,ouuidBuf,32);
+		env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+	}
+	if(cuuidstring != NULL) {
+		const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+		char cuuid[33] = {0};
+		strncpy(cuuid,cuuidBuf,32);
+		env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	}
 	
 	long rel=999;	
 
@@ -573,15 +589,20 @@ JNIEXPORT jchar JNICALL Java_invoker_sgx_1invoker_commitChar
 	strncpy(uuid,uuidBuf,32);
 	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
 
-	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
-	char ouuid[33] = {0};
-	strncpy(uuid,ouuidBuf,32);
-	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
-
-	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
-	char cuuid[33] = {0};
-	strncpy(cuuid,cuuidBuf,32);
-	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	char* ouuid = NULL;
+	char* cuuid = NULL;
+	if(ouuidstring != NULL) {
+		const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+		char ouuid[33] = {0};
+		strncpy(ouuid,ouuidBuf,32);
+		env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+	}
+	if(cuuidstring != NULL) {
+		const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+		char cuuid[33] = {0};
+		strncpy(cuuid,cuuidBuf,32);
+		env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	}
 
 	char rec=NULL;
 	
@@ -629,15 +650,20 @@ JNIEXPORT jbyte JNICALL Java_invoker_sgx_1invoker_commitByte
 	strncpy(uuid,uuidBuf,32);
 	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
 
-	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
-	char ouuid[33] = {0};
-	strncpy(uuid,ouuidBuf,32);
-	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
-
-	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
-	char cuuid[33] = {0};
-	strncpy(cuuid,cuuidBuf,32);
-	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	char* ouuid = NULL;
+	char* cuuid = NULL;
+	if(ouuidstring != NULL) {
+		const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+		char ouuid[33] = {0};
+		strncpy(ouuid,ouuidBuf,32);
+		env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+	}
+	if(cuuidstring != NULL) {
+		const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+		char cuuid[33] = {0};
+		strncpy(cuuid,cuuidBuf,32);
+		env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	}
 
 	char reb=NULL;
 
@@ -666,7 +692,7 @@ JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitBranch
 	
 	if(env -> MonitorEnter(obj)!= JNI_OK)
 		printf("branch enter wrong \n");
-
+	printf("----enter Java_invoker_sgx_1invoker_commitBranch()-----\n");
 	brnum++;
 
 	if(intTail > 0){
@@ -733,19 +759,26 @@ JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitBranch
 	strncpy(uuid,uuidBuf,32);
 	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
 
-	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
-	char ouuid[33] = {0};
-	strncpy(uuid,ouuidBuf,32);
-	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
-
-	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
-	char cuuid[33] = {0};
-	strncpy(cuuid,cuuidBuf,32);
-	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	char* ouuid = NULL;
+	char* cuuid = NULL;
+	if(ouuidstring != NULL) {
+		const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+		char ouuid[33] = {0};
+		strncpy(ouuid,ouuidBuf,32);
+		env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+	}
+	if(cuuidstring != NULL) {
+		const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+		char cuuid[33] = {0};
+		strncpy(cuuid,cuuidBuf,32);
+		env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	}
   
 	sgx_status_t ret=encall_switch_type_branch(global_eid,&counter,&re,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid);
 	//HotCall_requestCall( &hotEcall,requestedCallID, &counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid,&re);
-
+	
+	printf("ret=%d", ret);
+	printf("re=%d", re);
 	if(intTail > 0){
 		delete[] intArray;
 	}
@@ -778,6 +811,7 @@ JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitUpdate
 		printf("update enter wrong \n");
 
 	unum++;
+	printf("-----enter Java_invoker_sgx_1invoker_commitUpdate()-----\n");
 
 	// int* intArray = NULL;
 	// double* doubleArray = NULL;
@@ -851,20 +885,27 @@ JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitUpdate
 	strncpy(uuid,uuidBuf,32);
 	env->ReleaseStringUTFChars(uuidstring,uuidBuf);
 
-	const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
-	char ouuid[33] = {0};
-	strncpy(uuid,ouuidBuf,32);
-	env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
-
-	const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
-	char cuuid[33] = {0};
-	strncpy(cuuid,cuuidBuf,32);
-	env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	char* ouuid = NULL;
+	char* cuuid = NULL;
+	if(ouuidstring != NULL) {
+		const char* ouuidBuf = env->GetStringUTFChars(ouuidstring, false);
+		char ouuid[33] = {0};
+		strncpy(ouuid,ouuidBuf,32);
+		env->ReleaseStringUTFChars(ouuidstring,ouuidBuf);
+	}
+	if(cuuidstring != NULL) {
+		const char* cuuidBuf = env->GetStringUTFChars(cuuidstring, false);
+		char cuuid[33] = {0};
+		strncpy(cuuid,cuuidBuf,32);
+		env->ReleaseStringUTFChars(cuuidstring,cuuidBuf);
+	}
   
   	// [hyr]0814 暂时不用hotcall
 	sgx_status_t ret=encall_switch_type_update(global_eid,&counter,&re,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid);
 	// HotCall_requestCall( &hotEcall,requestedCallID3,&counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,charArray,charTail,longArray,longTail,byteArray,byteTail,uuid,ouuid,cuuid,&reu);
 	printf("update over\n");
+	printf("re=%d\n", re);
+	printf("ret=%d\n", ret);
 	
 	if(intTail > 0){
 		delete[] intArray;
@@ -885,8 +926,7 @@ JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitUpdate
 	if(byteTail > 0){
 		delete[] byteArray;
 	}
-	
-	re = reu;	
+		
 	if(env -> MonitorExit(obj)!= JNI_OK)
 		printf("update exit wrong \n");
 
@@ -896,8 +936,9 @@ JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitUpdate
 
 JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_initValue
   (JNIEnv *env, jclass obj,jstring uuidstring,jstring calluuidstring, jlong lineno){
+	
 	//hashmap insert
-
+	printf("-----enter Java_invoker_sgx_1invoker_initValue()-----\n");
 	if(env -> MonitorEnter(obj)!= JNI_OK)
 		printf("initvalue enter wrong \n");
 

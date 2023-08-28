@@ -7,98 +7,48 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+
 public class sgx_invoker{
-	//public native int varargsMethod( int... no,float... fl,double... dl,long... lo );
   	public static final int N=20;
-  	//public static final int Temp=100;
+  	// public static final int Temp=100;
 	public static native int print_ms();
 	public static native int init();
 	public static native int destroy();
-	public static native int commitInt(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid);
-	public static native float commitFloat(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid);
-	public static native double commitDouble(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid);
-	public static native char commitChar(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid);
-	public static native byte commitByte(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid);
-	public static native long commitLong(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid);
-	public static native int commitBranch(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid);
-	public static native int commitUpdate(long counter, int[] intArray,int intTail, double[] doubleArray,int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray, int charTail,byte[] byteArray,int byteTail, String uuid);
-
+	// get
+	public static native int commitInt(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid, String ouuid, String cuuid);
+	public static native float commitFloat(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid, String ouuid, String cuuid);
+	public static native double commitDouble(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid, String ouuid, String cuuid);
+	public static native char commitChar(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid, String ouuid, String cuuid);
+	public static native byte commitByte(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid, String ouuid, String cuuid);
+	public static native long commitLong(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid, String ouuid, String cuuid);
 	public static native int[] commitIntArray(long counter,String uuid);
 	public static native double[] commitDoubleArray(long counter,String uuid);
 	public static native byte[] commitByteArray(long counter,String uuid);
+	// branch
+	public static native int commitBranch(long counter, int[] intArray, int intTail, double[] doubleArray, int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray,int charTail, byte[] byteArray,int byteTail, String uuid, String ouuid, String cuuid);
+	// update
+	public static native int commitUpdate(long counter, int[] intArray,int intTail, double[] doubleArray,int doubleTail,float[] floatArray, int floatTail, long[] longArray, int longTail, char[] charArray, int charTail,byte[] byteArray,int byteTail, String uuid, String ouuid, String cuuid);
 	
-	public static native int commitUpdateMutliArray(long counter,String uuid,String cuuid);
-
 	public static native int initValue(String uuid,String calluuid,long LineNo);
-	public static native int deleteValue(String uuid,String cuuid,long status);
-	
-	public static native void initArray(String uuid,int index,int size,int isSens);
-	
+	public static native int deleteValue(String uuid,String ouuid,long status);
+	public static native void initNode(String uuid,int type,int size);
     
+    // 原方案
+	// public static native void initArray(String uuid,int index,int size,int isSens);
+	// public static native int commitUpdateMutliArray(long counter,String uuid,String cuuid);
 	
 	static {
 		try{
-//			System.out.println("invoker"+System.getProperty("java.library.path"));
+			System.out.println("invoker: "+ System.getProperty("java.library.path"));
 			System.loadLibrary("SGX");
 		}
 		catch (Exception e) {
-			// TODO Auto-generated catch block
-			System.out.println("invoker"+System.getProperty("java.library.path"));
+			System.out.println("invoker: " + System.getProperty("java.library.path"));
 			e.printStackTrace();
 		}
 	} 
 	
-	/*public static class TempUpdate {
-	    long Counter;
-	    int[] IntArray;
-	    double[] DoubleArray;
-	    float[] FloatArray;
-	    long[] LongArray;
-	    char[] CharArray;
-	    byte[] ByteArray;
-	    
-	    int inttail;
-	    int doubletail;
-	    int floattail;
-	    int longtail;
-	    int chartail;
-	    int bytetail;
-	    
-	    String uuid;
-	    public TempUpdate(long Counter,int[] IntArray,double[] DoubleArray,
-	    		float[] FloatArray,long[] LongArray,char[] CharArray,byte[] ByteArray,int inttail,
-	    		int doubletail,int floattail, int longtail,int chartail, int bytetail,String uuid){
-	    	this.Counter = Counter;
-	    	this.IntArray = IntArray;
-	    	this.DoubleArray = DoubleArray;
-	    	this.FloatArray = FloatArray;
-	    	this.LongArray = LongArray;
-	    	this.CharArray = CharArray;
-	    	this.ByteArray = ByteArray;
-	    	
-	    	this.inttail = inttail;
-	    	this.doubletail = doubletail;
-	    	this.floattail = floattail;
-	    	this.longtail = longtail;
-	    	this.chartail = chartail;
-	    	this.bytetail = bytetail;
-	    	
-	    	this.uuid = uuid;
-	    }
-	}
 
-	//public static List<TempUpdate> tempUpdatesList = new ArrayList<>();
-    //TODO: may potentially reduce the performance, can be improved later
-	//ArrayList<Object> objects = null;
-	
-	long[] counterArr = new long[10];
-	int[] temintarray = new int[Temp];
-	double[] temdoublearray = new double[Temp];
-	float[] temfloatarray = new float[Temp];
-	char[] temchararray = new char[Temp];
-	long[] temlongarray = new long[Temp];
-	byte[] tembytearray = new byte[Temp];
-*/
 	int[] intArray = new int[N];
 	int intTail = 0;
 	
@@ -139,22 +89,15 @@ public class sgx_invoker{
 	int size_b=0;
 	
 	long counter = -1;
+
+	// 0719[hyr] add ouuid, cuuid 
+	String ouuid = null;
 	String cuuid = null;
 	//long invokecounter = -1;
-	//static SnowFlake snowFlake = new SnowFlake(2, 3);
 	public void sgx_invoker(){
 		
 		//objects = new ArrayList<Object>();
 	}
-	
-	//long time_init = 0;
-	//long time_update = 0;
-	//long time_get = 0;
-	//long time_branch = 0;
-	//long time_delete = 0;
-	
-	//static long request = 1;
-	//static long hitNum = 0;
 	
 	public void clear(){
 		intTail = 0;
@@ -246,179 +189,119 @@ public class sgx_invoker{
 	public void add(byte[][] o){
 		
 	}
+	public void add(int[][][] o){
+	}
+	public void add(double[][][] o){
+	}
+	public void add(float[][][] o){
+	}
+	public void add(char[][][] o){
+	}
+	public void add(long[][][] o){
+	}
+	public void add(byte[][][] o){	
+	}
 	
 	public void setCounter(long counter){
 		this.counter = counter;
 	}
-	
-	public void setCuuid(String uuid){
-		this.cuuid = uuid;
+
+	// 0719[hyr] 这两个函数是插入ouuid和cuuid的一种手段，但如果重构了updateValueInEnclave等函数，参数中添加ouuid和cuuid，这两个函数或许也可以删除
+	public void setOuuid(String ouuid){
+		this.ouuid = ouuid;
+	}
+
+	public void setCuuid(String cuuid){
+		this.cuuid = cuuid;
+	}
+
+	public void clearOuuid(){
+		this.ouuid = null;
+	}
+
+	public void clearCuuid(){
+		this.cuuid = null;
 	}
 	
-//	public void setInvokeCounter(long counter){
-//		this.invokecounter = counter;
-//	}
 	
 	public boolean initenclave(){
-		//System.out.println("init in java");
+		System.out.println("----enter initenclave()----");
 		//init_total++;
-		if(1==init())
-		return true;
-		else
-		return false;
+		if(1==init()) return true;
+		else return false;
 	}
 	
 	public boolean closeenclave(){
-	
-		if(0==destroy())
-		return true;
-		else
-		return false;
-		
+		System.out.println("----enter closeenclave()----");
+		if(0==destroy()) return true;
+		else return false;
 	}
 	
 	public java.lang.String getUUID() {
 		String idsString = UUID.randomUUID().toString().replace("-", "").toLowerCase();
-		//System.out.println(idsString);
+		System.out.println(idsString);
 		return idsString;
 	}
 	
-	//新的生成uuid方法
-//		public java.lang.String getUUID() {
-//			
-//			//System.out.println("cominnnnnnnnnnnnnnnnnnnnnnnnnng");
-//			//String idsString = String.valueOf(snowFlake.nextId());
-//			//System.out.println(idsString);
-//			//return idsString;
-//			return String.valueOf(SnowFlake.nextId());
-//		}
+	// 原方案
+	// public void initArrayInEnclave(String uuid, int index, int size, int isSens){
+	// 	System.out.println("----enter initArray()----");
+	// 	initArray(uuid, index, size, isSens);
+	// }
 	
-	/*public void loadTempTail(int index,TempUpdate t){
-		if (t.inttail>0) {
-			for (int i = 0; i < t.inttail; i++) {
-				temintarray[index*10+i] = t.IntArray[i];
-				inttailT = 1;
-			}
-		}
-		if (t.doubletail>0) {
-			for (int i = 0; i < t.doubletail; i++) {
-				temdoublearray[index*10+i] = t.DoubleArray[i];
-				doubletailT = 1;
-			}
-		}
-		if (t.floattail>0) {
-			for (int i = 0; i < t.floattail; i++) {
-				temfloatarray[index*10+i] = t.FloatArray[i];
-				floattailT = 1;
-			}
-		}
-		if (t.longtail>0) {
-			for (int i = 0; i < t.longtail; i++) {
-				temlongarray[index*10+i] = t.LongArray[i];
-				longtailT = 1;
-			}
-		}
-		if (t.chartail>0) {
-			for (int i = 0; i < t.chartail; i++) {
-				temchararray[index*10+i] = t.CharArray[i];
-				chartailT = 1;
-			}
-		}
-		if (t.bytetail>0) {
-			for (int i = 0; i < t.bytetail; i++) {
-				tembytearray[index*10+i] = t.ByteArray[i];
-				bytetailT = 1;
-			}
-		}
-	}
-	*/
+	//add gpf
+	public void initNodeInEnclave(String uuid, int type, int size){
+		System.out.println("----enter initNode()----");
+ 		//7: int type array  8: double type array
+		initNode(uuid, type, size);
 	
-	/**
-	 * new solution for array init
-	 * @param uuid
-	 * @param index
-	 * @param size
-	 * @return
-	 */
-	public void initArrayInEnclave(String uuid,int index,int size,int isSens){
-		
-		initArray(uuid,index,size,isSens);
 	}
 	
-	
-	
-	@SuppressWarnings("null")
-	public boolean initValueInEnclave(String uuid,String calluuid,long LineNO){
-		/*if (!tempUpdatesList.isEmpty()) {
-			int index = 0;
-			
-			//String uuidList = new String();
-			for(TempUpdate t:tempUpdatesList){
-				counterArr[index] = t.Counter;
-				//uuidT = t.uuid;
-				loadTempTail(index, t);
-				index++;
-			}
-			
-			int ret = commitUpdate(counterArr,temintarray,inttailT,temdoublearray,doubletailT,temfloatarray,floattailT,
-					temlongarray,longtailT,temchararray,chartailT,tembytearray,bytetailT,tempUpdatesList.get(0).uuid,tempUpdatesList.size());
-			tempUpdatesList.clear();
-		}*/
-		
+	public boolean initValueInEnclave(String uuid, String calluuid, long LineNO){
 		//System.out.println("uuid="+uuid);
-		if(1==initValue(uuid,calluuid,LineNO)){
-			//System.out.println("initvalue true=");
+		if(1==initValue(uuid, calluuid, LineNO)){
+			System.out.println("----initValue true----");
 			return true;
 		}
 		
-		else
-			//initvaluefalse++;
-		    //System.out.println("initvalue false=");
+		else{
+			System.out.println("----initValue true----");
 			return false;
+		}
 	}
 	
-	public boolean deleteValueInEnclave(String getuuid,String cuuid,long status){
-		/*if (!tempUpdatesList.isEmpty()) {
-			int index = 0;
-			for(TempUpdate t:tempUpdatesList){
-				counterArr[index] = t.Counter;
-				loadTempTail(index, t);
-				index++;
-			}
-			int ret = commitUpdate(counterArr,temintarray,inttailT,temdoublearray,doubletailT,temfloatarray,floattailT,
-					temlongarray,longtailT,temchararray,chartailT,tembytearray,bytetailT,tempUpdatesList.get(0).uuid,tempUpdatesList.size());
-			tempUpdatesList.clear();
-		}*/
-
-		//System.out.println("[invoke] status:"+status);
-		if(1==deleteValue(getuuid,cuuid,status)){
+	// [hyr]0814 TODO cuuid? 这里cuuid是从java接收的，还需要再进一步处理
+	public boolean deleteValueInEnclave(String getuuid, String getouuid, long status){
+		System.out.println("status: " + status);
+		if(1==deleteValue(getuuid, getouuid, status)){
+			System.out.println("----deleteValue true----");
 			return true;
 		}
-		else
+		else{
+			System.out.println("----deleteValue false----");
 			return false;
+		}
 	}
 	
-	
-	public void updateValueInEnclave(String uuid,int status,long counter){
+	// update(getUUID, 0L)	status->maybe to identify uuid/cuuid
+	public void updateValueInEnclave(String uuid, int status, long counter){
 		//edit 20210526gxc merge continuous update function
-		
-		
-		//System.out.println("update stmt==========counter==="+counter);
-		
+
+		System.out.println("----enter commitUpdate()----");
 		int ret = -1;
 		if (status == 0) {
 			ret = commitUpdate(counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,
-					longArray,longTail,(cuuid==null)?charArray:cuuid.toCharArray(),(cuuid==null)?charTail:cuuid.toCharArray().length,byteArray,byteTail,uuid);
+					longArray,longTail,charArray,charTail,byteArray,byteTail,uuid,ouuid,cuuid);
+			System.out.println("status: " + status);
 		}else if (status == 1) {
 			int[] newi = new int[size_i];
 			double [] newd = new double[size_d];
 			float [] newf = new float[size_f];
-			//char [] newc = new char[size_c];
+			char [] newc = new char[size_c];
 			long [] newl = new long[size_l];
 			byte [] newb = new byte[size_b];
 			
 			for (int i = 0; i < size_i; i++) {
-				//System.out.println("[SGXinvoke]iarr["+i+"]:"+iarr[i]);
 				newi[i] = iarr[i];
 			}
 			for (int i = 0; i < size_d; i++) {
@@ -427,108 +310,132 @@ public class sgx_invoker{
 			for (int i = 0; i < size_f; i++) {
 				newf[i] = farr[i];
 			}
-//			for (int i = 0; i < size_c; i++) {
-//				newc[i] = carr[i];
-//			}
+			for (int i = 0; i < size_c; i++) {
+				newc[i] = carr[i];
+			}
 			for (int i = 0; i < size_l; i++) {
 				newl[i] = larr[i];
 			}
 			for (int i = 0; i < size_b; i++) {
 				newb[i] = barr[i];
 			}
+			// [hyr]cuuid不放在char数组中，但注意initVaule中在用到hotcall_request函数时，calluuid是放在char数组中的
 			ret = commitUpdate(counter,newi,size_i,newd,size_d,newf,size_f,
-					newl,size_l,(cuuid==null)?charArray:cuuid.toCharArray(),(cuuid==null)?charTail:cuuid.toCharArray().length,newb,size_b,uuid);
+					newl,size_l,newc,size_c,newb,size_b,uuid,ouuid,cuuid);
+			System.out.println("status: " + status);
 		}
 		
 		if (ret != 1000) {
-			System.out.println("update wrong:"+ret);
+			System.out.println("update wrong: " + ret);
 		}
 		clear();
 	}
 	
+	// 原方案
+	// public void updateMultArray(String uuid, int width, int high, long counter) {
+	// 	System.out.println("----enter commitUpdateMutliArray()----");
+	// 	commitUpdateMutliArray(counter, uuid, cuuid);
+	// 	clear();
+	// }
 	
-	public void updateMultArray(String uuid,int width,int high,long counter) {
-		commitUpdateMutliArray(counter,uuid,cuuid);
-	}
-	
-	public boolean getBooleanValue(String uuid,long counter){ 
-		//clear();
-		//System.out.println("branch stmt==========counter==="+counter);
-		/*if (!tempUpdatesList.isEmpty()) {
-			//System.out.println("update exe in branch size:"+tempUpdatesList.size());
-			int index = 0;
-			for(TempUpdate t:tempUpdatesList){
-				counterArr[index] = t.Counter;
-				loadTempTail(index, t);
-				index++;
-			}
-			int ret = commitUpdate(counterArr,temintarray,inttailT,temdoublearray,doubletailT,temfloatarray,floattailT,
-					temlongarray,longtailT,temchararray,chartailT,tembytearray,bytetailT,tempUpdatesList.get(0).uuid,tempUpdatesList.size());
-			tempUpdatesList.clear();
-		}*/
-		
+	public boolean getBooleanValue(String uuid, long counter){ 
 		int ret = -1;
-		ret = commitBranch(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail,uuid);
+		ret = commitBranch(counter, intArray, intTail, doubleArray, doubleTail, floatArray, floatTail, longArray, longTail, charArray, charTail, byteArray, byteTail, uuid, ouuid, cuuid);
 		if(ret == 1){
-			//System.out.println("get is okay!");
+			System.out.println("----commitBranch true----");
 			clear();
 			return true;
 		}else if(ret == 0){
+			System.out.println("----commitBranch false----");
 			clear();
 			return false;
 		}else{
 			//throw new Exception("error");
-			System.out.println("branch ret:"+ret);
+			System.out.println("branch ret: " + ret);
 			System.out.println("branch error");
-			System.out.println("ret");
 			System.exit(1);
 		}
 		clear();
 		return false;
 	}
-	public int getIntValue(String uuid,int status,long counter){ 
-		//System.out.println("get stmt==========counter==="+counter);
-		/*if (!tempUpdatesList.isEmpty()) {
-			int index = 0;
-			for(TempUpdate t:tempUpdatesList){
-				counterArr[index] = t.Counter;
-				loadTempTail(index, t);
-				index++;
-			}
-			int ret = commitUpdate(counterArr,temintarray,inttailT,temdoublearray,doubletailT,temfloatarray,floattailT,
-					temlongarray,longtailT,temchararray,chartailT,tembytearray,bytetailT,tempUpdatesList.get(0).uuid,tempUpdatesList.size());
-			tempUpdatesList.clear();
-		}*/
 
+
+	public int getIntValue(String getuuid, int status, long counter){ 
+		System.out.println("----enter getIntValue()----");
 		int ret = -1;
-		
-		ret = commitInt(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail,uuid);
-		//System.out.println("get ret in jni:"+ret);
+		ret = commitInt(counter, intArray, intTail, doubleArray, doubleTail, floatArray, floatTail, longArray, longTail, charArray, charTail, byteArray, byteTail, getuuid, ouuid, cuuid);
+		System.out.println("ret: " + ret);
 		clear();
 		return ret;
 	}
 	
-	public int[] getIntArray(String uuid,int status,long counter){ 
+	public double getDoubleValue(String getuuid, int status, long counter){ 
+		System.out.println("----enter getDoubleValue()----");
+		double ret = -1;
+		ret = commitDouble(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail,getuuid,ouuid,cuuid);
+		clear();
+		return ret;
+	}
+
+	
+	public float getFloatValue(String getuuid,int status,long counter){
+		System.out.println("----enter getFloatValue()----"); 
+		float ret = -1;
+		//ret = commitFloat(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail,getuuid,ouuid,cuuid);
+		clear();
+		return ret;
+	
+	}
+
+	public char getCharValue(String getuuid, int status, long counter){
+		System.out.println("----enter getCharValue()----"); 
+		char ret = 0;
+		//ret = commitChar(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail,getuuid,ouuid,cuuid);
+		clear();
+		return ret;
+	}
+	
+	public long getLongValue(String getuuid,int status,long counter){ 
+		System.out.println("----enter getLongValue()----");
+		long ret = -1;
+		ret = commitLong(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail,getuuid,ouuid,cuuid);
+		clear();
+		return ret;
+	
+	}
+
+	public byte getByteValue(String getuuid,int status,long counter){ 
+		System.out.println("----enter getByteValue()----");
+		byte ret=0;
+		//ret = commitByte(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail,getuuid,ouuid,cuuid);
+		clear();
+		return ret;
+	}
+
+	public int[] getIntArray(String uuid, int status, long counter){ 
 		
 		int[] ret;
+		System.out.println("----enter getIntArray()----");
 		if (status==1) {
-			//System.out.println("[invoke]cuuid:"+cuuid);
-			ret = commitIntArray(counter,cuuid);
+			System.out.println("cuuid: "+ cuuid + "; status: " + status);
+			ret = commitIntArray(counter, cuuid);
 		}else {
-			ret = commitIntArray(counter,uuid);
+			System.out.println("uuid: "+ uuid + "; status: " + status);
+			ret = commitIntArray(counter, uuid);
 		}
-		//System.out.println("[invoke]get success!");
-		//System.out.println("[invoke i]"+Arrays.toString(ret));
 		clear();
 		return ret;
 	}
 	
-	public double[] getDoubleArray(String uuid,int status,long counter){ 
+	public double[] getDoubleArray(String uuid, int status, long counter){ 
 		
 		double[] ret;
+		System.out.println("----enter getDoubleArray()----");
 		if (status==1) {
+			System.out.println("cuuid: "+ cuuid + "; status: " + status);
 			ret = commitDoubleArray(counter, cuuid);
 		}else{
+			System.out.println("uuid: "+ uuid + "; status: " + status);
 			ret = commitDoubleArray(counter, uuid);
 		}
 		clear();
@@ -538,49 +445,13 @@ public class sgx_invoker{
 	public byte[] getByteArray(String uuid,int status,long counter){ 
 		
 		byte[] ret;
+		System.out.println("----enter getByteArray()----");
 		
 		ret = commitByteArray(counter, uuid);
 		clear();
 		return ret;
 	}
 
-	public float getFloatValue(String getuuid,int status,long counter){ 
-		float ret = -1;
-		//ret = commitFloat(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail);
-		clear();
-		return ret;
-	
-	}
-
-	public double getDoubleValue(String getuuid,int status,long counter){ 
-		
-		double ret = -1;
-		ret = commitDouble(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail,getuuid);
-		clear();
-		return ret;
-	}
-
-	public char getCharValue(String getuuid,int status,long counter){ 
-		char ret=0;
-		//ret = commitChar(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail);
-		clear();
-		return ret;
-	}
-	
-	public long getLongValue(String getuuid,int status,long counter){ 
-		long ret = -1;
-		ret = commitLong(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail,getuuid);
-		clear();
-		return ret;
-	
-	}
-
-	public byte getByteValue(String getuuid,int status,long counter){ 
-		byte ret=0;
-		//ret = commitByte(counter, intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,longArray,longTail,charArray,charTail,byteArray,byteTail);
-		clear();
-		return ret;
-	}
 	
 	
 }

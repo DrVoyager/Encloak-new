@@ -12,10 +12,10 @@ public class BinarySearch {
 		for(int i=0;i<100;i++){//1000000
 			src[i] = i;
         }
-		int x=binarySearch(src, 1);
+		int x=binarySearch(src, 88);
 		//x=binarySearch(src, 49);
 	
-        System.out.println(x);//490000
+        System.out.println("X=" + x);//490000
         //System.out.println(binarySearch(src,3,0,src.length-1));
     }
 

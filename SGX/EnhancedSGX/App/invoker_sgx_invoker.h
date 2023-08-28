@@ -36,66 +36,50 @@ JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_destroy
 /*
  * Class:     invoker_sgx_invoker
  * Method:    commitInt
- * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;)I
+ * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)I
  */
 JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitInt
-  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring);
+  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring, jstring, jstring);
 
 /*
  * Class:     invoker_sgx_invoker
  * Method:    commitFloat
- * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;)F
+ * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)F
  */
 JNIEXPORT jfloat JNICALL Java_invoker_sgx_1invoker_commitFloat
-  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring);
+  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring, jstring, jstring);
 
 /*
  * Class:     invoker_sgx_invoker
  * Method:    commitDouble
- * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;)D
+ * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)D
  */
 JNIEXPORT jdouble JNICALL Java_invoker_sgx_1invoker_commitDouble
-  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring);
+  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring, jstring, jstring);
 
 /*
  * Class:     invoker_sgx_invoker
  * Method:    commitChar
- * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;)C
+ * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)C
  */
 JNIEXPORT jchar JNICALL Java_invoker_sgx_1invoker_commitChar
-  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring);
+  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring, jstring, jstring);
 
 /*
  * Class:     invoker_sgx_invoker
  * Method:    commitByte
- * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;)B
+ * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)B
  */
 JNIEXPORT jbyte JNICALL Java_invoker_sgx_1invoker_commitByte
-  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring);
+  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring, jstring, jstring);
 
 /*
  * Class:     invoker_sgx_invoker
  * Method:    commitLong
- * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;)J
+ * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL Java_invoker_sgx_1invoker_commitLong
-  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring);
-
-/*
- * Class:     invoker_sgx_invoker
- * Method:    commitBranch
- * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;)I
- */
-JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitBranch
-  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring);
-
-/*
- * Class:     invoker_sgx_invoker
- * Method:    commitUpdate
- * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;)I
- */
-JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitUpdate
-  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring);
+  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring, jstring, jstring);
 
 /*
  * Class:     invoker_sgx_invoker
@@ -123,11 +107,19 @@ JNIEXPORT jbyteArray JNICALL Java_invoker_sgx_1invoker_commitByteArray
 
 /*
  * Class:     invoker_sgx_invoker
- * Method:    commitUpdateMutliArray
- * Signature: (JLjava/lang/String;Ljava/lang/String;)I
+ * Method:    commitBranch
+ * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)I
  */
-JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitUpdateMutliArray
-  (JNIEnv *, jclass, jlong, jstring, jstring);
+JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitBranch
+  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring, jstring, jstring);
+
+/*
+ * Class:     invoker_sgx_invoker
+ * Method:    commitUpdate
+ * Signature: (J[II[DI[FI[JI[CI[BILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)I
+ */
+JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_commitUpdate
+  (JNIEnv *, jclass, jlong, jintArray, jint, jdoubleArray, jint, jfloatArray, jint, jlongArray, jint, jcharArray, jint, jbyteArray, jint, jstring, jstring, jstring);
 
 /*
  * Class:     invoker_sgx_invoker
@@ -144,14 +136,6 @@ JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_initValue
  */
 JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_deleteValue
   (JNIEnv *, jclass, jstring, jstring, jlong);
-
-/*
- * Class:     invoker_sgx_invoker
- * Method:    initArray
- * Signature: (Ljava/lang/String;III)V
- */
-JNIEXPORT void JNICALL Java_invoker_sgx_1invoker_initArray
-  (JNIEnv *, jclass, jstring, jint, jint, jint);
 
 /*
  * Class:     invoker_sgx_invoker

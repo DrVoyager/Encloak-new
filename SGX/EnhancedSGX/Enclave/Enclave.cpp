@@ -1291,7 +1291,7 @@ void encall_initArray(char* uuid,int index,int size,int isSens){
 // 初始化数组节点
 void encall_initNode(char* uuid,int type,int size){
 
-	printf("----------enter encall_initNode()----------\n");
+	//printf("----------enter encall_initNode()----------\n");
 
 	ArrayNode2* node=hashmapArray2.find(uuid);
 	if(node==NULL){
@@ -1374,9 +1374,9 @@ void encall_switch_type_get_i(void* data,void* rei,int* int_array,int int_tail,d
 
 // 处理
 void encall_switch_type_branch(void* data,void* rei,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid, char* ouuid, char* cuuid) {
-
+	//printf("----------enter encall_switch_type_branch()----------\n");
 	long *data1 = (long*)data;
-    long Line = *data1;
+    	long Line = *data1;
 	int return_flag = -1;
 
 
@@ -1397,8 +1397,10 @@ void encall_switch_type_branch(void* data,void* rei,int* int_array,int int_tail,
 }
 
 void encall_switch_type_update(void* data,void* rei,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid, char* ouuid, char* cuuid) {
+
+	//printf("----------enter encall_switch_type_update()----------\n");
 	long *data1 = (long*)data;
-    long Line = *data1;
+    	long Line = *data1;
 	int return_flag = -1;
 	
 	int numbers = mymap[Line];
@@ -1497,8 +1499,8 @@ void encall_switch_type_update(void* data,void* rei,int* int_array,int int_tail,
 //----------------------------------------------------------------------------------------------------------
 // [hyr]0723 add parameters ouuid, cuuid
 int print_int(long Line, int* int_array, char* uuid, char* ouuid, char* cuuid)
-{
-	
+{	
+	printf("----------enter print_int()----------\n");
 	Table_meta meta=get_table_meta(Line);
 
 	int p1 = meta.p1;
@@ -1511,6 +1513,9 @@ int print_int(long Line, int* int_array, char* uuid, char* ouuid, char* cuuid)
 
 	int return_flag = -999;
 	int para1, para2;
+	
+	printf("p1=%d; p1_i=%d; p2=%d; p2_i=%d; op=%d; para_name=%d; para_i=%d\n",p1,p1_i,p2,p2_i,op,para_name,para_i);
+
 	
 
 	// return statement replacce! 0509
@@ -1531,10 +1536,12 @@ int print_int(long Line, int* int_array, char* uuid, char* ouuid, char* cuuid)
 	
 	// hyr 0723 modified
 	if (p1 < 0 && hash_index[0-p1] != 0) { //consants
+		printf("p1 is constant\n");
 		para1 = hash_int[0-p1];
 	} else if (p1 < 10 && p1 >=0) { //list(for what)
 		para1 = int_array[p1];
 	} else if (p1 >= 100 && p1 < 200) { // sensitive variables
+		printf("p1 is sensitive variable\n");
 		para1 = hashmap.find(uuid)->v_int[p1 - 100];
 	} else if (p1 >= 1000 && p1 < 2000 && ouuid != NULL) { // sensitive member variables
 		para1 = hashmapMemberVariables.find(ouuid)->v_int[p1 - 1000];
@@ -1546,10 +1553,12 @@ int print_int(long Line, int* int_array, char* uuid, char* ouuid, char* cuuid)
 	
 	
 	if (p2 < 0 && hash_index[0-p2] != 0) { //consants
+		printf("p2 is constant\n");
 		para2 = hash_int[0-p2];
 	} else if (p2 < 10 && p2 >=0) { //list(for what)
 		para2 = int_array[p2];
 	} else if (p2 >= 100 && p2 < 200) { // sensitive variables
+		printf("p2 is sensitive variable\n");
 		para2 = hashmap.find(uuid)->v_int[p2 - 100];
 	} else if (p2 >= 1000 && p2 < 2000 && ouuid != NULL) { // sensitive member variables
 		para2 = hashmapMemberVariables.find(ouuid)->v_int[p2 - 1000];
@@ -1558,7 +1567,6 @@ int print_int(long Line, int* int_array, char* uuid, char* ouuid, char* cuuid)
 	} else {
 		printf("[hyr]error, unkonwn type!");
 	}
-
 
 	switch (op) {
 		case -1:return_flag = para1;break;
@@ -1581,7 +1589,9 @@ int print_int(long Line, int* int_array, char* uuid, char* ouuid, char* cuuid)
 		case 17:return_flag = (unsigned int)para1 >> para2;break;
 		default:return_flag = -11;
 	}
-
+	printf("para1=%d\n", para1);
+	printf("para2=%d\n", para2);
+	printf("return_flag=%d\n", return_flag);
 	if (para_name >= 100 && para_name < 200) { // int type variable, Typeindex(while int, its value equals 1) * 100 + position
 		hashmap.find(uuid)->v_int[para_name - 100] = return_flag;
 	} else if (para_name >= 1000 && para_name < 2000 && ouuid != NULL) { // int type member variable, Typeindex * 1000 + position
@@ -1593,6 +1603,7 @@ int print_int(long Line, int* int_array, char* uuid, char* ouuid, char* cuuid)
 			}
 		}
 		hashmapMemberVariables.find(ouuid)->v_int[para_name - 1000] = return_flag;
+		return_flag = 1000;
 	} else if (para_name >= 10000 && para_name < 20000 && cuuid != NULL) { // int type static memebr variable, *10000 + position
 		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
 			// init
@@ -1602,8 +1613,9 @@ int print_int(long Line, int* int_array, char* uuid, char* ouuid, char* cuuid)
 			}
 		}
 		hashmapStaticMemberVariables.find(cuuid)->v_int[para_name - 10000] = return_flag;
+		return_flag = 1000;
 	}
-	return_flag = 1000;
+	
 	return return_flag;
 
 }
@@ -1651,6 +1663,7 @@ int print_array_d(long Line, double* double_array,int double_tail,char* uuid, ch
 	
 	// printf("uuid=%s\n",uuid);
 	// printf("cuuid=%s\n",cuuid);
+	printf("----------enter print_array_d()----------\n");
 	Table_meta meta=get_table_meta(Line);
 	int type=meta.type;
 	int p1 = meta.p1;
@@ -2035,7 +2048,8 @@ int print_array_d(long Line, double* double_array,int double_tail,char* uuid, ch
 	
 }
 double print_double(long Line, double* double_array, int* int_array, char* uuid, char* ouuid, char* cuuid)//---------------------------double
-{
+{	
+	printf("----------enter print_double()----------\n");
 	Table_meta meta=get_table_meta(Line);
 
 	int p1 = meta.p1;
@@ -2119,6 +2133,7 @@ double print_double(long Line, double* double_array, int* int_array, char* uuid,
 			}
 		}
 		hashmapMemberVariables.find(ouuid)->v_double[para_name - 2000] = return_flag;
+		return_flag = 1000;
 	} else if (para_name >= 20000 && para_name < 30000 && cuuid != NULL) { // double type static memebr variable
 		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
 			// init
@@ -2128,16 +2143,17 @@ double print_double(long Line, double* double_array, int* int_array, char* uuid,
 			}
 		}
 		hashmapStaticMemberVariables.find(cuuid)->v_double[para_name - 20000] = return_flag;
+		return_flag = 1000;
 	}
 		
-		
-	return_flag = 1000;	
+	
 	return return_flag;
 }
 
 
 float print_float(long Line, float* float_array, char* uuid, char* ouuid, char* cuuid)//---------------------------float
 {
+	printf("----------enter print_float()----------\n");	
 	Table_meta meta=get_table_meta(Line);
 
 	int p1 = meta.p1;
@@ -2226,6 +2242,7 @@ float print_float(long Line, float* float_array, char* uuid, char* ouuid, char* 
 			}
 		}
 		hashmapMemberVariables.find(ouuid)->v_float[para_name - 3000] = return_flag;
+		return_flag = 1000;
 	} else if (para_name >= 30000 && para_name < 40000 && cuuid != NULL) { // float type static memebr variable
 		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
 			// init
@@ -2235,15 +2252,16 @@ float print_float(long Line, float* float_array, char* uuid, char* ouuid, char* 
 			}
 		}
 		hashmapStaticMemberVariables.find(cuuid)->v_float[para_name - 30000] = return_flag;
+		return_flag = 1000;
 	}
-	return_flag = 1000;
+
 	return return_flag;
 
 }
 
 int print_char(long Line, char* char_array, char* uuid, char* ouuid, char* cuuid)//---------------------------char
 {		
-
+	printf("----------enter print_char()----------\n");
 	Table_meta meta=get_table_meta(Line);
 
 	int p1 = meta.p1;
@@ -2332,6 +2350,7 @@ int print_char(long Line, char* char_array, char* uuid, char* ouuid, char* cuuid
 			}
 		}
 		hashmapMemberVariables.find(ouuid)->v_char[para_name - 4000] = return_flag;
+		return_flag = 1000;
 	} else if (para_name >= 40000 && para_name < 50000 && cuuid != NULL) { // float type static memebr variable
 		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
 			// init
@@ -2341,14 +2360,14 @@ int print_char(long Line, char* char_array, char* uuid, char* ouuid, char* cuuid
 			}
 		}
 		hashmapStaticMemberVariables.find(cuuid)->v_char[para_name - 40000] = return_flag;
+		return_flag = 1000;
 	}
-	return_flag = 1000;
 	return return_flag;
 }
 
 long print_long(long Line,long* long_array,int* int_array,char* uuid,char* ouuid,char* cuuid)
 {
-
+	printf("----------enter print_long()----------\n");
 	Table_meta meta=get_table_meta(Line);
 
 	int p1 = meta.p1;
@@ -2441,6 +2460,7 @@ long print_long(long Line,long* long_array,int* int_array,char* uuid,char* ouuid
 			}
 		}
 		hashmapMemberVariables.find(ouuid)->v_long[para_name - 5000] = return_flag;
+		return_flag = 1000;
 	} else if (para_name >= 50000 && para_name < 60000 && cuuid != NULL) { // float type static memebr variable
 		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
 			// init
@@ -2450,15 +2470,15 @@ long print_long(long Line,long* long_array,int* int_array,char* uuid,char* ouuid
 			}
 		}
 		hashmapStaticMemberVariables.find(cuuid)->v_long[para_name - 50000] = return_flag;
+		return_flag = 1000;
 	}
-	return_flag = 1000;
 	return return_flag;
 
 }
 
 int print_byte(long Line, char* byte_array,int* int_array,char* uuid,char* ouuid,char* cuuid)
 {
-
+	printf("----------enter print_byte()----------\n");
 	Table_meta meta=get_table_meta(Line);
 
 	int p1 = meta.p1;
@@ -2545,6 +2565,7 @@ int print_byte(long Line, char* byte_array,int* int_array,char* uuid,char* ouuid
 			}
 		}
 		hashmapMemberVariables.find(ouuid)->v_byte[para_name - 6000] = return_flag;
+		return_flag = 1000;
 	} else if (para_name >= 60000 && para_name < 70000 && cuuid != NULL) { // float type static memebr variable
 		if (hashmapStaticMemberVariables.find(cuuid) == NULL) {
 			// init
@@ -2554,8 +2575,9 @@ int print_byte(long Line, char* byte_array,int* int_array,char* uuid,char* ouuid
 			}
 		}
 		hashmapStaticMemberVariables.find(cuuid)->v_byte[para_name - 60000] = return_flag;
+		return_flag = 1000;
 	}
-	return_flag = 1000;
+
 	return return_flag;
 
 }
@@ -2566,7 +2588,7 @@ int print_array_i(long Line, int* int_array, int int_tail, char* uuid, char* ouu
 	// printf("uuid=%s\n", uuid);
 	// printf("ouuid=%s\n", ouuid);
 	// printf("cuuid=%s\n", cuuid);
-
+	printf("----------enter print_array_i()----------\n");
 	Table_meta meta=get_table_meta(Line);
 	int type=meta.type;
 	int p1 = meta.p1;
@@ -2943,14 +2965,14 @@ int print_array_i(long Line, int* int_array, int int_tail, char* uuid, char* ouu
 	}
 	free(tmpuuid);
 	// return 1000;
-	printf("[hyr]handle array, member/static member array!!");	
+	printf("[hyr]handle array, member/static member array!!\n");	
 	// 这里还没有处理就直接return了，并没有处理成员变量的情况
 	if (para_i >=700 && para_i<=1800 && ouuid != NULL) {	   // init member array
 		printf("ouuid = %s", ouuid);
 		if (hashmapMemberArray.find(ouuid) == NULL) {
 			ANODE2 aNode = (ANODE2) malloc (sizeof(ArrayNode2));
 			if (!hashmapMemberArray.insert(ouuid, aNode)) {
-				printf("[hyr]insert member array fail!");
+				printf("[hyr]insert member array fail!\n");
 			}
 		}
 		for (int i = 0; i < int_tail; i++) {
@@ -2962,7 +2984,7 @@ int print_array_i(long Line, int* int_array, int int_tail, char* uuid, char* ouu
 		if (hashmapStaticMemberArray.find(cuuid) == NULL) {
 			ANODE2 aNode = (ANODE2) malloc (sizeof(ArrayNode2));
 			if (!hashmapStaticMemberArray.insert(cuuid, aNode)) {
-				printf("[hyr]insert static member array fail!");
+				printf("[hyr]insert static member array fail!\n");
 			}
 		}
 		for (int i = 0; i < int_tail; i++) {
@@ -2970,7 +2992,7 @@ int print_array_i(long Line, int* int_array, int int_tail, char* uuid, char* ouu
 		}
 		hashmapStaticMemberArray.find(cuuid)->int_arrNodes[para_i%10]->sz = int_tail; 
 	}
-
+	
 
 
 	// 原方案
@@ -3070,6 +3092,7 @@ int print_array_c(long Line, char* char_array, int char_tail, char* uuid, char* 
 	
 	// printf("uuid=%s\n",uuid);
 	// printf("cuuid=%s\n",cuuid);
+	printf("----------enter print_array_c()----------\n");
 	Table_meta meta=get_table_meta(Line);
 	int type=meta.type;
 	int p1 = meta.p1;
