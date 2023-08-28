@@ -600,7 +600,9 @@ public class Transformer {
 							getUUIDLocal, invokeUUIDLocal, invokeLineNo);
 					isInitValueInSgx = true;
 				}
+			G.v().out.println("[hyr]finish init SGX");
 			}
+			G.v().out.println("[hyr]0828currProStmt: " + currProStmt.toString());
 
 			//处理函数调用语句，注意与下边包含函数调用表达式的AssignStmt区分
 			if (currProStmt instanceof InvokeStmt) { // deal with invoke statement 1   foo(x)
@@ -1943,6 +1945,12 @@ public class Transformer {
 		//
 
 		int opTypeIndex = TypeIndex(values.get(0));
+		// [hyr]FIX PiEstimator$HaltonSequence-nextPoint()-$r1 = r0; $r1非敏感，r0敏感，转换为get语句，但语句类型并非1-18，导致没有对应的encall_get，暂时不做保护
+		if(opTypeIndex == -1) {
+			G.v().out.println("[hyr]other type, e.g. object");
+			return;
+		}
+
 		indexwriter(Integer.toString(opTypeIndex));// tuple-0
 		G.v().out
 				.println("<<<<<<ZYSTBLE>>>>>> tuple-0 Get: ++++++++++++++++++++++++++ "
@@ -1955,9 +1963,10 @@ public class Transformer {
 		if (values.size() == 1) {
 			G.v().out.println("values.size()==1");
 			if (condVals.contains(values.get(0))) {
-				if (identityArray.containsKey(values.get(0))) {
+				if (identityArray.containsKey(values.get(0))) {	// 处理的是identity相关
 					left_flag_index = identityArray.get(values.get(0));
 				} else if (SenstiveFieldArray.containsKey(values.get(0))) {
+					// 这里其实是和instanceFieldRef联动的，处理的是敏感的成员数组，sensitivefieldarray里拿到的symbol是membervariables里的值，直接×100，比如K=700（好像有问题，因为静态处理的是×1000的）
 					left_flag_index = SenstiveFieldArray.get(values.get(0))
 							.toString();
 					right_index = SenstiveFieldIndexArray.get(values.get(0))
@@ -1967,7 +1976,7 @@ public class Transformer {
 					tempCuuidValue = SenstiveFieldCuuidArray.get(values.get(0));
 					G.v().out.println("tempCuuidValue :" + tempCuuidValue);
 					isNeedCuuidFlag = true;
-				} else {
+				} else { // 处理普通的变量/数组
 					val_type = TypeIndex(values.get(0));// int or float
 					G.v().out.println("val_type:" + val_type);
 					pos_index = typeToList(val_type).indexOf(values.get(0));
