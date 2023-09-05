@@ -1544,8 +1544,10 @@ int print_int(long Line, int* int_array, char* uuid, char* ouuid, char* cuuid)
 		printf("p1 is sensitive variable\n");
 		para1 = hashmap.find(uuid)->v_int[p1 - 100];
 	} else if (p1 >= 1000 && p1 < 2000 && ouuid != NULL) { // sensitive member variables
+		printf("p1 is sensitive memebr variable\n");
 		para1 = hashmapMemberVariables.find(ouuid)->v_int[p1 - 1000];
 	} else if (p1 >= 10000 && p1 < 20000 && cuuid != NULL) { // sensitive static member variables
+		printf("p1 is sensitive static memebr variable\n");
 		para1 = hashmapStaticMemberVariables.find(cuuid)->v_int[p1 - 10000];
 	} else {
 		printf("[hyr]error, unkonwn type!");

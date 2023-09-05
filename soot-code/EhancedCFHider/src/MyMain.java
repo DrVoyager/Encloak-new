@@ -95,7 +95,7 @@ public class MyMain {
 	   PackManager.v().getPack("wjtp").add(new Transform("wjtp.T", new SceneTransformer() {
 		   @Override
 			protected void internalTransform(String arg0,Map arg1) {
-				// TODO Auto-generated method stub
+			   // TODO Auto-generated method stub
 				
 			   //for input taint source
 			   //Scanner in = new Scanner(System.in);
@@ -140,9 +140,9 @@ public class MyMain {
 //			   String taintClassName = "cfhider.PiEstimator";
 //			   String taintMethodName = "estimate";
 //			   
-			   String taintClassName = "cfhider.PiEstimator$HaltonSequence";
-			   String taintMethodName = "nextPoint";
-			   String taintSourceName = "$r2";
+//			   String taintClassName = "cfhider.PiEstimator$HaltonSequence";
+//			   String taintMethodName = "nextPoint";
+//			   String taintSourceName = "$r2";
 			   
 			   //pagerank pegasus.PagerankInitVector$MapStage1  map  $z0
 			   //wordcount cfhider.WordCount$TokenizerMapper map $z0
@@ -163,8 +163,10 @@ public class MyMain {
 //			   String taintSourceName = "r3";
 			   
 //			   String taintClassName = "test.test";
-//			   String taintMethodName = "t";
-//			   String taintSourceName = "$i0";
+//			   String taintMethodName = "main";
+//			   String taintSourceName = "$i1";
+//			   String taintMethodName = "<clinit>";
+//			   String taintSourceName = "<test.test: int K>";
 			   
 //			   String taintClassName = "test.Test2";
 //			   String taintMethodName = "main";
@@ -180,9 +182,9 @@ public class MyMain {
 //			   String taintMethodName = "main";
 //			   String taintSourceName = "b0";
 			   
-//			   String taintClassName = "test.Test";
-//			   String taintMethodName = "main";
-//			   String taintSourceName = "r1";
+			   String taintClassName = "test.Test";
+			   String taintMethodName = "main";
+			   String taintSourceName = "r1";
 			   
 			   /**
 			    * for variables
@@ -197,12 +199,9 @@ public class MyMain {
 					}
 				   G.v().out.println("[cf] class: "+cls.toString());
 				   List<SootMethod> sootMethods = cls.getMethods();
-				   
-				 // if(cls.toString().equals(taintClassName)){//200
-				// G.v().out.println("[cf] success class: "+cls.toString());
+
 				   for (SootMethod sootMethod : sootMethods) { 
 					   G.v().out.println("2021method name :"+sootMethod.getName());
-					// if (sootMethod.getName().equals(taintMethodName)) {
 						 if(!sootMethod.hasActiveBody()){
 							   G.v().out.println("method name="+sootMethod.getName());
 							   G.v().out.println("[cf] sootMethod:hasNOTActiveBody "+sootMethod.getName());
@@ -215,8 +214,6 @@ public class MyMain {
 							  
 							   Body body = sootMethod.retrieveActiveBody();
 							   List<Value> list = new ArrayList<>();
-							   //access the variable of ifStmt
-	                          //new GetContrlFlowVariables(body,list);
 	                           G.v().out.println("[cf] zystble");
 	                           
 	                           //access the variable of data analysis
@@ -224,58 +221,44 @@ public class MyMain {
 	                           if (!list.isEmpty()) {
 	                        	   map.put(sootMethod.getName(), list);
 	                           }
-	                           //G.v().out.println("[cf] sootMethod-list:"+list.toString());
 							}else {
 								Body body = sootMethod.getActiveBody();
-								//do somethings
-								 G.v().out.println("[cf] sootMethod a:"+sootMethod.getName());
+								G.v().out.println("[cf] sootMethod a:"+sootMethod.getName());
 								
 								List<Value> list = new ArrayList<>();
 								G.v().out.println("[cf] sootMethod zystble");
-	                           //new GetContrlFlowVariables(body,list);
 	                            
-	                           new SetTaintSources(body,list,taintSourceName);
-	                            //G.v().out.println("[cf] sootMethod-list:"+list.toString());
+	                            new SetTaintSources(body,list,taintSourceName);
 	                            if (!list.isEmpty()) {
 	                         	   map.put(sootMethod.getName(), list);
 	                            }
 							}
 					  }
-					// }//198
-				   //}//200
 
                    CFMAP.put(cls.getName(), map);
                    Map<String, int[]> initnullMap = new HashMap<>();
                    INVOKEMAP.put(cls.getName(),initnullMap);   //for init 
+                 
                    
-                   
-                   
-                   
-                   
-                   // insert Ouuid, public String Ouuid
+                   // [hyr]insert Ouuid, public String Ouuid
                    SootField sFieldOuuid = new SootField("Ouuid", RefType.v("java.lang.String"), 1);
 				   cls.addField(sFieldOuuid);
 				   
-				   // insert Cuuid, public static String Cuuid
+				   // [hyr]insert Cuuid, public static String Cuuid
 				   SootField sFieldCuuid = new SootField("Cuuid", RefType.v("java.lang.String"), 9);
 				   cls.addField(sFieldCuuid);
 				   
 			   }
 			   
-			   G.v().out.println("[CFMAP]2021:"+CFMAP.toString());
-			   
+			   G.v().out.println("[CFMAP]2021: "+CFMAP.toString());
 			   Iterator<Map.Entry<String, Map<String, int[]>>> invokeIterator = INVOKEMAP.entrySet().iterator();
 			   
-			   G.v().out.println("[INVOKEMAP]2021size:"+INVOKEMAP.size());
+			   G.v().out.println("[INVOKEMAP]2021size: "+INVOKEMAP.size());
 			   while (invokeIterator.hasNext()) {
 				   Map.Entry<String, Map<String, int[]>> entry = invokeIterator.next();
 				   Iterator<Map.Entry<String, int[]>> entries1 = entry.getValue().entrySet().iterator();
 				   while (entries1.hasNext()) {
 					   Map.Entry<String, int[]> entry1 = entries1.next();
-					   /*if (entry1.getKey().equals("buildTrie")) {
-						   entry1.getValue()[1] =0;
-						   entry1.getValue()[4] =0;
-					   }*/
 					   G.v().out.println("[========INVOKE==before taint========] class = "+entry.getKey()+" method = " + entry1.getKey() + ", Value1 = " + Arrays.toString(entry1.getValue()));
 					   
 				   }
@@ -306,7 +289,6 @@ public class MyMain {
 						for (int i = 0; i <sootMethods.size(); i++) {
 							for (int x= 0; x<sootMethods.size();x++) {
 								
-								
 								SootMethod sootMethod = sootMethods.get(x);
 								
 									
@@ -314,10 +296,10 @@ public class MyMain {
 										G.v().out.println("[taint not hasActiveBody] sootMethod: "+sootMethod.getName());
 										if(sootMethod.getName().equals("findPartition") && cls.toString().equals("cfhider.TeraSort$TotalOrderPartitioner$TrieNode")){
 											   continue;
-										   }
+										}
 										if(sootMethod.getName().equals("print") && cls.toString().equals("cfhider.TeraSort$TotalOrderPartitioner$TrieNode")){
 											   continue;
-										   }
+										}
 										Body body = sootMethod.retrieveActiveBody();
 										
 										if (methList.containsKey(sootMethod.getName())) {
@@ -335,9 +317,6 @@ public class MyMain {
 									}else {
 												G.v().out.println("[taint into] sootMethod: "+sootMethod.getName());
 												Body body = sootMethod.getActiveBody();
-												//new TaintAnalysisMain(g);
-												//G.v().out.println("[taint] hashfortaint: "+hashfortaint.size() +" sMethodsList");
-												//List<Value> values = CFLIST.
 												if (methList.containsKey(sootMethod.getName())) {
 													G.v().out.println(methList.get(sootMethod.getName()).toString());
 												}else {
@@ -362,9 +341,6 @@ public class MyMain {
 				   }
 			   }
 			   
-			   
-			   //CFMAP.get(taintClassName).get(taintMethodName).remove(4);
-			   
 			   G.v().out.println("[========CFMAP=======after taint===]:"+CFMAP.toString());
 			   G.v().out.println("[==========memberVariables==after taint=========]:"+memberVariables.toString());
 			   G.v().out.println("[============staticmemberVariables=====after taint=======]:"+staticmemberVariables.toString());
@@ -375,10 +351,6 @@ public class MyMain {
 				   Iterator<Map.Entry<String, int[]>> entries1 = entry.getValue().entrySet().iterator();
 				   while (entries1.hasNext()) {
 					   Map.Entry<String, int[]> entry1 = entries1.next();
-					   /*if (entry1.getKey().equals("buildTrie")) {
-						   entry1.getValue()[1] =0;
-						   entry1.getValue()[4] =0;
-					   }*/
 					   G.v().out.println("[========INVOKE==========] class = "+entry.getKey()+" method = " + entry1.getKey() + ", Value1 = " + Arrays.toString(entry1.getValue()));
 					   
 				   }

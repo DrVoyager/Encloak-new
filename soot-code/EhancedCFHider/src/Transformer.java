@@ -1092,42 +1092,42 @@ public class Transformer {
 			indexwriter(value.getType().toString() + "_" + value);// re, e.g. int_0
 			indexwriter("-1");// r
 		}
-		if (ouuidFlag == true) {
-			// 若return的是敏感的成员变量/数组，函数中应当有对它们的初始化过程，也就有tmpOuuid，故没有重新生成
-			SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: void setOuuid(java.lang.String)>");
-			Stmt newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList(tmpOuuid)));
-			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
-			units.insertBefore(newInvokeStmt, currProStmt);
-
-			toCall = Scene.v().getMethod(
-							"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
-			newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
-							Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
-			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
-			units.insertBefore(newInvokeStmt, currProStmt);
-
-			toCall = Scene.v().getMethod("<invoker.sgx_invoker: void clearOuuid()>");
-			newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList()));
-			units.insertBefore(newInvokeStmt, currProStmt);
-		}
-
-		if (cuuidFlag == true) {
-			SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
-			Stmt newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList(tmpCuuid)));
-			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
-			units.insertBefore(newInvokeStmt, currProStmt);
-
-			toCall = Scene.v().getMethod(
-							"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
-			newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
-							Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
-			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
-			units.insertBefore(newInvokeStmt, currProStmt);
-
-			toCall = Scene.v().getMethod("<invoker.sgx_invoker: void clearCuuid()>");
-			newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList()));
-			units.insertBefore(newInvokeStmt, currProStmt);
-		}
+//		if (ouuidFlag == true) {
+//			// 若return的是敏感的成员变量/数组，函数中应当有对它们的初始化过程，也就有tmpOuuid，故没有重新生成
+//			SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: void setOuuid(java.lang.String)>");
+//			Stmt newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList(tmpOuuid)));
+//			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
+//			units.insertBefore(newInvokeStmt, currProStmt);
+//
+//			toCall = Scene.v().getMethod(
+//							"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+//			newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
+//							Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
+//			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
+//			units.insertBefore(newInvokeStmt, currProStmt);
+//
+//			toCall = Scene.v().getMethod("<invoker.sgx_invoker: void clearOuuid()>");
+//			newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList()));
+//			units.insertBefore(newInvokeStmt, currProStmt);
+//		}
+//
+//		if (cuuidFlag == true) {
+//			SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
+//			Stmt newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList(tmpCuuid)));
+//			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
+//			units.insertBefore(newInvokeStmt, currProStmt);
+//
+//			toCall = Scene.v().getMethod(
+//							"<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>");
+//			newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
+//							Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
+//			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
+//			units.insertBefore(newInvokeStmt, currProStmt);
+//
+//			toCall = Scene.v().getMethod("<invoker.sgx_invoker: void clearCuuid()>");
+//			newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList()));
+//			units.insertBefore(newInvokeStmt, currProStmt);
+//		}
 
 
 		SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: void clear()>");
@@ -1860,7 +1860,7 @@ public class Transformer {
 		String symbolString = null;
 		int val_type = 0;
 		int pos_index = 0;
-
+		boolean isNeedOuuidFlag = false;
 		boolean isNeedCuuidFlag = false;
 		Value tempCuuidValue = null;
 
@@ -1899,33 +1899,33 @@ public class Transformer {
 					left_flag_index = identityArray.get(v); // call_
 				} else if(opTypeIndex <= 6) {
 					G.v().out.println("[hyr]return sensitive variable");
-					int pos_index = typeToList(opTypeIndex).indexOf(v);
+					int pos = typeToList(opTypeIndex).indexOf(v);
 					// sensitive variable, * 100
-					int index = opTypeIndex * 100 + pos_index;
-					if(value instanceof InstanceFieldRef){	// sensitive member variable, * 1000
-						index = opTypeIndex * 1000 + pos_index;
+					int valueIndex = opTypeIndex * 100 + pos;
+					if(v instanceof InstanceFieldRef){	// sensitive member variable, * 1000
+						valueIndex = opTypeIndex * 1000 + pos_index;
 						G.v().out.println("[hyr]member variable");
 						isNeedOuuidFlag = true;
-					} else if(value instanceof StaticFieldRef){	// sensitive static member variable, * 10000
-						index = opTypeIndex * 10000 + pos_index;
+					} else if(v instanceof StaticFieldRef){	// sensitive static member variable, * 10000
+						valueIndex = opTypeIndex * 10000 + pos_index;
 						G.v().out.println("[hyr]static member variable");
 						isNeedCuuidFlag = true;
 					}
-					left_index = Integer.toString(index);
+					left_index = Integer.toString(valueIndex);
 				} else { // array
 					G.v().out.println("[hyr]return sensitive array");
-					int pos_index = typeToList(opTypeIndex).indexOf(value);
-					int index = opTypeIndex * 10 + pos_index;
-					if(value instanceof InstanceFieldRef){	// sensitive member array, * 100
-						index = opTypeIndex * 100 + pos_index;
+					int pos = typeToList(opTypeIndex).indexOf(v);
+					int valueIndex = opTypeIndex * 10 + pos;
+					if(v instanceof InstanceFieldRef){	// sensitive member array, * 100
+						valueIndex = opTypeIndex * 100 + pos;
 						G.v().out.println("[hyr]member array");
 						isNeedOuuidFlag = true;
-					} else if(value instanceof StaticFieldRef){	// sensitive static member array, * 1000
-						index = opTypeIndex * 1000 + pos_index;
+					} else if(v instanceof StaticFieldRef){	// sensitive static member array, * 1000
+						valueIndex = opTypeIndex * 1000 + pos;
 						G.v().out.println("[hyr]static member array");
 						isNeedCuuidFlag = true;
 					}
-					left_index = Integer.toString(index);
+					left_index = Integer.toString(valueIndex);
 				}
 			} else {
 				for (Local loc : localArray) {// 将variable随机插入localarray
@@ -2145,42 +2145,42 @@ public class Transformer {
 			LeftOpIsObject = true;
 		}
 
-		if (isNeedOuuidFlag) {
-			G.v().out.println("1111333311");
-			SootFieldRef sootFieldRef = Scene.v().makeFieldRef(sField.getDeclaringClass(), "Ouuid",
-						RefType.v("java.lang.String"), false);
-			G.v().out.println("[hyr]sootFieldRef: " + sootFieldRef.toString());
-			FieldRef fieldRef = Jimple.v().newInstanceFieldRef(ssValue, sootFieldRef);
-			G.v().out.println("[hyr]fieldRef: " + fieldRef.toString());
-			Local tmpOuuid = Jimple.v().newLocal("tmpOuuid" + Long.toString(counter), RefType.v("java.lang.String"));
-			aBody.getLocals().add(tmpOuuid);
-			localArray.add(tmpOuuid);
-			AssignStmt asStmt = Jimple.v().newAssignStmt(tmpOuuid, fieldRef);	// tmpOuuid = object.Ouuid
-			G.v().out.println("[hyr]asStmt: " + asStmt.toString());
-			units.insertBefore(asStmt, currProStmt);
-
-			SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: void setOuuid(java.lang.String)>");
-			Stmt newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList(tmpOuuid)));
-			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
-			units.insertBefore(newInvokeStmt, currProStmt);
-		}
-
-		if (isNeedCuuidFlag) {
-			G.v().out.println("1111333311");
-			Local tmpCuuid = Jimple.v().newLocal("tmpCuuid", RefType.v("java.lang.String"));
-				aBody.getLocals().add(tmpCuuid);
-				localArray.add(tmpCuuid);
-			AssignStmt asStmt = Jimple.v().newAssignStmt(tmpCuuid, fieldRef);	// tmpCuuid = Cuuid
-			G.v().out.println("[hyr]asStmt: " + asStmt.toString());
-			units.insertBefore(asStmt, currProStmt);
-
-			SootMethod toCall = Scene.v().getMethod("<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
-			Stmt newInvokeStmt = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(), Arrays.asList(tmpCuuid)));
-			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt.toString());
-			units.insertBefore(newInvokeStmt, currProStmt);
-
-			G.v().out.println("1111444111");
-		}
+//		if (isNeedOuuidFlag) {
+//			G.v().out.println("1111333311");
+//			SootFieldRef sootFieldRef = Scene.v().makeFieldRef(sField.getDeclaringClass(), "Ouuid",
+//						RefType.v("java.lang.String"), false);
+//			G.v().out.println("[hyr]sootFieldRef: " + sootFieldRef.toString());
+//			FieldRef fieldRef = Jimple.v().newInstanceFieldRef(ssValue, sootFieldRef);
+//			G.v().out.println("[hyr]fieldRef: " + fieldRef.toString());
+//			Local tmpOuuid = Jimple.v().newLocal("tmpOuuid" + Long.toString(counter), RefType.v("java.lang.String"));
+//			aBody.getLocals().add(tmpOuuid);
+//			localArray.add(tmpOuuid);
+//			AssignStmt asStmt = Jimple.v().newAssignStmt(tmpOuuid, fieldRef);	// tmpOuuid = object.Ouuid
+//			G.v().out.println("[hyr]asStmt: " + asStmt.toString());
+//			units.insertBefore(asStmt, currProStmt);
+//
+//			SootMethod toCall1 = Scene.v().getMethod("<invoker.sgx_invoker: void setOuuid(java.lang.String)>");
+//			Stmt newInvokeStmt1 = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall1.makeRef(), Arrays.asList(tmpOuuid)));
+//			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt1.toString());
+//			units.insertBefore(newInvokeStmt1, currProStmt);
+//		}
+//
+//		if (isNeedCuuidFlag) {
+//			G.v().out.println("1111333311");
+//			Local tmpCuuid = Jimple.v().newLocal("tmpCuuid", RefType.v("java.lang.String"));
+//				aBody.getLocals().add(tmpCuuid);
+//				localArray.add(tmpCuuid);
+//			AssignStmt asStmt = Jimple.v().newAssignStmt(tmpCuuid, fieldRef);	// tmpCuuid = Cuuid
+//			G.v().out.println("[hyr]asStmt: " + asStmt.toString());
+//			units.insertBefore(asStmt, currProStmt);
+//
+//			SootMethod toCall1 = Scene.v().getMethod("<invoker.sgx_invoker: void setCuuid(java.lang.String)>");
+//			Stmt newInvokeStmt1 = Jimple.v().newInvokeStmt(Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall1.makeRef(), Arrays.asList(tmpCuuid)));
+//			G.v().out.println("[hyr]newInvokeStmt: " + newInvokeStmt1.toString());
+//			units.insertBefore(newInvokeStmt1, currProStmt);
+//
+//			G.v().out.println("1111444111");
+//		}
 
 		G.v().out.println("start insert an un-invoke get");
 		G.v().out.println("returnTypeIndexToCallFunc:"
