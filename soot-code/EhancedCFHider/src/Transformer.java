@@ -1048,7 +1048,7 @@ public class Transformer {
 			indexwriter("-2");// op
 
 			// [hyr]0817 modified
-			// TODO 0829，如果返回的(静态)成员变量/数组，需要对应的ouuid和cuuid
+			// TODO 0916，如果返回的(静态)成员变量/数组，需要对应的ouuid和cuuid
 			if (pos <= 6) { // variables
 				G.v().out.println("[hyr]return sensitive variable");
 				int pos_index = typeToList(pos).indexOf(value);

@@ -1,5 +1,9 @@
-/backup
+/UpdateIndex.class
+/BackWardAnalysis.class
+/BackWardFlow.class
+/GetContrlFlowVariables.class
 /GetUseBoxes.class
+/MergeUpdate.class
 /MyMain$1.class
 /MyMain$2.class
 /MyMain.class
@@ -7,9 +11,4 @@
 /TaintAnalysis.class
 /TaintAnalysisWrapper.class
 /Transformer.class
-/UpdateIndex.class
-/BackWardAnalysis.class
-/BackWardFlow.class
-/GetContrlFlowVariables.class
-/MergeUpdate.class
 /UpdateTag.class

@@ -19,6 +19,7 @@ import soot.ValueBox;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.Constant;
+import soot.jimple.FieldRef;
 import soot.jimple.IdentityStmt;
 import soot.jimple.IfStmt;
 import soot.jimple.InvokeExpr;
@@ -210,11 +211,13 @@ class BackWardFlow extends BackwardFlowAnalysis<Unit, Set<Value>> {
                         Value tmpValue = vBox.getValue();
                         G.v().out.println("2021=" + SourceList.toString());
                         G.v().out.println("2021tmp=" + tmpValue);
+                        // TODO [hyr]SourceList.contains() cannot deal with object correctly
                         if (SourceList != null && !SourceList.contains(tmpValue) && !(tmpValue instanceof Constant) && TypeIndex(tmpValue.getType()) != 100) {
-                            // out.add(tmpValue);
-                            if (tmpValue instanceof Local) {
+//                        	G.v().out.println("[hyr]contains: " + SourceList.contains(tmpValue));
+                            if (tmpValue instanceof Local || tmpValue instanceof FieldRef) {
                                 G.v().out.println("20210720==========tmp=" + tmpValue);
                                 SourceList.add(tmpValue);
+                                G.v().out.println("[hyr]tmpValue: " + SourceList.toString());
                                 break;
                             }
                         }

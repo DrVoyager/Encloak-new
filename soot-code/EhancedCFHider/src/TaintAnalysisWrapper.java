@@ -317,8 +317,14 @@ class TaintAnalysis extends ForwardFlowAnalysis<Unit, Set<Value>> {
                     G.v().out.println("useBoxes value: " + tmpValue);
                     G.v().out.println("leftofbox.getvalue: " + assn.getLeftOpBox().getValue());
                     if (isPrivateSource(tmpValue)) {
+                    	// [hyr]FIX 0913
+                    	if (tmpValue instanceof FieldRef) {
+                    		G.v().out.println("[hyr]fieldref out: " + tmpValue);
+                    		out.add(tmpValue);
+                    	}
                         G.v().out.println("======out====:" + assn.getLeftOpBox().getValue());
                         out.add(assn.getLeftOpBox().getValue());
+                        G.v().out.println("[hyr]out: " + out.toString());
                         break;
                     }
                 }
