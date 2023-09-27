@@ -1,7 +1,8 @@
 public class cfhider.PiEstimator extends org.apache.hadoop.conf.Configured implements org.apache.hadoop.util.Tool
 {
     private static final org.apache.hadoop.fs.Path TMP_DIR;
-    public java.lang.String Cuuid;
+    public java.lang.String Ouuid;
+    public static java.lang.String Cuuid;
 
     public void <init>()
     {
@@ -14,8 +15,8 @@ public class cfhider.PiEstimator extends org.apache.hadoop.conf.Configured imple
 
     public static java.math.BigDecimal estimate(int, long, org.apache.hadoop.mapred.JobConf) throws java.io.IOException
     {
-        int i0, i2, $i0, tmpResult150, tmpResult180, tmpResult230;
-        long l1, $l3, $l4, l5, $l6, $l7, $l8, $l9, invokeLineNo, $l0, tmpResult210, tmpResult220, tmpResult260, tmpResult270, invokeLineNoTest;
+        int i0, i2;
+        long l1, $l3, $l4, l5, $l6, $l7, $l8, $l9;
         org.apache.hadoop.mapred.JobConf r0;
         java.lang.Class $r1;
         org.apache.hadoop.fs.Path $r2, r3, r4, r6, $r17, $r18, $r19, $r21, $r42, r43, $r57, $r59;
@@ -25,108 +26,16 @@ public class cfhider.PiEstimator extends org.apache.hadoop.conf.Configured imple
         org.apache.hadoop.io.SequenceFile$Writer r10;
         java.lang.Throwable r11, r14, r15, $r28, $r48, $r58;
         org.apache.hadoop.io.SequenceFile$Reader r13, $r47;
-        java.lang.String $r16, $r25, $r33, $r41, getUUID, invokeUUID, getUUIDTest, invokeUUIDTest;
+        java.lang.String $r16, $r25, $r33, $r41;
         org.apache.hadoop.fs.Path[] $r20;
         java.lang.StringBuilder $r22, $r23, $r24, $r30, $r31, $r32, $r37, $r38, $r39, $r40;
         java.io.PrintStream $r29, $r34, $r36;
         double $d0, d1;
         java.math.BigDecimal $r49, $r50, $r51, $r52, $r53, $r54, $r55, r56;
-        boolean branchInvokeResult, branchInvokeResultTest;
-        invoker.sgx_invoker sgxInvoker, sgxInvokerTest;
 
-        $i0 := @parameter0: int;
-        $l0 := @parameter1: long;
+        i0 := @parameter0: int;
+        l1 := @parameter1: long;
         r0 := @parameter2: org.apache.hadoop.mapred.JobConf;
-        tmpResult270 = 0L;
-        tmpResult260 = 0L;
-        tmpResult230 = 0;
-        tmpResult220 = 0L;
-        tmpResult210 = 0L;
-        tmpResult180 = 0;
-        tmpResult150 = 0;
-        $r1 = null;
-        $r2 = null;
-        r3 = null;
-        r4 = null;
-        r5 = null;
-        i2 = 0;
-        r6 = null;
-        r7 = null;
-        r8 = null;
-        $r9 = null;
-        r10 = null;
-        r11 = null;
-        r12 = null;
-        r13 = null;
-        r14 = null;
-        r15 = null;
-        $r16 = null;
-        $r17 = null;
-        $r18 = null;
-        $r19 = null;
-        $r20 = null;
-        $r21 = null;
-        $r22 = null;
-        $r23 = null;
-        $r24 = null;
-        $r25 = null;
-        $r26 = null;
-        $l3 = 0L;
-        $l4 = 0L;
-        $r27 = null;
-        $r28 = null;
-        $r29 = null;
-        $r30 = null;
-        $r31 = null;
-        $r32 = null;
-        $r33 = null;
-        $r34 = null;
-        l5 = 0L;
-        $l6 = 0L;
-        $l7 = 0L;
-        $d0 = 0.0;
-        d1 = 0.0;
-        $r36 = null;
-        $r37 = null;
-        $r38 = null;
-        $r39 = null;
-        $r40 = null;
-        $r41 = null;
-        $r42 = null;
-        r43 = null;
-        $r44 = null;
-        r45 = null;
-        $r46 = null;
-        $r47 = null;
-        $r48 = null;
-        $r49 = null;
-        $r50 = null;
-        $l8 = 0L;
-        $r51 = null;
-        $r52 = null;
-        $l9 = 0L;
-        $r53 = null;
-        $r54 = null;
-        $r55 = null;
-        r56 = null;
-        $r57 = null;
-        $r58 = null;
-        $r59 = null;
-        invokeLineNo = 0L;
-        getUUID = null;
-        invokeUUID = null;
-        branchInvokeResult = 0;
-        sgxInvoker = null;
-        sgxInvoker = new invoker.sgx_invoker;
-        specialinvoke sgxInvoker.<invoker.sgx_invoker: void <init>()>();
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initenclave()>();
-        getUUID = virtualinvoke sgxInvoker.<invoker.sgx_invoker: java.lang.String getUUID()>();
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, invokeUUID, invokeLineNo);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void add(int)>($i0);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void add(long)>($l0);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void add(long)>($l7);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void add(long)>(invokeLineNo);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 13L);
         $r1 = class "cfhider/PiEstimator";
         $r16 = virtualinvoke $r1.<java.lang.Class: java.lang.String getSimpleName()>();
         virtualinvoke r0.<org.apache.hadoop.mapred.JobConf: void setJobName(java.lang.String)>($r16);
@@ -135,8 +44,7 @@ public class cfhider.PiEstimator extends org.apache.hadoop.conf.Configured imple
         virtualinvoke r0.<org.apache.hadoop.mapred.JobConf: void setOutputValueClass(java.lang.Class)>(class "org/apache/hadoop/io/LongWritable");
         virtualinvoke r0.<org.apache.hadoop.mapred.JobConf: void setOutputFormat(java.lang.Class)>(class "org/apache/hadoop/mapred/SequenceFileOutputFormat");
         virtualinvoke r0.<org.apache.hadoop.mapred.JobConf: void setMapperClass(java.lang.Class)>(class "cfhider/PiEstimator$PiMapper");
-        tmpResult150 = virtualinvoke sgxInvoker.<invoker.sgx_invoker: int getIntValue(java.lang.String,int,long)>(getUUID, 0, 15L);
-        virtualinvoke r0.<org.apache.hadoop.mapred.JobConf: void setNumMapTasks(int)>(tmpResult150);
+        virtualinvoke r0.<org.apache.hadoop.mapred.JobConf: void setNumMapTasks(int)>(i0);
         virtualinvoke r0.<org.apache.hadoop.mapred.JobConf: void setReducerClass(java.lang.Class)>(class "cfhider/PiEstimator$PiReducer");
         virtualinvoke r0.<org.apache.hadoop.mapred.JobConf: void setNumReduceTasks(int)>(1);
         virtualinvoke r0.<org.apache.hadoop.mapred.JobConf: void setSpeculativeExecution(boolean)>(0);
@@ -155,29 +63,26 @@ public class cfhider.PiEstimator extends org.apache.hadoop.conf.Configured imple
         r5 = staticinvoke <org.apache.hadoop.fs.FileSystem: org.apache.hadoop.fs.FileSystem get(org.apache.hadoop.conf.Configuration)>(r0);
 
      label0:
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 16L);
+        i2 = 0;
 
      label1:
-        branchInvokeResult = virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean getBooleanValue(java.lang.String,long)>(getUUID, 17L);
-        if branchInvokeResult == 1 goto label8;
+        if i2 >= i0 goto label8;
 
         $r21 = new org.apache.hadoop.fs.Path;
         $r22 = new java.lang.StringBuilder;
         specialinvoke $r22.<java.lang.StringBuilder: void <init>()>();
         $r23 = virtualinvoke $r22.<java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)>("part");
-        tmpResult180 = virtualinvoke sgxInvoker.<invoker.sgx_invoker: int getIntValue(java.lang.String,int,long)>(getUUID, 0, 18L);
-        $r24 = virtualinvoke $r23.<java.lang.StringBuilder: java.lang.StringBuilder append(int)>(tmpResult180);
+        $r24 = virtualinvoke $r23.<java.lang.StringBuilder: java.lang.StringBuilder append(int)>(i2);
         $r25 = virtualinvoke $r24.<java.lang.StringBuilder: java.lang.String toString()>();
         specialinvoke $r21.<org.apache.hadoop.fs.Path: void <init>(org.apache.hadoop.fs.Path,java.lang.String)>(r3, $r25);
         r6 = $r21;
         $r26 = new org.apache.hadoop.io.LongWritable;
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 19L);
-        tmpResult210 = virtualinvoke sgxInvoker.<invoker.sgx_invoker: long getLongValue(java.lang.String,int,long)>(getUUID, 0, 21L);
-        specialinvoke $r26.<org.apache.hadoop.io.LongWritable: void <init>(long)>(tmpResult210);
+        $l3 = (long) i2;
+        $l4 = $l3 * l1;
+        specialinvoke $r26.<org.apache.hadoop.io.LongWritable: void <init>(long)>($l4);
         r7 = $r26;
         $r27 = new org.apache.hadoop.io.LongWritable;
-        tmpResult220 = virtualinvoke sgxInvoker.<invoker.sgx_invoker: long getLongValue(java.lang.String,int,long)>(getUUID, 0, 22L);
-        specialinvoke $r27.<org.apache.hadoop.io.LongWritable: void <init>(long)>(tmpResult220);
+        specialinvoke $r27.<org.apache.hadoop.io.LongWritable: void <init>(long)>(l1);
         r8 = $r27;
         $r9 = <org.apache.hadoop.io.SequenceFile$CompressionType: org.apache.hadoop.io.SequenceFile$CompressionType NONE>;
         r10 = staticinvoke <org.apache.hadoop.io.SequenceFile: org.apache.hadoop.io.SequenceFile$Writer createWriter(org.apache.hadoop.fs.FileSystem,org.apache.hadoop.conf.Configuration,org.apache.hadoop.fs.Path,java.lang.Class,java.lang.Class,org.apache.hadoop.io.SequenceFile$CompressionType)>(r5, r0, r6, class "org/apache/hadoop/io/LongWritable", class "org/apache/hadoop/io/LongWritable", $r9);
@@ -204,11 +109,10 @@ public class cfhider.PiEstimator extends org.apache.hadoop.conf.Configured imple
         $r30 = new java.lang.StringBuilder;
         specialinvoke $r30.<java.lang.StringBuilder: void <init>()>();
         $r31 = virtualinvoke $r30.<java.lang.StringBuilder: java.lang.StringBuilder append(java.lang.String)>("Wrote input for Map #");
-        tmpResult230 = virtualinvoke sgxInvoker.<invoker.sgx_invoker: int getIntValue(java.lang.String,int,long)>(getUUID, 0, 23L);
-        $r32 = virtualinvoke $r31.<java.lang.StringBuilder: java.lang.StringBuilder append(int)>(tmpResult230);
+        $r32 = virtualinvoke $r31.<java.lang.StringBuilder: java.lang.StringBuilder append(int)>(i2);
         $r33 = virtualinvoke $r32.<java.lang.StringBuilder: java.lang.String toString()>();
         virtualinvoke $r29.<java.io.PrintStream: void println(java.lang.String)>($r33);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 24L);
+        i2 = i2 + 1;
         goto label1;
 
      label8:
@@ -264,20 +168,16 @@ public class cfhider.PiEstimator extends org.apache.hadoop.conf.Configured imple
         $l8 = virtualinvoke r45.<org.apache.hadoop.io.LongWritable: long get()>();
         $r51 = staticinvoke <java.math.BigDecimal: java.math.BigDecimal valueOf(long)>($l8);
         $r52 = virtualinvoke $r50.<java.math.BigDecimal: java.math.BigDecimal multiply(java.math.BigDecimal)>($r51);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 25L);
-        tmpResult260 = virtualinvoke sgxInvoker.<invoker.sgx_invoker: long getLongValue(java.lang.String,int,long)>(getUUID, 0, 26L);
-        $r53 = staticinvoke <java.math.BigDecimal: java.math.BigDecimal valueOf(long)>(tmpResult260);
+        $l9 = (long) i0;
+        $r53 = staticinvoke <java.math.BigDecimal: java.math.BigDecimal valueOf(long)>($l9);
         $r54 = virtualinvoke $r52.<java.math.BigDecimal: java.math.BigDecimal divide(java.math.BigDecimal)>($r53);
-        tmpResult270 = virtualinvoke sgxInvoker.<invoker.sgx_invoker: long getLongValue(java.lang.String,int,long)>(getUUID, 0, 27L);
-        $r55 = staticinvoke <java.math.BigDecimal: java.math.BigDecimal valueOf(long)>(tmpResult270);
+        $r55 = staticinvoke <java.math.BigDecimal: java.math.BigDecimal valueOf(long)>(l1);
         r56 = virtualinvoke $r54.<java.math.BigDecimal: java.math.BigDecimal divide(java.math.BigDecimal)>($r55);
 
      label15:
         $r57 = <cfhider.PiEstimator: org.apache.hadoop.fs.Path TMP_DIR>;
         virtualinvoke r5.<org.apache.hadoop.fs.FileSystem: boolean delete(org.apache.hadoop.fs.Path,boolean)>($r57, 1);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 28L);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean deleteValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, "", 0L);
-        return;
+        return r56;
 
      label16:
         $r58 := @caughtexception;
@@ -302,57 +202,18 @@ public class cfhider.PiEstimator extends org.apache.hadoop.conf.Configured imple
     {
         cfhider.PiEstimator r0;
         java.lang.String[] r1;
-        int i0, $i2, tmpResult29, tmpResult310;
-        long l1, invokeLineNo, tmpResult30, tmpResult321, invokeLineNoTest;
+        int i0, $i2;
+        long l1;
         org.apache.hadoop.mapred.JobConf r2, $r14;
         java.io.PrintStream $r3, $r11, $r17, $r18;
         java.lang.StringBuilder $r4, $r5, $r8, $r9;
         java.lang.Class $r6, $r16;
-        java.lang.String $r7, $r10, $r12, $r13, getUUID, invokeUUID, getUUIDTest, invokeUUIDTest;
+        java.lang.String $r7, $r10, $r12, $r13;
         org.apache.hadoop.conf.Configuration $r15;
         java.math.BigDecimal $r19;
-        boolean branchInvokeResult, branchInvokeResultTest;
-        invoker.sgx_invoker sgxInvoker, sgxInvokerTest;
 
         r0 := @this: cfhider.PiEstimator;
         r1 := @parameter0: java.lang.String[];
-        tmpResult321 = 0L;
-        tmpResult310 = 0;
-        tmpResult30 = 0L;
-        tmpResult29 = 0;
-        i0 = 0;
-        l1 = 0L;
-        r2 = null;
-        $i2 = 0;
-        $r3 = null;
-        $r4 = null;
-        $r5 = null;
-        $r6 = null;
-        $r7 = null;
-        $r8 = null;
-        $r9 = null;
-        $r10 = null;
-        $r11 = null;
-        $r12 = null;
-        $r13 = null;
-        $r14 = null;
-        $r15 = null;
-        $r16 = null;
-        $r17 = null;
-        $r18 = null;
-        $r19 = null;
-        invokeLineNo = 0L;
-        getUUID = null;
-        invokeUUID = null;
-        branchInvokeResult = 0;
-        sgxInvoker = null;
-        sgxInvoker = new invoker.sgx_invoker;
-        specialinvoke sgxInvoker.<invoker.sgx_invoker: void <init>()>();
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initenclave()>();
-        getUUID = virtualinvoke sgxInvoker.<invoker.sgx_invoker: java.lang.String getUUID()>();
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, invokeUUID, invokeLineNo);
-        getUUID = virtualinvoke sgxInvoker.<invoker.sgx_invoker: java.lang.String getUUID()>();
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, invokeUUID, invokeLineNo);
         $i2 = lengthof r1;
         if $i2 == 2 goto label0;
 
@@ -368,18 +229,13 @@ public class cfhider.PiEstimator extends org.apache.hadoop.conf.Configured imple
         virtualinvoke $r3.<java.io.PrintStream: void println(java.lang.String)>($r10);
         $r11 = <java.lang.System: java.io.PrintStream err>;
         staticinvoke <org.apache.hadoop.util.ToolRunner: void printGenericCommandUsage(java.io.PrintStream)>($r11);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean deleteValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, "", 0L);
         return -1;
 
      label0:
         $r12 = r1[0];
-        tmpResult29 = staticinvoke <java.lang.Integer: int parseInt(java.lang.String)>($r12);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void add(int)>(tmpResult29);
+        i0 = staticinvoke <java.lang.Integer: int parseInt(java.lang.String)>($r12);
         $r13 = r1[1];
-        tmpResult30 = staticinvoke <java.lang.Long: long parseLong(java.lang.String)>($r13);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void add(long)>(tmpResult30);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void add(long)>(invokeLineNo);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 29L);
+        l1 = staticinvoke <java.lang.Long: long parseLong(java.lang.String)>($r13);
         $r14 = new org.apache.hadoop.mapred.JobConf;
         $r15 = virtualinvoke r0.<cfhider.PiEstimator: org.apache.hadoop.conf.Configuration getConf()>();
         $r16 = virtualinvoke r0.<java.lang.Object: java.lang.Class getClass()>();
@@ -388,11 +244,8 @@ public class cfhider.PiEstimator extends org.apache.hadoop.conf.Configured imple
         $r17 = <java.lang.System: java.io.PrintStream out>;
         virtualinvoke $r17.<java.io.PrintStream: void println(java.lang.String)>("Estimated value of Pi is ");
         $r18 = <java.lang.System: java.io.PrintStream out>;
-        tmpResult310 = virtualinvoke sgxInvoker.<invoker.sgx_invoker: int getIntValue(java.lang.String,int,long)>(getUUID, 0, 31L);
-        tmpResult321 = virtualinvoke sgxInvoker.<invoker.sgx_invoker: long getLongValue(java.lang.String,int,long)>(getUUID, 0, 32L);
-        $r19 = staticinvoke <cfhider.PiEstimator: java.math.BigDecimal estimate(int,long,org.apache.hadoop.mapred.JobConf)>(tmpResult310, tmpResult321, r2);
+        $r19 = staticinvoke <cfhider.PiEstimator: java.math.BigDecimal estimate(int,long,org.apache.hadoop.mapred.JobConf)>(i0, l1, r2);
         virtualinvoke $r18.<java.io.PrintStream: void println(java.lang.Object)>($r19);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean deleteValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, "", 0L);
         return 0;
     }
 

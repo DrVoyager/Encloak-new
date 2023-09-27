@@ -856,6 +856,7 @@ public class Transformer {
 					insertCloseEnclaveStmt(sgxObjLocal, units, currProStmt,
 							"invoker.sgx_invoker");
 				}
+				// [hyr]0920, temp solve signature problem
 				if (isSenstive) { // need to delete
 					ReturnVoidStmt returnVoidStmt = Jimple.v().newReturnVoidStmt();
 					units.insertBefore(returnVoidStmt, currProStmt);
@@ -3532,6 +3533,7 @@ public class Transformer {
 							toCall.makeRef(),
 							Arrays.asList(getUUIDLocal, IntConstant.v(0),
 									LongConstant.v(counter)))); // IntConstant.v(returnTypeIndex)));
+			G.v().out.println("newInvokeStmt: " + newInvokeStmt);
 			units.insertBefore(newInvokeStmt, currProStmt);
 			units.remove(currProStmt);
 			counter++;
@@ -4191,6 +4193,7 @@ public class Transformer {
 		Stmt newInvokeStmt1 = Jimple.v().newInvokeStmt(
 				Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
 						Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
+		G.v().out.println("newInvokeStmt1: " + newInvokeStmt1);
 		units.insertBefore(newInvokeStmt1, currStmt);
 		counter++;
 		indexwriter("" + TypeIndex(((AssignStmt) currProStmt).getLeftOp()));
@@ -4206,6 +4209,7 @@ public class Transformer {
 		Stmt newInvokeStmt2 = Jimple.v().newInvokeStmt(
 				Jimple.v().newVirtualInvokeExpr(sgxObjLocal, toCall.makeRef(),
 						Arrays.asList(getUUIDLocal, IntConstant.v(0), LongConstant.v(counter))));
+		G.v().out.println("newInvokeStmt2: " + newInvokeStmt2);
 		units.insertBefore(newInvokeStmt2, currStmt);
 		counter++;
 		indexwriter("" + TypeIndex(((AssignStmt) currProStmt).getLeftOp()));

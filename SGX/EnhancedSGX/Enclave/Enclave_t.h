@@ -18,6 +18,7 @@
 extern "C" {
 #endif
 
+
 void encall_switch_type_get_i(void* data, void* rei, int* int_array, int intTail, double* double_array, int doubleTail, float* float_array, int floatTail, char* char_array, int charTail, long int* long_array, int longTail, char* byte_array, int byteTail, char* uuid, char* ouuid, char* cuuid);
 void encall_switch_type_branch(void* data, void* rei, int* int_array, int intTail, double* double_array, int doubleTail, float* float_array, int floatTail, char* char_array, int charTail, long int* long_array, int longTail, char* byte_array, int byteTail, char* uuid, char* ouuid, char* cuuid);
 void encall_switch_type_update(void* data, void* rei, int* int_array, int intTail, double* double_array, int doubleTail, float* float_array, int floatTail, char* char_array, int charTail, long int* long_array, int longTail, char* byte_array, int byteTail, char* uuid, char* ouuid, char* cuuid);

@@ -3,7 +3,8 @@ public class cfhider.PiEstimator$PiReducer extends org.apache.hadoop.mapred.MapR
     private long numInside;
     private long numOutside;
     private org.apache.hadoop.mapred.JobConf conf;
-    public java.lang.String Cuuid;
+    public java.lang.String Ouuid;
+    public static java.lang.String Cuuid;
 
     public void <init>()
     {
@@ -34,44 +35,16 @@ public class cfhider.PiEstimator$PiReducer extends org.apache.hadoop.mapred.MapR
         java.util.Iterator r2;
         org.apache.hadoop.mapred.OutputCollector r3;
         org.apache.hadoop.mapred.Reporter r4;
-        boolean $z0, $z1, $z2, branchInvokeResult, branchInvokeResultTest;
-        long $l0, $l1, $l2, $l3, $l4, $l5, invokeLineNo, tmpResult10, invokeLineNoTest;
+        boolean $z0, $z1, $z2;
+        long $l0, $l1, $l2, $l3, $l4, $l5;
         java.lang.Object $r6, $r9;
         org.apache.hadoop.io.LongWritable $r7, $r10;
-        java.lang.String getUUID, invokeUUID, tmpCuuid9, tmpCuuid12, getUUIDTest, invokeUUIDTest;
-        invoker.sgx_invoker sgxInvoker, sgxInvokerTest;
 
         r0 := @this: cfhider.PiEstimator$PiReducer;
         r1 := @parameter0: org.apache.hadoop.io.BooleanWritable;
         r2 := @parameter1: java.util.Iterator;
         r3 := @parameter2: org.apache.hadoop.mapred.OutputCollector;
         r4 := @parameter3: org.apache.hadoop.mapred.Reporter;
-        tmpResult10 = 0L;
-        $z0 = 0;
-        $z1 = 0;
-        $r5 = null;
-        $l0 = 0L;
-        $r6 = null;
-        $r7 = null;
-        $l1 = 0L;
-        $l2 = 0L;
-        $z2 = 0;
-        $r8 = null;
-        $l3 = 0L;
-        $r9 = null;
-        $r10 = null;
-        $l4 = 0L;
-        $l5 = 0L;
-        invokeLineNo = 0L;
-        getUUID = null;
-        invokeUUID = null;
-        branchInvokeResult = 0;
-        sgxInvoker = null;
-        sgxInvoker = new invoker.sgx_invoker;
-        specialinvoke sgxInvoker.<invoker.sgx_invoker: void <init>()>();
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initenclave()>();
-        getUUID = virtualinvoke sgxInvoker.<invoker.sgx_invoker: java.lang.String getUUID()>();
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, invokeUUID, invokeLineNo);
         $z0 = virtualinvoke r1.<org.apache.hadoop.io.BooleanWritable: boolean get()>();
         if $z0 == 0 goto label1;
 
@@ -93,22 +66,15 @@ public class cfhider.PiEstimator$PiReducer extends org.apache.hadoop.mapred.MapR
         if $z2 == 0 goto label2;
 
         $r8 = r0;
-        tmpCuuid9 = $r8.<cfhider.PiEstimator$PiReducer: java.lang.String Cuuid>;
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void setCuuid(java.lang.String)>(tmpCuuid9);
+        $l3 = $r8.<cfhider.PiEstimator$PiReducer: long numOutside>;
         $r9 = interfaceinvoke r2.<java.util.Iterator: java.lang.Object next()>();
         $r10 = (org.apache.hadoop.io.LongWritable) $r9;
-        tmpResult10 = virtualinvoke $r10.<org.apache.hadoop.io.LongWritable: long get()>();
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void add(long)>(tmpResult10);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void add(long)>($l1);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void add(long)>(invokeLineNo);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 1, 9L);
-        tmpCuuid12 = $r8.<cfhider.PiEstimator$PiReducer: java.lang.String Cuuid>;
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void setCuuid(java.lang.String)>(tmpCuuid12);
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 1, 12L);
+        $l4 = virtualinvoke $r10.<org.apache.hadoop.io.LongWritable: long get()>();
+        $l5 = $l3 + $l4;
+        $r8.<cfhider.PiEstimator$PiReducer: long numOutside> = $l5;
         goto label1;
 
      label2:
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean deleteValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, "", 0L);
         return;
     }
 
@@ -155,25 +121,12 @@ public class cfhider.PiEstimator$PiReducer extends org.apache.hadoop.mapred.MapR
         org.apache.hadoop.mapred.OutputCollector r3;
         org.apache.hadoop.mapred.Reporter r4;
         org.apache.hadoop.io.BooleanWritable $r5;
-        long invokeLineNo, invokeLineNoTest;
-        java.lang.String getUUID, invokeUUID, getUUIDTest, invokeUUIDTest;
-        boolean branchInvokeResult, branchInvokeResultTest;
-        invoker.sgx_invoker sgxInvoker, sgxInvokerTest;
 
         r0 := @this: cfhider.PiEstimator$PiReducer;
         r1 := @parameter0: java.lang.Object;
         r2 := @parameter1: java.util.Iterator;
         r3 := @parameter2: org.apache.hadoop.mapred.OutputCollector;
         r4 := @parameter3: org.apache.hadoop.mapred.Reporter;
-        $r5 = null;
-        invokeLineNo = 0L;
-        getUUID = null;
-        invokeUUID = null;
-        branchInvokeResult = 0;
-        sgxInvoker = null;
-        sgxInvoker = new invoker.sgx_invoker;
-        specialinvoke sgxInvoker.<invoker.sgx_invoker: void <init>()>();
-        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initenclave()>();
         $r5 = (org.apache.hadoop.io.BooleanWritable) r1;
         virtualinvoke r0.<cfhider.PiEstimator$PiReducer: void reduce(org.apache.hadoop.io.BooleanWritable,java.util.Iterator,org.apache.hadoop.mapred.OutputCollector,org.apache.hadoop.mapred.Reporter)>($r5, r2, r3, r4);
         return;

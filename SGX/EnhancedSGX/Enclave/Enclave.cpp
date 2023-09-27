@@ -725,7 +725,7 @@ int encall_table_load(void)
 {
 	
 	//printf("printf index once\n");
-	printf("Start to write the hashmap about updateIndex\n");
+	printf("Start to write the hashmap about updateIndex!!!\n");
 	//clock_t start,end;
 	//start = clock();
 	read_update_index_file();
@@ -1291,11 +1291,11 @@ void encall_initArray(char* uuid,int index,int size,int isSens){
 // 初始化数组节点
 void encall_initNode(char* uuid,int type,int size){
 
-	//printf("----------enter encall_initNode()----------\n");
+	printf("----------enter encall_initNode()----------\n");
 
 	ArrayNode2* node=hashmapArray2.find(uuid);
 	if(node==NULL){
-		printf("null\n");
+		printf("node is null\n");
 		node=(ArrayNode2*)malloc(sizeof(ArrayNode2));
 		if(!hashmapArray2.insert(uuid,node)){
 			printf("insert fail\n");
@@ -1303,6 +1303,7 @@ void encall_initNode(char* uuid,int type,int size){
 	}
 	// int array
 	if(type==7||type==13){
+		printf("int array\n");
 	 	for(int i=0;i<size;i++){
 	 		node->int_arrNodes[i]=(IntArrayNode*)malloc(sizeof(IntArrayNode));
 	 		for(int j=0;j<5;j++){
@@ -1322,6 +1323,7 @@ void encall_initNode(char* uuid,int type,int size){
 
 	// char array
 	if(type==10){
+		printf("char array\n");
 		for(int i=0;i<size;i++){
 			node->char_arrNodes[i]=(CharArrayNode*)malloc(sizeof(CharArrayNode));
 			for(int j=0;j<5;j++){
@@ -1336,6 +1338,7 @@ void encall_initNode(char* uuid,int type,int size){
 
 	// double array
 	if(type==8||type==14){
+		printf("double array\n");
 		for(int i=0;i<size;i++){
 			node->double_arrNodes[i]=(DoubleArrayNode*)malloc(sizeof(DoubleArrayNode));
 			for(int j=0;j<5;j++){
@@ -1374,7 +1377,7 @@ void encall_switch_type_get_i(void* data,void* rei,int* int_array,int int_tail,d
 
 // 处理
 void encall_switch_type_branch(void* data,void* rei,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid, char* ouuid, char* cuuid) {
-	//printf("----------enter encall_switch_type_branch()----------\n");
+	printf("----------enter encall_switch_type_branch()----------\n");
 	long *data1 = (long*)data;
     	long Line = *data1;
 	int return_flag = -1;
@@ -1398,7 +1401,7 @@ void encall_switch_type_branch(void* data,void* rei,int* int_array,int int_tail,
 
 void encall_switch_type_update(void* data,void* rei,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid, char* ouuid, char* cuuid) {
 
-	//printf("----------enter encall_switch_type_update()----------\n");
+	printf("----------enter encall_switch_type_update()----------\n");
 	long *data1 = (long*)data;
     	long Line = *data1;
 	int return_flag = -1;

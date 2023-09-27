@@ -190,20 +190,20 @@ void* EnclaveResponderThread3( void* hotEcall3AsVoidP ) //init_delete
 JNIEXPORT jint JNICALL Java_invoker_sgx_1invoker_init(JNIEnv *env, jclass obj)
 //int init_enclave(void)
 {
+	printf("INIT\n");
 	if(sgx_use_flag){
 		return 0;
 	}
 	clock_t t1,t2;
 	t1=clock();
 
-	printf("----enter Java_invoker_sgx_1invoker_init()-----\n");
-	// TODO initialize_enclave()这个函数的定义在哪？
-    if(initialize_enclave() < 0){
-        printf("init Failed ...\n");
-        getchar();
-        return -1; 
-    }
-	printf("init ok\n");
+	// initialize_enclave()位于SGX_setting.cpp中
+    	if(initialize_enclave() < 0){
+        	printf("init Failed ...\n");
+        	getchar();
+        	return -1; 
+    	}
+	printf("init ok!!\n");
 	//------------load-----------------------
 	int load_flag=-111;
 	//printf("loading");

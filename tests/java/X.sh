@@ -4,4 +4,4 @@
 ./transformer.sh
 ./encrypt_SGXindex.sh
 cd replaceOutput
-java test.test
+java test.Test

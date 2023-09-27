@@ -1,7 +1,6 @@
 #include "Enclave_t.h"
 
 #include "sgx_trts.h" /* for sgx_ocalloc, sgx_is_outside_enclave */
-#include "sgx_lfence.h" /* for sgx_lfence */
 
 #include <errno.h>
 #include <string.h> /* for memcpy etc */
@@ -431,11 +430,6 @@ typedef struct ms_ocall_sleep_t {
 
 static sgx_status_t SGX_CDECL sgx_encall_switch_type_get_i(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_encall_switch_type_get_i_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_encall_switch_type_get_i_t* ms = SGX_CAST(ms_encall_switch_type_get_i_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	void* _tmp_data = ms->ms_data;
@@ -450,7 +444,7 @@ static sgx_status_t SGX_CDECL sgx_encall_switch_type_get_i(void* pms)
 	char* _tmp_ouuid = ms->ms_ouuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_encall_switch_type_get_i_t));
 
 	encall_switch_type_get_i(_tmp_data, _tmp_rei, _tmp_int_array, ms->ms_intTail, _tmp_double_array, ms->ms_doubleTail, _tmp_float_array, ms->ms_floatTail, _tmp_char_array, ms->ms_charTail, _tmp_long_array, ms->ms_longTail, _tmp_byte_array, ms->ms_byteTail, _tmp_uuid, _tmp_ouuid, _tmp_cuuid);
 
@@ -460,11 +454,6 @@ static sgx_status_t SGX_CDECL sgx_encall_switch_type_get_i(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_encall_switch_type_branch(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_encall_switch_type_branch_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_encall_switch_type_branch_t* ms = SGX_CAST(ms_encall_switch_type_branch_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	void* _tmp_data = ms->ms_data;
@@ -479,7 +468,7 @@ static sgx_status_t SGX_CDECL sgx_encall_switch_type_branch(void* pms)
 	char* _tmp_ouuid = ms->ms_ouuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_encall_switch_type_branch_t));
 
 	encall_switch_type_branch(_tmp_data, _tmp_rei, _tmp_int_array, ms->ms_intTail, _tmp_double_array, ms->ms_doubleTail, _tmp_float_array, ms->ms_floatTail, _tmp_char_array, ms->ms_charTail, _tmp_long_array, ms->ms_longTail, _tmp_byte_array, ms->ms_byteTail, _tmp_uuid, _tmp_ouuid, _tmp_cuuid);
 
@@ -489,11 +478,6 @@ static sgx_status_t SGX_CDECL sgx_encall_switch_type_branch(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_encall_switch_type_update(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_encall_switch_type_update_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_encall_switch_type_update_t* ms = SGX_CAST(ms_encall_switch_type_update_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	void* _tmp_data = ms->ms_data;
@@ -508,7 +492,7 @@ static sgx_status_t SGX_CDECL sgx_encall_switch_type_update(void* pms)
 	char* _tmp_ouuid = ms->ms_ouuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_encall_switch_type_update_t));
 
 	encall_switch_type_update(_tmp_data, _tmp_rei, _tmp_int_array, ms->ms_intTail, _tmp_double_array, ms->ms_doubleTail, _tmp_float_array, ms->ms_floatTail, _tmp_char_array, ms->ms_charTail, _tmp_long_array, ms->ms_longTail, _tmp_byte_array, ms->ms_byteTail, _tmp_uuid, _tmp_ouuid, _tmp_cuuid);
 
@@ -518,11 +502,6 @@ static sgx_status_t SGX_CDECL sgx_encall_switch_type_update(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_print_int(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_print_int_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_print_int_t* ms = SGX_CAST(ms_print_int_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	int* _tmp_int_array = ms->ms_int_array;
@@ -530,7 +509,7 @@ static sgx_status_t SGX_CDECL sgx_print_int(void* pms)
 	char* _tmp_ouuid = ms->ms_ouuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_print_int_t));
 
 	ms->ms_retval = print_int(ms->ms_line, _tmp_int_array, _tmp_uuid, _tmp_ouuid, _tmp_cuuid);
 
@@ -540,11 +519,6 @@ static sgx_status_t SGX_CDECL sgx_print_int(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_print_long(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_print_long_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_print_long_t* ms = SGX_CAST(ms_print_long_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	long int* _tmp_long_array = ms->ms_long_array;
@@ -553,7 +527,7 @@ static sgx_status_t SGX_CDECL sgx_print_long(void* pms)
 	char* _tmp_ouuid = ms->ms_ouuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_print_long_t));
 
 	ms->ms_retval = print_long(ms->ms_line, _tmp_long_array, _tmp_int_array, _tmp_uuid, _tmp_ouuid, _tmp_cuuid);
 
@@ -563,11 +537,6 @@ static sgx_status_t SGX_CDECL sgx_print_long(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_print_double(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_print_double_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_print_double_t* ms = SGX_CAST(ms_print_double_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	double* _tmp_double_array = ms->ms_double_array;
@@ -576,7 +545,7 @@ static sgx_status_t SGX_CDECL sgx_print_double(void* pms)
 	char* _tmp_ouuid = ms->ms_ouuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_print_double_t));
 
 	ms->ms_retval = print_double(ms->ms_line, _tmp_double_array, _tmp_int_array, _tmp_uuid, _tmp_ouuid, _tmp_cuuid);
 
@@ -586,11 +555,6 @@ static sgx_status_t SGX_CDECL sgx_print_double(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_print_float(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_print_float_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_print_float_t* ms = SGX_CAST(ms_print_float_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	float* _tmp_float_array = ms->ms_float_array;
@@ -598,7 +562,7 @@ static sgx_status_t SGX_CDECL sgx_print_float(void* pms)
 	char* _tmp_ouuid = ms->ms_ouuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_print_float_t));
 
 	ms->ms_retval = print_float(ms->ms_line, _tmp_float_array, _tmp_uuid, _tmp_ouuid, _tmp_cuuid);
 
@@ -608,11 +572,6 @@ static sgx_status_t SGX_CDECL sgx_print_float(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_print_char(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_print_char_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_print_char_t* ms = SGX_CAST(ms_print_char_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	char* _tmp_char_array = ms->ms_char_array;
@@ -620,7 +579,7 @@ static sgx_status_t SGX_CDECL sgx_print_char(void* pms)
 	char* _tmp_ouuid = ms->ms_ouuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_print_char_t));
 
 	ms->ms_retval = print_char(ms->ms_line, _tmp_char_array, _tmp_uuid, _tmp_ouuid, _tmp_cuuid);
 
@@ -630,11 +589,6 @@ static sgx_status_t SGX_CDECL sgx_print_char(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_print_byte(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_print_byte_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_print_byte_t* ms = SGX_CAST(ms_print_byte_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	char* _tmp_byte_array = ms->ms_byte_array;
@@ -643,7 +597,7 @@ static sgx_status_t SGX_CDECL sgx_print_byte(void* pms)
 	char* _tmp_ouuid = ms->ms_ouuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_print_byte_t));
 
 	ms->ms_retval = print_byte(ms->ms_line, _tmp_byte_array, _tmp_int_array, _tmp_uuid, _tmp_ouuid, _tmp_cuuid);
 
@@ -653,11 +607,6 @@ static sgx_status_t SGX_CDECL sgx_print_byte(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_print_array_i(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_print_array_i_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_print_array_i_t* ms = SGX_CAST(ms_print_array_i_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	int* _tmp_int_array = ms->ms_int_array;
@@ -665,7 +614,7 @@ static sgx_status_t SGX_CDECL sgx_print_array_i(void* pms)
 	char* _tmp_ouuid = ms->ms_ouuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_print_array_i_t));
 
 	ms->ms_retval = print_array_i(ms->ms_line, _tmp_int_array, ms->ms_int_tail, _tmp_uuid, _tmp_ouuid, _tmp_cuuid);
 
@@ -675,11 +624,6 @@ static sgx_status_t SGX_CDECL sgx_print_array_i(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_print_array_d(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_print_array_d_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_print_array_d_t* ms = SGX_CAST(ms_print_array_d_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	double* _tmp_double_array = ms->ms_double_array;
@@ -687,7 +631,7 @@ static sgx_status_t SGX_CDECL sgx_print_array_d(void* pms)
 	char* _tmp_ouuid = ms->ms_ouuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_print_array_d_t));
 
 	ms->ms_retval = print_array_d(ms->ms_line, _tmp_double_array, ms->ms_double_tail, _tmp_uuid, _tmp_ouuid, _tmp_cuuid);
 
@@ -697,15 +641,10 @@ static sgx_status_t SGX_CDECL sgx_print_array_d(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_encall_table_load(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_encall_table_load_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_encall_table_load_t* ms = SGX_CAST(ms_encall_table_load_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_encall_table_load_t));
 
 	ms->ms_retval = encall_table_load();
 
@@ -715,25 +654,16 @@ static sgx_status_t SGX_CDECL sgx_encall_table_load(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_encall_hash_readin(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_encall_hash_readin_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_encall_hash_readin_t* ms = SGX_CAST(ms_encall_hash_readin_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	char* _tmp_buf = ms->ms_buf;
 	size_t _len_buf = 400;
 	char* _in_buf = NULL;
 
+	CHECK_REF_POINTER(pms, sizeof(ms_encall_hash_readin_t));
 	CHECK_UNIQUE_POINTER(_tmp_buf, _len_buf);
 
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
-
-	if (_tmp_buf != NULL && _len_buf != 0) {
+	if (_tmp_buf != NULL) {
 		_in_buf = (char*)malloc(_len_buf);
 		if (_in_buf == NULL) {
 			status = SGX_ERROR_OUT_OF_MEMORY;
@@ -742,7 +672,6 @@ static sgx_status_t SGX_CDECL sgx_encall_hash_readin(void* pms)
 
 		memcpy(_in_buf, _tmp_buf, _len_buf);
 	}
-
 	ms->ms_retval = encall_hash_readin(_in_buf, ms->ms_line);
 err:
 	if (_in_buf) free(_in_buf);
@@ -752,25 +681,16 @@ err:
 
 static sgx_status_t SGX_CDECL sgx_encall_read_line(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_encall_read_line_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_encall_read_line_t* ms = SGX_CAST(ms_encall_read_line_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	char* _tmp_in_buf = ms->ms_in_buf;
 	size_t _len_in_buf = 50;
 	char* _in_in_buf = NULL;
 
+	CHECK_REF_POINTER(pms, sizeof(ms_encall_read_line_t));
 	CHECK_UNIQUE_POINTER(_tmp_in_buf, _len_in_buf);
 
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
-
-	if (_tmp_in_buf != NULL && _len_in_buf != 0) {
+	if (_tmp_in_buf != NULL) {
 		_in_in_buf = (char*)malloc(_len_in_buf);
 		if (_in_in_buf == NULL) {
 			status = SGX_ERROR_OUT_OF_MEMORY;
@@ -779,7 +699,6 @@ static sgx_status_t SGX_CDECL sgx_encall_read_line(void* pms)
 
 		memcpy(_in_in_buf, _tmp_in_buf, _len_in_buf);
 	}
-
 	ms->ms_retval = encall_read_line(_in_in_buf, ms->ms_buf_len, ms->ms_line, ms->ms_isIndex);
 err:
 	if (_in_in_buf) free(_in_in_buf);
@@ -789,18 +708,13 @@ err:
 
 static sgx_status_t SGX_CDECL sgx_encall_varible(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_encall_varible_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_encall_varible_t* ms = SGX_CAST(ms_encall_varible_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	void* _tmp_data = ms->ms_data;
 	char* _tmp_uuid = ms->ms_uuid;
 	char* _tmp_calluuid = ms->ms_calluuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_encall_varible_t));
 
 	encall_varible(_tmp_data, _tmp_uuid, _tmp_calluuid);
 
@@ -810,18 +724,13 @@ static sgx_status_t SGX_CDECL sgx_encall_varible(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_encall_deleteValue(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_encall_deleteValue_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_encall_deleteValue_t* ms = SGX_CAST(ms_encall_deleteValue_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	void* _tmp_data = ms->ms_data;
 	char* _tmp_uuid = ms->ms_uuid;
 	char* _tmp_cuuid = ms->ms_cuuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_encall_deleteValue_t));
 
 	encall_deleteValue(_tmp_data, _tmp_uuid, _tmp_cuuid);
 
@@ -831,16 +740,11 @@ static sgx_status_t SGX_CDECL sgx_encall_deleteValue(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_encall_initArray(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_encall_initArray_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_encall_initArray_t* ms = SGX_CAST(ms_encall_initArray_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	char* _tmp_uuid = ms->ms_uuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_encall_initArray_t));
 
 	encall_initArray(_tmp_uuid, ms->ms_index, ms->ms_size, ms->ms_isSens);
 
@@ -850,16 +754,11 @@ static sgx_status_t SGX_CDECL sgx_encall_initArray(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_encall_initNode(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_encall_initNode_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_encall_initNode_t* ms = SGX_CAST(ms_encall_initNode_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	char* _tmp_uuid = ms->ms_uuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_encall_initNode_t));
 
 	encall_initNode(_tmp_uuid, ms->ms_type, ms->ms_size);
 
@@ -869,16 +768,11 @@ static sgx_status_t SGX_CDECL sgx_encall_initNode(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_encall_getArraySize(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_encall_getArraySize_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_encall_getArraySize_t* ms = SGX_CAST(ms_encall_getArraySize_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	char* _tmp_uuid = ms->ms_uuid;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_encall_getArraySize_t));
 
 	ms->ms_retval = encall_getArraySize(ms->ms_line, _tmp_uuid);
 
@@ -888,16 +782,11 @@ static sgx_status_t SGX_CDECL sgx_encall_getArraySize(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_EcallStartResponder(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_EcallStartResponder_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_EcallStartResponder_t* ms = SGX_CAST(ms_EcallStartResponder_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	HotCall* _tmp_fastEcall = ms->ms_fastEcall;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_EcallStartResponder_t));
 
 	EcallStartResponder(_tmp_fastEcall);
 
@@ -907,16 +796,11 @@ static sgx_status_t SGX_CDECL sgx_EcallStartResponder(void* pms)
 
 static sgx_status_t SGX_CDECL sgx_EcallStartResponder3(void* pms)
 {
-	CHECK_REF_POINTER(pms, sizeof(ms_EcallStartResponder3_t));
-	//
-	// fence after pointer checks
-	//
-	sgx_lfence();
 	ms_EcallStartResponder3_t* ms = SGX_CAST(ms_EcallStartResponder3_t*, pms);
 	sgx_status_t status = SGX_SUCCESS;
 	HotCall* _tmp_fastEcall = ms->ms_fastEcall;
 
-
+	CHECK_REF_POINTER(pms, sizeof(ms_EcallStartResponder3_t));
 
 	EcallStartResponder3(_tmp_fastEcall);
 
@@ -1022,8 +906,8 @@ sgx_status_t SGX_CDECL ocall_print_string(const char* str)
 
 	if (str != NULL && sgx_is_within_enclave(str, _len_str)) {
 		ms->ms_str = (char*)__tmp;
-		memcpy(__tmp, str, _len_str);
 		__tmp = (void *)((size_t)__tmp + _len_str);
+		memcpy((void*)ms->ms_str, str, _len_str);
 	} else if (str == NULL) {
 		ms->ms_str = NULL;
 	} else {
@@ -1033,8 +917,7 @@ sgx_status_t SGX_CDECL ocall_print_string(const char* str)
 	
 	status = sgx_ocall(0, ms);
 
-	if (status == SGX_SUCCESS) {
-	}
+
 	sgx_ocfree();
 	return status;
 }
@@ -1059,8 +942,7 @@ sgx_status_t SGX_CDECL ocall_print_int(int str)
 	ms->ms_str = str;
 	status = sgx_ocall(1, ms);
 
-	if (status == SGX_SUCCESS) {
-	}
+
 	sgx_ocfree();
 	return status;
 }
@@ -1085,8 +967,7 @@ sgx_status_t SGX_CDECL ocall_print_long(long int str)
 	ms->ms_str = str;
 	status = sgx_ocall(2, ms);
 
-	if (status == SGX_SUCCESS) {
-	}
+
 	sgx_ocfree();
 	return status;
 }
@@ -1113,8 +994,7 @@ sgx_status_t SGX_CDECL ocall_file_write(char* file, char* buf, int len)
 	ms->ms_len = len;
 	status = sgx_ocall(3, ms);
 
-	if (status == SGX_SUCCESS) {
-	}
+
 	sgx_ocfree();
 	return status;
 }
@@ -1141,8 +1021,7 @@ sgx_status_t SGX_CDECL ocall_file_add(char* file, char* buf, int len)
 	ms->ms_len = len;
 	status = sgx_ocall(4, ms);
 
-	if (status == SGX_SUCCESS) {
-	}
+
 	sgx_ocfree();
 	return status;
 }
@@ -1158,8 +1037,6 @@ sgx_status_t SGX_CDECL ocall_file_read(char* file, int* buf, long int* start)
 	size_t ocalloc_size = sizeof(ms_ocall_file_read_t);
 	void *__tmp = NULL;
 
-	void *__tmp_buf = NULL;
-	void *__tmp_start = NULL;
 	ocalloc_size += (file != NULL && sgx_is_within_enclave(file, _len_file)) ? _len_file : 0;
 	ocalloc_size += (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) ? _len_buf : 0;
 	ocalloc_size += (start != NULL && sgx_is_within_enclave(start, _len_start)) ? _len_start : 0;
@@ -1174,8 +1051,8 @@ sgx_status_t SGX_CDECL ocall_file_read(char* file, int* buf, long int* start)
 
 	if (file != NULL && sgx_is_within_enclave(file, _len_file)) {
 		ms->ms_file = (char*)__tmp;
-		memcpy(__tmp, file, _len_file);
 		__tmp = (void *)((size_t)__tmp + _len_file);
+		memcpy(ms->ms_file, file, _len_file);
 	} else if (file == NULL) {
 		ms->ms_file = NULL;
 	} else {
@@ -1185,9 +1062,8 @@ sgx_status_t SGX_CDECL ocall_file_read(char* file, int* buf, long int* start)
 	
 	if (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) {
 		ms->ms_buf = (int*)__tmp;
-		__tmp_buf = __tmp;
-		memcpy(__tmp_buf, buf, _len_buf);
 		__tmp = (void *)((size_t)__tmp + _len_buf);
+		memcpy(ms->ms_buf, buf, _len_buf);
 	} else if (buf == NULL) {
 		ms->ms_buf = NULL;
 	} else {
@@ -1197,9 +1073,8 @@ sgx_status_t SGX_CDECL ocall_file_read(char* file, int* buf, long int* start)
 	
 	if (start != NULL && sgx_is_within_enclave(start, _len_start)) {
 		ms->ms_start = (long int*)__tmp;
-		__tmp_start = __tmp;
-		memcpy(__tmp_start, start, _len_start);
 		__tmp = (void *)((size_t)__tmp + _len_start);
+		memcpy(ms->ms_start, start, _len_start);
 	} else if (start == NULL) {
 		ms->ms_start = NULL;
 	} else {
@@ -1209,10 +1084,9 @@ sgx_status_t SGX_CDECL ocall_file_read(char* file, int* buf, long int* start)
 	
 	status = sgx_ocall(5, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (buf) memcpy((void*)buf, __tmp_buf, _len_buf);
-		if (start) memcpy((void*)start, __tmp_start, _len_start);
-	}
+	if (buf) memcpy((void*)buf, ms->ms_buf, _len_buf);
+	if (start) memcpy((void*)start, ms->ms_start, _len_start);
+
 	sgx_ocfree();
 	return status;
 }
@@ -1239,8 +1113,7 @@ sgx_status_t SGX_CDECL ocall_file_getline(char* file, char* buf, long int* line_
 	ms->ms_line_num = SGX_CAST(long int*, line_num);
 	status = sgx_ocall(6, ms);
 
-	if (status == SGX_SUCCESS) {
-	}
+
 	sgx_ocfree();
 	return status;
 }
@@ -1266,8 +1139,8 @@ sgx_status_t SGX_CDECL ocall_open(int* retval, const char* filename, int flags, 
 
 	if (filename != NULL && sgx_is_within_enclave(filename, _len_filename)) {
 		ms->ms_filename = (char*)__tmp;
-		memcpy(__tmp, filename, _len_filename);
 		__tmp = (void *)((size_t)__tmp + _len_filename);
+		memcpy((void*)ms->ms_filename, filename, _len_filename);
 	} else if (filename == NULL) {
 		ms->ms_filename = NULL;
 	} else {
@@ -1279,9 +1152,8 @@ sgx_status_t SGX_CDECL ocall_open(int* retval, const char* filename, int flags, 
 	ms->ms_mode = mode;
 	status = sgx_ocall(7, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1309,9 +1181,8 @@ sgx_status_t SGX_CDECL ocall_fallocate(int* retval, int fd, int mode, off_t offs
 	ms->ms_len = len;
 	status = sgx_ocall(8, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1319,7 +1190,7 @@ sgx_status_t SGX_CDECL ocall_fallocate(int* retval, int fd, int mode, off_t offs
 sgx_status_t SGX_CDECL ocall_fcntl_flock(int* retval, int fd, int cmd, struct flock* p)
 {
 	sgx_status_t status = SGX_SUCCESS;
-	size_t _len_p = sizeof(struct flock);
+	size_t _len_p = sizeof(*p);
 
 	ms_ocall_fcntl_flock_t* ms = NULL;
 	size_t ocalloc_size = sizeof(ms_ocall_fcntl_flock_t);
@@ -1339,8 +1210,8 @@ sgx_status_t SGX_CDECL ocall_fcntl_flock(int* retval, int fd, int cmd, struct fl
 	ms->ms_cmd = cmd;
 	if (p != NULL && sgx_is_within_enclave(p, _len_p)) {
 		ms->ms_p = (struct flock*)__tmp;
-		memcpy(__tmp, p, _len_p);
 		__tmp = (void *)((size_t)__tmp + _len_p);
+		memcpy(ms->ms_p, p, _len_p);
 	} else if (p == NULL) {
 		ms->ms_p = NULL;
 	} else {
@@ -1350,9 +1221,8 @@ sgx_status_t SGX_CDECL ocall_fcntl_flock(int* retval, int fd, int cmd, struct fl
 	
 	status = sgx_ocall(9, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1379,9 +1249,8 @@ sgx_status_t SGX_CDECL ocall_fcntl_int(int* retval, int fd, int cmd, int pa)
 	ms->ms_pa = pa;
 	status = sgx_ocall(10, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1407,9 +1276,8 @@ sgx_status_t SGX_CDECL ocall_fcntl_void(int* retval, int fd, int cmd)
 	ms->ms_cmd = cmd;
 	status = sgx_ocall(11, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1435,8 +1303,8 @@ sgx_status_t SGX_CDECL ocall_getenv(char** retval, const char* name)
 
 	if (name != NULL && sgx_is_within_enclave(name, _len_name)) {
 		ms->ms_name = (char*)__tmp;
-		memcpy(__tmp, name, _len_name);
 		__tmp = (void *)((size_t)__tmp + _len_name);
+		memcpy((void*)ms->ms_name, name, _len_name);
 	} else if (name == NULL) {
 		ms->ms_name = NULL;
 	} else {
@@ -1446,9 +1314,8 @@ sgx_status_t SGX_CDECL ocall_getenv(char** retval, const char* name)
 	
 	status = sgx_ocall(12, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1457,13 +1324,12 @@ sgx_status_t SGX_CDECL ocall_stat(int* retval, const char* pathname, struct stat
 {
 	sgx_status_t status = SGX_SUCCESS;
 	size_t _len_pathname = pathname ? strlen(pathname) + 1 : 0;
-	size_t _len_buf = sizeof(struct stat);
+	size_t _len_buf = sizeof(*buf);
 
 	ms_ocall_stat_t* ms = NULL;
 	size_t ocalloc_size = sizeof(ms_ocall_stat_t);
 	void *__tmp = NULL;
 
-	void *__tmp_buf = NULL;
 	ocalloc_size += (pathname != NULL && sgx_is_within_enclave(pathname, _len_pathname)) ? _len_pathname : 0;
 	ocalloc_size += (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) ? _len_buf : 0;
 
@@ -1477,8 +1343,8 @@ sgx_status_t SGX_CDECL ocall_stat(int* retval, const char* pathname, struct stat
 
 	if (pathname != NULL && sgx_is_within_enclave(pathname, _len_pathname)) {
 		ms->ms_pathname = (char*)__tmp;
-		memcpy(__tmp, pathname, _len_pathname);
 		__tmp = (void *)((size_t)__tmp + _len_pathname);
+		memcpy((void*)ms->ms_pathname, pathname, _len_pathname);
 	} else if (pathname == NULL) {
 		ms->ms_pathname = NULL;
 	} else {
@@ -1488,9 +1354,8 @@ sgx_status_t SGX_CDECL ocall_stat(int* retval, const char* pathname, struct stat
 	
 	if (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) {
 		ms->ms_buf = (struct stat*)__tmp;
-		__tmp_buf = __tmp;
-		memset(__tmp_buf, 0, _len_buf);
 		__tmp = (void *)((size_t)__tmp + _len_buf);
+		memset(ms->ms_buf, 0, _len_buf);
 	} else if (buf == NULL) {
 		ms->ms_buf = NULL;
 	} else {
@@ -1500,10 +1365,9 @@ sgx_status_t SGX_CDECL ocall_stat(int* retval, const char* pathname, struct stat
 	
 	status = sgx_ocall(13, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-		if (buf) memcpy((void*)buf, __tmp_buf, _len_buf);
-	}
+	if (retval) *retval = ms->ms_retval;
+	if (buf) memcpy((void*)buf, ms->ms_buf, _len_buf);
+
 	sgx_ocfree();
 	return status;
 }
@@ -1511,13 +1375,12 @@ sgx_status_t SGX_CDECL ocall_stat(int* retval, const char* pathname, struct stat
 sgx_status_t SGX_CDECL ocall_fstat(int* retval, int fd, struct stat* buf)
 {
 	sgx_status_t status = SGX_SUCCESS;
-	size_t _len_buf = sizeof(struct stat);
+	size_t _len_buf = sizeof(*buf);
 
 	ms_ocall_fstat_t* ms = NULL;
 	size_t ocalloc_size = sizeof(ms_ocall_fstat_t);
 	void *__tmp = NULL;
 
-	void *__tmp_buf = NULL;
 	ocalloc_size += (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) ? _len_buf : 0;
 
 	__tmp = sgx_ocalloc(ocalloc_size);
@@ -1531,9 +1394,8 @@ sgx_status_t SGX_CDECL ocall_fstat(int* retval, int fd, struct stat* buf)
 	ms->ms_fd = fd;
 	if (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) {
 		ms->ms_buf = (struct stat*)__tmp;
-		__tmp_buf = __tmp;
-		memset(__tmp_buf, 0, _len_buf);
 		__tmp = (void *)((size_t)__tmp + _len_buf);
+		memset(ms->ms_buf, 0, _len_buf);
 	} else if (buf == NULL) {
 		ms->ms_buf = NULL;
 	} else {
@@ -1543,10 +1405,9 @@ sgx_status_t SGX_CDECL ocall_fstat(int* retval, int fd, struct stat* buf)
 	
 	status = sgx_ocall(14, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-		if (buf) memcpy((void*)buf, __tmp_buf, _len_buf);
-	}
+	if (retval) *retval = ms->ms_retval;
+	if (buf) memcpy((void*)buf, ms->ms_buf, _len_buf);
+
 	sgx_ocfree();
 	return status;
 }
@@ -1572,9 +1433,8 @@ sgx_status_t SGX_CDECL ocall_fchmod(int* retval, int fd, unsigned int mode)
 	ms->ms_mode = mode;
 	status = sgx_ocall(15, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1600,8 +1460,8 @@ sgx_status_t SGX_CDECL ocall_mkdir(int* retval, const char* pathname, mode_t mod
 
 	if (pathname != NULL && sgx_is_within_enclave(pathname, _len_pathname)) {
 		ms->ms_pathname = (char*)__tmp;
-		memcpy(__tmp, pathname, _len_pathname);
 		__tmp = (void *)((size_t)__tmp + _len_pathname);
+		memcpy((void*)ms->ms_pathname, pathname, _len_pathname);
 	} else if (pathname == NULL) {
 		ms->ms_pathname = NULL;
 	} else {
@@ -1612,9 +1472,8 @@ sgx_status_t SGX_CDECL ocall_mkdir(int* retval, const char* pathname, mode_t mod
 	ms->ms_mode = mode;
 	status = sgx_ocall(16, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1622,7 +1481,7 @@ sgx_status_t SGX_CDECL ocall_mkdir(int* retval, const char* pathname, mode_t mod
 sgx_status_t SGX_CDECL ocall_time(time_t* retval, time_t* t)
 {
 	sgx_status_t status = SGX_SUCCESS;
-	size_t _len_t = sizeof(time_t);
+	size_t _len_t = sizeof(*t);
 
 	ms_ocall_time_t* ms = NULL;
 	size_t ocalloc_size = sizeof(ms_ocall_time_t);
@@ -1640,8 +1499,8 @@ sgx_status_t SGX_CDECL ocall_time(time_t* retval, time_t* t)
 
 	if (t != NULL && sgx_is_within_enclave(t, _len_t)) {
 		ms->ms_t = (time_t*)__tmp;
-		memcpy(__tmp, t, _len_t);
 		__tmp = (void *)((size_t)__tmp + _len_t);
+		memcpy(ms->ms_t, t, _len_t);
 	} else if (t == NULL) {
 		ms->ms_t = NULL;
 	} else {
@@ -1651,9 +1510,8 @@ sgx_status_t SGX_CDECL ocall_time(time_t* retval, time_t* t)
 	
 	status = sgx_ocall(17, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1662,7 +1520,7 @@ sgx_status_t SGX_CDECL ocall_utimes(int* retval, const char* filename, const str
 {
 	sgx_status_t status = SGX_SUCCESS;
 	size_t _len_filename = filename ? strlen(filename) + 1 : 0;
-	size_t _len_times = 2 * sizeof(struct timeval);
+	size_t _len_times = 2 * sizeof(*times);
 
 	ms_ocall_utimes_t* ms = NULL;
 	size_t ocalloc_size = sizeof(ms_ocall_utimes_t);
@@ -1681,8 +1539,8 @@ sgx_status_t SGX_CDECL ocall_utimes(int* retval, const char* filename, const str
 
 	if (filename != NULL && sgx_is_within_enclave(filename, _len_filename)) {
 		ms->ms_filename = (char*)__tmp;
-		memcpy(__tmp, filename, _len_filename);
 		__tmp = (void *)((size_t)__tmp + _len_filename);
+		memcpy((void*)ms->ms_filename, filename, _len_filename);
 	} else if (filename == NULL) {
 		ms->ms_filename = NULL;
 	} else {
@@ -1692,8 +1550,8 @@ sgx_status_t SGX_CDECL ocall_utimes(int* retval, const char* filename, const str
 	
 	if (times != NULL && sgx_is_within_enclave(times, _len_times)) {
 		ms->ms_times = (struct timeval*)__tmp;
-		memcpy(__tmp, times, _len_times);
 		__tmp = (void *)((size_t)__tmp + _len_times);
+		memcpy((void*)ms->ms_times, times, _len_times);
 	} else if (times == NULL) {
 		ms->ms_times = NULL;
 	} else {
@@ -1703,9 +1561,8 @@ sgx_status_t SGX_CDECL ocall_utimes(int* retval, const char* filename, const str
 	
 	status = sgx_ocall(18, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1713,13 +1570,12 @@ sgx_status_t SGX_CDECL ocall_utimes(int* retval, const char* filename, const str
 sgx_status_t SGX_CDECL ocall_gettimeofday(int* retval, struct timeval* tv)
 {
 	sgx_status_t status = SGX_SUCCESS;
-	size_t _len_tv = sizeof(struct timeval);
+	size_t _len_tv = sizeof(*tv);
 
 	ms_ocall_gettimeofday_t* ms = NULL;
 	size_t ocalloc_size = sizeof(ms_ocall_gettimeofday_t);
 	void *__tmp = NULL;
 
-	void *__tmp_tv = NULL;
 	ocalloc_size += (tv != NULL && sgx_is_within_enclave(tv, _len_tv)) ? _len_tv : 0;
 
 	__tmp = sgx_ocalloc(ocalloc_size);
@@ -1732,9 +1588,8 @@ sgx_status_t SGX_CDECL ocall_gettimeofday(int* retval, struct timeval* tv)
 
 	if (tv != NULL && sgx_is_within_enclave(tv, _len_tv)) {
 		ms->ms_tv = (struct timeval*)__tmp;
-		__tmp_tv = __tmp;
-		memset(__tmp_tv, 0, _len_tv);
 		__tmp = (void *)((size_t)__tmp + _len_tv);
+		memset(ms->ms_tv, 0, _len_tv);
 	} else if (tv == NULL) {
 		ms->ms_tv = NULL;
 	} else {
@@ -1744,10 +1599,9 @@ sgx_status_t SGX_CDECL ocall_gettimeofday(int* retval, struct timeval* tv)
 	
 	status = sgx_ocall(19, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-		if (tv) memcpy((void*)tv, __tmp_tv, _len_tv);
-	}
+	if (retval) *retval = ms->ms_retval;
+	if (tv) memcpy((void*)tv, ms->ms_tv, _len_tv);
+
 	sgx_ocfree();
 	return status;
 }
@@ -1761,7 +1615,6 @@ sgx_status_t SGX_CDECL ocall_read(ssize_t* retval, int file, void* buf, size_t c
 	size_t ocalloc_size = sizeof(ms_ocall_read_t);
 	void *__tmp = NULL;
 
-	void *__tmp_buf = NULL;
 	ocalloc_size += (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) ? _len_buf : 0;
 
 	__tmp = sgx_ocalloc(ocalloc_size);
@@ -1775,9 +1628,8 @@ sgx_status_t SGX_CDECL ocall_read(ssize_t* retval, int file, void* buf, size_t c
 	ms->ms_file = file;
 	if (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) {
 		ms->ms_buf = (void*)__tmp;
-		__tmp_buf = __tmp;
-		memset(__tmp_buf, 0, _len_buf);
 		__tmp = (void *)((size_t)__tmp + _len_buf);
+		memset(ms->ms_buf, 0, _len_buf);
 	} else if (buf == NULL) {
 		ms->ms_buf = NULL;
 	} else {
@@ -1788,10 +1640,9 @@ sgx_status_t SGX_CDECL ocall_read(ssize_t* retval, int file, void* buf, size_t c
 	ms->ms_count = count;
 	status = sgx_ocall(20, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-		if (buf) memcpy((void*)buf, __tmp_buf, _len_buf);
-	}
+	if (retval) *retval = ms->ms_retval;
+	if (buf) memcpy((void*)buf, ms->ms_buf, _len_buf);
+
 	sgx_ocfree();
 	return status;
 }
@@ -1818,8 +1669,8 @@ sgx_status_t SGX_CDECL ocall_write(ssize_t* retval, int file, const void* buf, s
 	ms->ms_file = file;
 	if (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) {
 		ms->ms_buf = (void*)__tmp;
-		memcpy(__tmp, buf, _len_buf);
 		__tmp = (void *)((size_t)__tmp + _len_buf);
+		memcpy((void*)ms->ms_buf, buf, _len_buf);
 	} else if (buf == NULL) {
 		ms->ms_buf = NULL;
 	} else {
@@ -1830,9 +1681,8 @@ sgx_status_t SGX_CDECL ocall_write(ssize_t* retval, int file, const void* buf, s
 	ms->ms_count = count;
 	status = sgx_ocall(21, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1857,9 +1707,8 @@ sgx_status_t SGX_CDECL ocall_close(int* retval, int fd)
 	ms->ms_fd = fd;
 	status = sgx_ocall(22, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1886,9 +1735,8 @@ sgx_status_t SGX_CDECL ocall_fchown(int* retval, int fd, uid_t owner, gid_t grou
 	ms->ms_group = group;
 	status = sgx_ocall(23, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1896,13 +1744,12 @@ sgx_status_t SGX_CDECL ocall_fchown(int* retval, int fd, uid_t owner, gid_t grou
 sgx_status_t SGX_CDECL ocall_getcwd(char** retval, char* buf, size_t size)
 {
 	sgx_status_t status = SGX_SUCCESS;
-	size_t _len_buf = size * sizeof(char);
+	size_t _len_buf = size * sizeof(*buf);
 
 	ms_ocall_getcwd_t* ms = NULL;
 	size_t ocalloc_size = sizeof(ms_ocall_getcwd_t);
 	void *__tmp = NULL;
 
-	void *__tmp_buf = NULL;
 	ocalloc_size += (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) ? _len_buf : 0;
 
 	__tmp = sgx_ocalloc(ocalloc_size);
@@ -1915,9 +1762,8 @@ sgx_status_t SGX_CDECL ocall_getcwd(char** retval, char* buf, size_t size)
 
 	if (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) {
 		ms->ms_buf = (char*)__tmp;
-		__tmp_buf = __tmp;
-		memcpy(__tmp_buf, buf, _len_buf);
 		__tmp = (void *)((size_t)__tmp + _len_buf);
+		memcpy(ms->ms_buf, buf, _len_buf);
 	} else if (buf == NULL) {
 		ms->ms_buf = NULL;
 	} else {
@@ -1928,10 +1774,9 @@ sgx_status_t SGX_CDECL ocall_getcwd(char** retval, char* buf, size_t size)
 	ms->ms_size = size;
 	status = sgx_ocall(24, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-		if (buf) memcpy((void*)buf, __tmp_buf, _len_buf);
-	}
+	if (retval) *retval = ms->ms_retval;
+	if (buf) memcpy((void*)buf, ms->ms_buf, _len_buf);
+
 	sgx_ocfree();
 	return status;
 }
@@ -1957,8 +1802,8 @@ sgx_status_t SGX_CDECL ocall_truncate(int* retval, const char* path, off_t lengt
 
 	if (path != NULL && sgx_is_within_enclave(path, _len_path)) {
 		ms->ms_path = (char*)__tmp;
-		memcpy(__tmp, path, _len_path);
 		__tmp = (void *)((size_t)__tmp + _len_path);
+		memcpy((void*)ms->ms_path, path, _len_path);
 	} else if (path == NULL) {
 		ms->ms_path = NULL;
 	} else {
@@ -1969,9 +1814,8 @@ sgx_status_t SGX_CDECL ocall_truncate(int* retval, const char* path, off_t lengt
 	ms->ms_length = length;
 	status = sgx_ocall(25, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -1997,9 +1841,8 @@ sgx_status_t SGX_CDECL ocall_ftruncate(int* retval, int fd, off_t length)
 	ms->ms_length = length;
 	status = sgx_ocall(26, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -2013,7 +1856,6 @@ sgx_status_t SGX_CDECL ocall_pread(ssize_t* retval, int fd, void* buf, size_t co
 	size_t ocalloc_size = sizeof(ms_ocall_pread_t);
 	void *__tmp = NULL;
 
-	void *__tmp_buf = NULL;
 	ocalloc_size += (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) ? _len_buf : 0;
 
 	__tmp = sgx_ocalloc(ocalloc_size);
@@ -2027,9 +1869,8 @@ sgx_status_t SGX_CDECL ocall_pread(ssize_t* retval, int fd, void* buf, size_t co
 	ms->ms_fd = fd;
 	if (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) {
 		ms->ms_buf = (void*)__tmp;
-		__tmp_buf = __tmp;
-		memset(__tmp_buf, 0, _len_buf);
 		__tmp = (void *)((size_t)__tmp + _len_buf);
+		memset(ms->ms_buf, 0, _len_buf);
 	} else if (buf == NULL) {
 		ms->ms_buf = NULL;
 	} else {
@@ -2041,10 +1882,9 @@ sgx_status_t SGX_CDECL ocall_pread(ssize_t* retval, int fd, void* buf, size_t co
 	ms->ms_offset = offset;
 	status = sgx_ocall(27, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-		if (buf) memcpy((void*)buf, __tmp_buf, _len_buf);
-	}
+	if (retval) *retval = ms->ms_retval;
+	if (buf) memcpy((void*)buf, ms->ms_buf, _len_buf);
+
 	sgx_ocfree();
 	return status;
 }
@@ -2071,8 +1911,8 @@ sgx_status_t SGX_CDECL ocall_pwrite(ssize_t* retval, int fd, const void* buf, si
 	ms->ms_fd = fd;
 	if (buf != NULL && sgx_is_within_enclave(buf, _len_buf)) {
 		ms->ms_buf = (void*)__tmp;
-		memcpy(__tmp, buf, _len_buf);
 		__tmp = (void *)((size_t)__tmp + _len_buf);
+		memcpy((void*)ms->ms_buf, buf, _len_buf);
 	} else if (buf == NULL) {
 		ms->ms_buf = NULL;
 	} else {
@@ -2084,9 +1924,8 @@ sgx_status_t SGX_CDECL ocall_pwrite(ssize_t* retval, int fd, const void* buf, si
 	ms->ms_offset = offset;
 	status = sgx_ocall(28, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -2112,8 +1951,8 @@ sgx_status_t SGX_CDECL ocall_access(int* retval, const char* pathname, int mode)
 
 	if (pathname != NULL && sgx_is_within_enclave(pathname, _len_pathname)) {
 		ms->ms_pathname = (char*)__tmp;
-		memcpy(__tmp, pathname, _len_pathname);
 		__tmp = (void *)((size_t)__tmp + _len_pathname);
+		memcpy((void*)ms->ms_pathname, pathname, _len_pathname);
 	} else if (pathname == NULL) {
 		ms->ms_pathname = NULL;
 	} else {
@@ -2124,9 +1963,8 @@ sgx_status_t SGX_CDECL ocall_access(int* retval, const char* pathname, int mode)
 	ms->ms_mode = mode;
 	status = sgx_ocall(29, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -2152,8 +1990,8 @@ sgx_status_t SGX_CDECL ocall_unlink(int* retval, const char* pathname)
 
 	if (pathname != NULL && sgx_is_within_enclave(pathname, _len_pathname)) {
 		ms->ms_pathname = (char*)__tmp;
-		memcpy(__tmp, pathname, _len_pathname);
 		__tmp = (void *)((size_t)__tmp + _len_pathname);
+		memcpy((void*)ms->ms_pathname, pathname, _len_pathname);
 	} else if (pathname == NULL) {
 		ms->ms_pathname = NULL;
 	} else {
@@ -2163,9 +2001,8 @@ sgx_status_t SGX_CDECL ocall_unlink(int* retval, const char* pathname)
 	
 	status = sgx_ocall(30, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -2191,8 +2028,8 @@ sgx_status_t SGX_CDECL ocall_rmdir(int* retval, const char* pathname)
 
 	if (pathname != NULL && sgx_is_within_enclave(pathname, _len_pathname)) {
 		ms->ms_pathname = (char*)__tmp;
-		memcpy(__tmp, pathname, _len_pathname);
 		__tmp = (void *)((size_t)__tmp + _len_pathname);
+		memcpy((void*)ms->ms_pathname, pathname, _len_pathname);
 	} else if (pathname == NULL) {
 		ms->ms_pathname = NULL;
 	} else {
@@ -2202,9 +2039,8 @@ sgx_status_t SGX_CDECL ocall_rmdir(int* retval, const char* pathname)
 	
 	status = sgx_ocall(31, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -2228,9 +2064,8 @@ sgx_status_t SGX_CDECL ocall_geteuid(uid_t* retval)
 
 	status = sgx_ocall(32, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -2257,9 +2092,8 @@ sgx_status_t SGX_CDECL ocall_lseek(off_t* retval, int fd, off_t offset, int when
 	ms->ms_whence = whence;
 	status = sgx_ocall(33, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -2284,9 +2118,8 @@ sgx_status_t SGX_CDECL ocall_fsync(int* retval, int fd)
 	ms->ms_fd = fd;
 	status = sgx_ocall(34, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -2310,9 +2143,8 @@ sgx_status_t SGX_CDECL ocall_getpid(pid_t* retval)
 
 	status = sgx_ocall(35, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
@@ -2337,9 +2169,8 @@ sgx_status_t SGX_CDECL ocall_sleep(unsigned int* retval, unsigned int seconds)
 	ms->ms_seconds = seconds;
 	status = sgx_ocall(36, ms);
 
-	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
-	}
+	if (retval) *retval = ms->ms_retval;
+
 	sgx_ocfree();
 	return status;
 }
