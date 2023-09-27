@@ -239,7 +239,7 @@ public class sgx_invoker{
 	
 	public java.lang.String getUUID() {
 		String idsString = UUID.randomUUID().toString().replace("-", "").toLowerCase();
-		System.out.println("UUID=" + idsString);
+		System.out.println(idsString);
 		return idsString;
 	}
 	
@@ -258,21 +258,20 @@ public class sgx_invoker{
 	}
 	
 	public boolean initValueInEnclave(String uuid, String calluuid, long LineNO){
-		System.out.println("----enter initValueInEnclave()----");
+		//System.out.println("uuid="+uuid);
 		if(1==initValue(uuid, calluuid, LineNO)){
 			System.out.println("----initValue true----");
 			return true;
 		}
 		
 		else{
-			System.out.println("----initValue false----");
+			System.out.println("----initValue true----");
 			return false;
 		}
 	}
 	
 	// [hyr]0814 TODO cuuid? 这里cuuid是从java接收的，还需要再进一步处理
 	public boolean deleteValueInEnclave(String getuuid, String getouuid, long status){
-		System.out.println("----enter deleteValueInEnclave()----");
 		System.out.println("status: " + status);
 		if(1==deleteValue(getuuid, getouuid, status)){
 			System.out.println("----deleteValue true----");
@@ -289,9 +288,6 @@ public class sgx_invoker{
 		//edit 20210526gxc merge continuous update function
 
 		System.out.println("----enter commitUpdate()----");
-		System.out.println("uuid=" + uuid);
-		System.out.println("ouuid=" + ouuid);
-		System.out.println("cuuid=" + cuuid);
 		int ret = -1;
 		if (status == 0) {
 			ret = commitUpdate(counter,intArray,intTail,doubleArray,doubleTail,floatArray,floatTail,
@@ -332,9 +328,7 @@ public class sgx_invoker{
 		if (ret != 1000) {
 			System.out.println("update wrong: " + ret);
 		}
-		System.out.println("update success");
 		clear();
-		System.out.println("clear success");
 	}
 	
 	// 原方案
@@ -345,10 +339,8 @@ public class sgx_invoker{
 	// }
 	
 	public boolean getBooleanValue(String uuid, long counter){ 
-		System.out.println("----enter getBooleanValue()----");
 		int ret = -1;
 		ret = commitBranch(counter, intArray, intTail, doubleArray, doubleTail, floatArray, floatTail, longArray, longTail, charArray, charTail, byteArray, byteTail, uuid, ouuid, cuuid);
-		System.out.println("ret=" + ret);
 		if(ret == 1){
 			System.out.println("----commitBranch true----");
 			clear();

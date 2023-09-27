@@ -164,7 +164,7 @@ int initialize_enclave(void)
     /* Debug Support: set 2nd parameter to 1 */
 	
 printf("sgx_create_enclave in setting\n");    
-    char* tmpe="/home/xidian/SGX/Encloak-new/SGX/EnhancedSGX/enclave.signed.so";
+    char* tmpe="/home/sgx/SGX/Encloak/SGX/EnhancedSGX/enclave.signed.so";
     ret = sgx_create_enclave(tmpe, SGX_DEBUG_FLAG, &token, &updated, &global_eid, NULL);         //zystble changed 18.12.10 ENCLAVE_FILENAME
 printf("end_sgx_create_enclave:ret==%d\n",ret); 
     if (ret != SGX_SUCCESS) {
