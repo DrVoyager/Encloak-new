@@ -173,18 +173,18 @@ public class MyMain {
 //			   String taintSourceName = "$i0";
 //			   String taintSourceName = "K";
 			   
-			   String taintClassName = "test.Test4";
-			   String taintMethodName = "main";
-			   String taintSourceName = "$i0";
+//			   String taintClassName = "test.Test4";
+//			   String taintMethodName = "main";
+//			   String taintSourceName = "$i0";
 //			   String taintSourceName = "a";
 			   
 //			   String taintClassName = "test.simple";
 //			   String taintMethodName = "main";
 //			   String taintSourceName = "b0";
 			   
-//			   String taintClassName = "test.Test";
-//			   String taintMethodName = "main";
-//			   String taintSourceName = "r1";
+			   String taintClassName = "test.Test";
+			   String taintMethodName = "main";
+			   String taintSourceName = "r1";
 			   
 			   /**
 			    * for variables

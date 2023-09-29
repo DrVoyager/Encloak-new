@@ -1374,7 +1374,7 @@ void encall_switch_type_get_i(void* data,void* rei,int* int_array,int int_tail,d
 
 // 处理
 void encall_switch_type_branch(void* data,void* rei,int* int_array,int int_tail,double* double_array,int double_tail,float* float_array,int float_tail,char* char_array,int char_tail,long* long_array, int long_tail,char* byte_array, int byte_tail,char* uuid, char* ouuid, char* cuuid) {
-	//printf("----------enter encall_switch_type_branch()----------\n");
+	printf("----------enter encall_switch_type_branch()----------\n");
 	long *data1 = (long*)data;
     	long Line = *data1;
 	int return_flag = -1;
