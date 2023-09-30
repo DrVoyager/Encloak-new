@@ -1,3 +1,25 @@
+### JNI与c++的编译
+
+#### JNI
+
+根据需要修改~/SGX/Encloak/SGX/EnhancedSGX/App/App.cpp
+
+### c++
+
+根据需要修改~/SGX/Encloak/SGX/EnhancedSGX/Enclave/Enclave.cpp
+
+#### 编译
+
+~/SGX/Encloak/SGX/EnhancedSGX下执行
+
+```
+$ make clean
+$ make
+$ ./scpso-hadoop.sh(hadoop case时执行，按照cluster各节点的实际IP值对脚本进行修改)
+```
+
+
+
 ## java（binarysearch为例）
 
 #### 指定敏感变量
@@ -60,6 +82,12 @@ $ ./build-origin.sh
 $ ./origin-run.sh（执行PI的源代码，可略过，若要执行需切换至hadoop用户，密码为123）
 ```
 
+#### 清理缓存
+
+```
+$ ./rmtmp.sh 
+```
+
 #### 转换
 
 ```
@@ -69,6 +97,7 @@ $ ./replace-transform.sh
 #### 加密
 
 ```
+$ source /opt/intel/sgxsdk/environment
 $ ./encrypt_SGXindex.sh  
 ```
 
