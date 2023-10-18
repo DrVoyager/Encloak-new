@@ -1,0 +1,91 @@
+public class test.Test extends java.lang.Object
+{
+    public java.lang.String Ouuid;
+    public static java.lang.String Cuuid;
+
+    public void <init>()
+    {
+        test.Test r0;
+
+        r0 := @this: test.Test;
+        specialinvoke r0.<java.lang.Object: void <init>()>();
+        return;
+    }
+
+    public static void main(java.lang.String[])
+    {
+        java.lang.String[] r0;
+        int[] r1, $r2;
+        byte b0;
+        int i1, tmpResult70;
+        java.io.PrintStream $r3;
+        long invokeLineNo;
+        java.lang.String getUUID, invokeUUID;
+        boolean branchInvokeResult;
+        invoker.sgx_invoker sgxInvoker;
+
+        r0 := @parameter0: java.lang.String[];
+        tmpResult70 = 0;
+        r1 = null;
+        b0 = 0;
+        i1 = 0;
+        $r2 = null;
+        $r3 = null;
+        invokeLineNo = 0L;
+        getUUID = null;
+        invokeUUID = null;
+        branchInvokeResult = 0;
+        sgxInvoker = null;
+        sgxInvoker = new invoker.sgx_invoker;
+        specialinvoke sgxInvoker.<invoker.sgx_invoker: void <init>()>();
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initenclave()>();
+        getUUID = virtualinvoke sgxInvoker.<invoker.sgx_invoker: java.lang.String getUUID()>();
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, invokeUUID, invokeLineNo);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void initNodeInEnclave(java.lang.String,int,int)>(getUUID, 7, 2);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 0L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 1L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 2L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 3L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 4L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 5L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 6L);
+        staticinvoke <test.Test: void foo(java.lang.String,long)>(getUUID, 1L);
+        $r3 = <java.lang.System: java.io.PrintStream out>;
+        tmpResult70 = virtualinvoke sgxInvoker.<invoker.sgx_invoker: int getIntValue(java.lang.String,int,long)>(getUUID, 0, 7L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void clearOuuid()>();
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void clearCuuid()>();
+        virtualinvoke $r3.<java.io.PrintStream: void println(int)>(tmpResult70);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean deleteValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, "", 0L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean closeenclave()>();
+        return;
+    }
+
+    public static void foo(java.lang.String, long)
+    {
+        int[] r0;
+        int i0, $i1;
+        long invokeLineNo;
+        java.lang.String getUUID, invokeUUID;
+        boolean branchInvokeResult;
+        invoker.sgx_invoker sgxInvoker;
+
+        invokeUUID := @parameter0: java.lang.String;
+        invokeLineNo := @parameter1: long;
+        $i1 = 0;
+        getUUID = null;
+        branchInvokeResult = 0;
+        sgxInvoker = null;
+        sgxInvoker = new invoker.sgx_invoker;
+        specialinvoke sgxInvoker.<invoker.sgx_invoker: void <init>()>();
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initenclave()>();
+        getUUID = virtualinvoke sgxInvoker.<invoker.sgx_invoker: java.lang.String getUUID()>();
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean initValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, invokeUUID, invokeLineNo);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void initNodeInEnclave(java.lang.String,int,int)>(getUUID, 7, 1);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 8L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 9L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 10L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: void updateValueInEnclave(java.lang.String,int,long)>(getUUID, 0, 11L);
+        virtualinvoke sgxInvoker.<invoker.sgx_invoker: boolean deleteValueInEnclave(java.lang.String,java.lang.String,long)>(getUUID, "", 0L);
+        return;
+    }
+}

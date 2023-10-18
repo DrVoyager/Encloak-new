@@ -715,7 +715,7 @@ int read_table(char* file,int isIndex)
 	//ocall_print_string("read ok before splite\n");
 	//printf("read ok before splite ret_len:%d\n",ret_len);
 	int lineno = split_file(isIndex);
-	//printf("lineno:%d\n",lineno);
+	printf("split file finished, lineno:%d\n",lineno);
 	//ocall_print_string("read_table ok\n");
 	//close(reout);
 	return lineno;
@@ -1596,6 +1596,7 @@ int print_int(long Line, int* int_array, char* uuid, char* ouuid, char* cuuid)
 	printf("return_flag=%d\n", return_flag);
 	if (para_name >= 100 && para_name < 200) { // int type variable, Typeindex(while int, its value equals 1) * 100 + position
 		hashmap.find(uuid)->v_int[para_name - 100] = return_flag;
+		return_flag = 1000;
 	} else if (para_name >= 1000 && para_name < 2000 && ouuid != NULL) { // int type member variable, Typeindex * 1000 + position
 		if (hashmapMemberVariables.find(ouuid) == NULL) {
 			// init
@@ -2601,7 +2602,7 @@ int print_array_i(long Line, int* int_array, int int_tail, char* uuid, char* ouu
 	int para_name = meta.para_name;
 	int para_i = meta.para_i;
 
-	//printf("line=%ld p1=%d  p1_i=%d  p2=%d  p2_i=%d op=%d  para_name=%d  para_i=%d\n",Line,p1,p1_i,p2,p2_i,op,para_name,para_i);
+	printf("line=%ld p1=%d  p1_i=%d  p2=%d  p2_i=%d op=%d  para_name=%d  para_i=%d\n",Line,p1,p1_i,p2,p2_i,op,para_name,para_i);
 	char *tmpuuid=(char*)malloc(33*sizeof(char));
 	memcpy(tmpuuid,uuid,32);
 	if(p1==-2&&p1_i==-2&&p2==-2&&p2_i==-2&&op==-2){

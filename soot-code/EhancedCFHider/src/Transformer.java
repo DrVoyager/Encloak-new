@@ -234,6 +234,7 @@ public class Transformer {
 				if (((IdentityStmt) currScanStmt).getRightOp().toString().startsWith("@parameter")) {
 					// Index represents the position of this parameter in the list of parameters
 					int index = Integer.parseInt(((IdentityStmt) currScanStmt).getRightOp().toString().substring(10, 11));
+					G.v().out.println("index= " + index);
 					if (CFMAP.containsKey(declaredClassName) && CFMAP.get(declaredClassName).containsKey(declaredMethodName)) {
 						if (CFMAP.get(declaredClassName).get(declaredMethodName).contains(((IdentityStmt) currScanStmt).getLeftOp())
 								&& TypeIndex(((IdentityStmt) currScanStmt).getLeftOp()) > 6) {
@@ -501,8 +502,13 @@ public class Transformer {
 						isSenstiveflag = true;
 						G.v().out.println("IdentityStmt: isSenstiveflag: " + isSenstiveflag + "; declaredMethodName: " + declaredMethodName);
 						
-						// condVals已经包含所有敏感变量了，再加一遍的意义是什么？
-						// condVals.add(((IdentityStmt) currProStmt).getLeftOp());
+						if (TypeIndex(((IdentityStmt) currProStmt).getLeftOp()) < 6) {
+							// need to update, because these are normal sensitive variables							
+							tempStmts.add(currProStmt);
+							G.v().out.println("added to tempStmts");
+							// condVals.add(((IdentityStmt) currProStmt).getLeftOp());
+						}
+
 						// 删除该语句
 						units.remove(currProStmt);
 						// 进一步处理在if (isSenstiveflag)中，为什么不直接合并进来？
@@ -569,18 +575,6 @@ public class Transformer {
 			}
 
 
-			//插入上边保存在tempStmts中的语句并转化成update语句
-			if (!tempStmts.isEmpty() && flag) {
-				G.v().out.println("[0528]tempStmts is not empty!");
-				for (Unit unit : tempStmts) {
-					G.v().out.println("[0528]tempStmts unit:" + unit.toString());
-					units.insertBefore(unit, currProStmt);
-					replaceValueUpdateStmt(aBody, sgxObjLocal, units,
-							localArray, unit, getUUIDLocal, memberVariables,
-							staticmemberVariables, OriginFieldCuuidArray);
-				}
-				flag = false;
-			}
 			// init SGX
 			if (!isInitSgxInvoker) {// && (!condVals.isEmpty())
 				// init all local variables
@@ -600,8 +594,23 @@ public class Transformer {
 							getUUIDLocal, invokeUUIDLocal, invokeLineNo);
 					isInitValueInSgx = true;
 				}
-			G.v().out.println("[hyr]finish init SGX");
+				G.v().out.println("[hyr]finish init SGX");
 			}
+
+			//插入上边保存在tempStmts中的语句并转化成update语句
+			if (!tempStmts.isEmpty() && flag) {
+				G.v().out.println("[0528]tempStmts is not empty!");
+				G.v().out.println("currProStmt: " + currProStmt);
+				for (Unit unit : tempStmts) {
+					G.v().out.println("[0528]tempStmts unit:" + unit.toString());
+					units.insertBefore(unit, currProStmt);
+					replaceValueUpdateStmt(aBody, sgxObjLocal, units,
+							localArray, unit, getUUIDLocal, memberVariables,
+							staticmemberVariables, OriginFieldCuuidArray);
+				}
+				flag = false;
+			}
+
 			G.v().out.println("[hyr]0828currProStmt: " + currProStmt.toString());
 
 			//处理函数调用语句，注意与下边包含函数调用表达式的AssignStmt区分
@@ -2794,6 +2803,8 @@ public class Transformer {
 			Value Indevalue = ((ArrayRef) ((AssignStmt) currProStmt)
 					.getRightOp()).getIndex();
 			String rightBase = "";
+			G.v().out.println("Arrvalue: " + Arrvalue);
+			G.v().out.println("Indevalue: " + Indevalue);
 
 			val_type = TypeIndex(Arrvalue);
 			pos_index = typeToList(val_type).indexOf(Arrvalue);
@@ -2803,10 +2814,12 @@ public class Transformer {
 			flag = true;
 			if (Indevalue instanceof Constant) {
 				Index = "int_" + Integer.parseInt(Indevalue.toString());
+				G.v().out.println("constant Index: " + Index);
 			} else {
 				val_type = TypeIndex(Indevalue);
 				pos_index = typeToList(val_type).indexOf(Indevalue);
 				Index = "" + (val_type * 100 + pos_index);// 右侧敏感数组下标是变量 该变量的逻辑位置
+				G.v().out.println("not constant Index: " + Index);
 			}
 			Value leftValue = ((AssignStmt) currProStmt).getLeftOp();
 
@@ -2827,6 +2840,8 @@ public class Transformer {
 							toCall.makeRef(),
 							Arrays.asList(getUUIDLocal, IntConstant.v(0),
 									LongConstant.v(counter)))); // IntConstant.v(returnTypeIndex)));
+			G.v().out.println("currProStmt: " + currProStmt);
+			G.v().out.println("newInvokeStmt: " + newInvokeStmt);
 			units.insertBefore(newInvokeStmt, currProStmt);
 			units.remove(currProStmt);
 			counter++;
@@ -3565,10 +3580,13 @@ public class Transformer {
 
 		val_type = TypeIndex(values.get(0));
 		G.v().out.println("values.get(0)=" + values.get(0));
+		G.v().out.println("val_type= " + val_type);
 
 		pos_index = typeToList(val_type).indexOf(values.get(0)); // 获取全局数组中
-																	// 它的index
+		// [hyr]0920, FIX Test.java b0=2, left type is byte, right type is int. update return_index(else{ // i0=i1})
+		return_index = Integer.toString(val_type * 100 + pos_index);													
 		G.v().out.println("pos_index=" + pos_index);
+                G.v().out.println("return_index=" + return_index);
 		G.v().out.println("123321");
 		// 当求数组长度时 type用7表示
 		if (!isArrayLength && !arrayAssign) {
